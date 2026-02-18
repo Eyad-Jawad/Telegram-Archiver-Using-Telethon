@@ -1,5 +1,6 @@
-import json, asyncio, os, csv
+import json, asyncio, os, csv, time
 from telethon import TelegramClient, functions, types
+from telethon.errors import FloodWaitError
 from telethon.tl.types import (
     MessageService,
     MessageActionChatAddUser,
@@ -17,96 +18,117 @@ API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
 
-async def userIdHandler(message, row, users):
+async def userIdHandler(message, messagesRow, users):
     # check for the id of the user to add to the message
-    if message.sender: 
-        row.append(str(message.sender.id))
-        # check if the sender is not saved
-        if message.sender.id not in users:
-            users.add(message.sender.id)
-    else:
-        row.append('0')
+    if not message.sender: 
+        messagesRow.append('0')
+        return
+    messagesRow.append(str(message.sender.id))
+    # check if the sender is not saved
+    if message.sender.id not in users:
+        users.add(message.sender.id)
 
-async def fileHanlder(message, row, fileCounter, FILE_PATH):
-    isFile = 0
+async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH):
     if not message.file:
-        row.append('0')
-        row.append('0')
-        row.append('0')
-    else:
-        file = message.file
-        # photos don't work with file id in telethon
-        if message.photo:
-            file = message.photo
+        messagesRow.append('0')
+        messagesRow.append('0')
+        messagesRow.append('0')
+        return 0
+    file = message.file
+    # photos don't work with file id in telethon
+    if message.photo:
+        file = message.photo
 
-        fileName = f"{fileCounter} "
-        if message.file.name:
-            fileName += message.file.name
+    fileName = f"{fileCounter} "
+    if message.file.name:
+        fileName += message.file.name
 
-        row.append(str(file.id))
-        row.append(str(fileCounter))
-        isFile = 1
-        # if the file is bigger than 100mb, don't download it
-        if message.photo or file.size < (1024 ** 2) * 100:
-            await message.download_media(file=f"{FILE_PATH}/{fileName}")
-            row.append('0')
-        else: 
-            # keep log of files not downloaded
-            await message.forward_to("me")
-            row.append('1')
-    return isFile
+    messagesRow.append(str(file.id))
+    messagesRow.append(str(fileCounter))
+    # if the file is bigger than 100mb, don't download it
+    if message.photo or file.size < (1024 ** 2) * 100:
+        await message.download_media(file=f"{FILE_PATH}/{fileName}")
+        messagesRow.append('0')
+    else: 
+        # keep log of files not downloaded
+        await message.forward_to("me")
+        messagesRow.append('1')
+    return 1
 
-async def replyHandler(message, row):
+# TODO: Outside dialog reply handler
+async def replyHandler(message, messagesRow):
     # check if this message is a reply to another
     if not message.is_reply:
-        row.append('0')
-    else:
-        reply = await message.get_reply_message()
-        row.append(str(reply.id))
+        messagesRow.append('0')
+        return
+    reply = await message.get_reply_message()
+    messagesRow.append(str(reply.id))
 
-async def forwardHanlder(message, row, users):
+async def forwardHanlder(message, messagesRow, users):
     forward = message.forward
     if not forward:
-        row.append('0')
-        row.append('0')
-    else:
-        row.append(f"{forward.from_name}")
-        if not forward.from_id:
-            row.append('0')
-        else:
-            row.append(str(forward.from_id))
-            users.add(forward.from_id)
+        messagesRow.append('0')
+        messagesRow.append('0')
+        return
+    messagesRow.append(f"{forward.from_name}")
+    if not forward.from_id:
+        messagesRow.append('0')
+        return
+    messagesRow.append(str(forward.from_id))
+    users.add(forward.from_id)
     
-async def textHandler(message, row):
+async def textHandler(message, messagesRow):
     # check for text
     if message.text:
-        row.append(f"{message.text}")
+        messagesRow.append(f"{message.text}")
     elif isinstance(message, MessageService):
         action = message.action
         if isinstance(action, MessageActionPinMessage):
-            row.append(f"a messaage was pinned")
+            messagesRow.append(f"a messaage was pinned")
         elif isinstance(action, MessageActionChatAddUser):
-            row.append(f"{action.users} was added")
+            messagesRow.append(f"{action.users} was added")
         elif isinstance(action, MessageActionChatJoinedByLink):
-            row.append(f"{action.inviter_id} joined")
+            messagesRow.append(f"{action.inviter_id} joined")
         elif isinstance(action, MessageActionChatDeleteUser):
-            row.append(f"{action.user_id} was kicked/left")
+            messagesRow.append(f"{action.user_id} was kicked/left")
         elif isinstance(action, MessageActionChatEditPhoto):
-            row.append(f"chat photo changed")
+            messagesRow.append(f"chat photo changed")
         elif isinstance(action, MessageActionChatEditTitle):
-            row.append(f"chat title changed to {action.title}")
+            messagesRow.append(f"chat title changed to {action.title}")
         elif isinstance(action, MessageActionChatCreate):
-            row.append(f"{action.title} was created with users: {action.users}")
+            messagesRow.append(f"{action.title} was created with users: {action.users}")
         else:
-            row.append(f"{action} was done.")
+            messagesRow.append(f"{action} was done.")
 
     else: 
-        row.append("")
+        messagesRow.append("")
 
-# TODO: reactions handler
+async def reactionHandler(message, CSVReactionsWriter):
+    reactions = message.reactions
+    if not reactions: return
+    reactionsRow = [message.id]
+
+    # For channels
+    if not reactions.can_see_list:
+        for react in reactions.results:
+            reactionsRow.append(react.reaction)
+            reactionsRow.append(react.count)
+        CSVReactionsWriter.writerow(reactionsRow)
+        return
+
+    # For groups or chats
+    for react in reactions.recent_reactions:
+        reactionsRow.append(react.reaction.emoticon)
+        reactionsRow.append(react.date)
+        reactionsRow.append(react.peer_id.user_id)
+    CSVReactionsWriter.writerow(reactionsRow)
+
+
+
 # TODO: Topic handler
-# TODO: use better except
 # TODO: Make the code look better
+# TODO: block private groups from being saved
+# TODO: Better handle mid-work errors (checkpoints)
 async def archiveGroup(dialog, dialogCounter):
     PATH = f"dialogs/groups/dialog {dialogCounter}"
     FILE_PATH = f"{PATH}/file"
@@ -115,9 +137,11 @@ async def archiveGroup(dialog, dialogCounter):
         os.makedirs (f"{PATH}", exist_ok=True)
         os.makedirs (FILE_PATH, exist_ok=True)
         texts = open(f"{PATH}/Text messages.csv", 'w')
-        CSVWrtier = csv.writer(texts)
-    except:
-        print("Error making the folders/files")
+        reactions = open(f"{PATH}/Reactions.csv", 'w')
+        CSVMessagesWrtier = csv.writer(texts)
+        CSVReactionsWriter = csv.writer(reactions)
+    except OSError as e:
+        print(f"Error making the folders/files: {e}")
         exit()
 
     users = set()
@@ -125,41 +149,41 @@ async def archiveGroup(dialog, dialogCounter):
 
     async for message in client.iter_messages(dialog.entity, reverse=True):
         # for writing into the file at once
-        row = []
-        row.append(str(message.id))
+        messagesRow = []
+        messagesRow.append(str(message.id))
         
-        await userIdHandler (message, row, users)
+        await userIdHandler (message, messagesRow, users)
 
-        fileCounter += await fileHanlder (message, row, fileCounter, FILE_PATH)
+        fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH)
         
-        await replyHandler (message, row)
+        await replyHandler (message, messagesRow)
 
-        await forwardHanlder (message, row, users)
+        await forwardHanlder (message, messagesRow, users)
         
-        await textHandler (message, row)
+        await textHandler (message, messagesRow)
         
-        row.append(str(message.date))
-        CSVWrtier.writerow(row)
+        await reactionHandler(message, CSVReactionsWriter)
+
+        messagesRow.append(str(message.date))
+        CSVMessagesWrtier.writerow(messagesRow)
 
     texts.close()    
 
 # TODO: Not done!
 # TODO: rate limit handler
-# TODO: Use the csv module
 async def getDialogInfo(client, dialog, PATH):
     with open(f"{PATH}/Dialog Info") as f:
-        row = []
-        row.append(str(dialog.id))
-        row.append(f"{dialog.name}")
+        messagesRow = []
+        messagesRow.append(str(dialog.id))
+        messagesRow.append(f"{dialog.name}")
         if not dialog.is_user:
-            row.append(dialog.participants_count)
+            messagesRow.append(dialog.participants_count)
 
-        f.write(row)
+        f.write(messagesRow)
         pass
     # async for photo in client.iter_profile_photos():
 
     
-
 
 
 async def main():
@@ -168,9 +192,11 @@ async def main():
     dialogCounter = 1
 
     async for dialog in client.iter_dialogs():
-        if dialog.is_group:
-            await archiveGroup(dialog, dialogCounter)
-        dialogCounter += 1
+        if (input(f"Do you want to check {dialog.name}?") == 'y'):
+            await calculateDialogSpace(dialog)
+        # if dialog.is_group:
+        #     await archiveGroup(dialog, dialogCounter)
+        # dialogCounter += 1
 
 with client:
     client.loop.run_until_complete(main())
