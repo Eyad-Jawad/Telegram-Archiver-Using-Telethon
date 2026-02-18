@@ -146,28 +146,31 @@ async def archiveGroup(dialog, dialogCounter):
 
     users = set()
     fileCounter = 1
+    try:
+        async for message in client.iter_messages(dialog.entity, reverse=True):
+            # for writing into the file at once
+            messagesRow = []
+            messagesRow.append(str(message.id))
+            
+            await userIdHandler (message, messagesRow, users)
 
-    async for message in client.iter_messages(dialog.entity, reverse=True):
-        # for writing into the file at once
-        messagesRow = []
-        messagesRow.append(str(message.id))
-        
-        await userIdHandler (message, messagesRow, users)
+            fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH)
+            
+            await replyHandler (message, messagesRow)
 
-        fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH)
-        
-        await replyHandler (message, messagesRow)
+            await forwardHanlder (message, messagesRow, users)
+            
+            await textHandler (message, messagesRow)
+            
+            await reactionHandler(message, CSVReactionsWriter)
 
-        await forwardHanlder (message, messagesRow, users)
-        
-        await textHandler (message, messagesRow)
-        
-        await reactionHandler(message, CSVReactionsWriter)
+            messagesRow.append(str(message.date))
+            CSVMessagesWrtier.writerow(messagesRow)
 
-        messagesRow.append(str(message.date))
-        CSVMessagesWrtier.writerow(messagesRow)
-
-    texts.close()    
+        texts.close()    
+    except FloodWaitError as e:
+        print(f"You've been rate limited for {e.seconds}s")
+        asyncio.sleep(e.seconds)
 
 # TODO: Not done!
 # TODO: rate limit handler
@@ -183,7 +186,31 @@ async def getDialogInfo(client, dialog, PATH):
         pass
     # async for photo in client.iter_profile_photos():
 
-    
+async def calculateDialogSpace(dialog):
+    sizeInMB = 0
+    messageCounter = 0
+    mult = 0
+    totalTimeStart = time.perf_counter()
+    try:
+        async for message in client.iter_messages(dialog.entity):
+            messageCounter += 1
+
+            if messageCounter >= 10_000:
+                messageCounter = 0
+                mult += 1
+                print(f"Message {mult * 10_000}, current time {time.perf_counter() - totalTimeStart:.3f}s the current space: {sizeInMB:.3f}MB")
+
+            if not message.file: pass
+            else: sizeInMB += message.file.size/(1024 ** 2)
+
+        print(f"Dialog {dialog.title} will take about {sizeInMB:.3f}MB")
+
+    except FloodWaitError as e:
+        print(f"You've been rate limited for {e.seconds}s")
+        await asyncio.sleep(e.seconds)
+
+    print(f"It had taken {time.perf_counter() - totalTimeStart:.3f}s")
+    print(f"Total size of the chat: {sizeInMB:.3f}mb")
 
 
 async def main():
@@ -192,11 +219,12 @@ async def main():
     dialogCounter = 1
 
     async for dialog in client.iter_dialogs():
-        if (input(f"Do you want to check {dialog.name}?") == 'y'):
+        if (input(f"Do you want to check the approximate size of {dialog.name}? (y) ") == 'y'):
             await calculateDialogSpace(dialog)
-        # if dialog.is_group:
-        #     await archiveGroup(dialog, dialogCounter)
-        # dialogCounter += 1
+        if (input(f"Do you want to archive {dialog.name}? (y) ") == 'y'):
+            if dialog.is_group:
+                await archiveGroup(dialog, dialogCounter)
+            dialogCounter += 1
 
 with client:
     client.loop.run_until_complete(main())
