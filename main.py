@@ -1,16 +1,8 @@
 import json, asyncio, os, csv, time
 from telethon import TelegramClient, functions, types
 from telethon.errors import FloodWaitError
-from telethon.tl.types import (
-    MessageService,
-    MessageActionChatAddUser,
-    MessageActionChatDeleteUser,
-    MessageActionChatJoinedByLink,
-    MessageActionPinMessage,
-    MessageActionChatEditTitle,
-    MessageActionChatEditPhoto,
-    MessageActionChatCreate
-)
+from telethon.tl.functions.channels import GetFullChannelRequest
+from telethon.tl import types
 
 # Get the API keys
 API_ID = os.getenv("TELEGRAM_API_KEY")
@@ -28,6 +20,7 @@ async def userIdHandler(message, messagesRow, users):
     if message.sender.id not in users:
         users.add(message.sender.id)
 
+# TODO: Keep a separate log of files to download later 
 async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH):
     if not message.file:
         messagesRow.append('0')
@@ -56,13 +49,17 @@ async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH):
     return 1
 
 # TODO: Outside dialog reply handler
+# TODO: remove str from these things
 async def replyHandler(message, messagesRow):
     # check if this message is a reply to another
     if not message.is_reply:
         messagesRow.append('0')
         return
     reply = await message.get_reply_message()
-    messagesRow.append(str(reply.id))
+    if reply:
+        messagesRow.append(str(reply.id))
+    else:
+        messagesRow.append(0)
 
 async def forwardHanlder(message, messagesRow, users):
     forward = message.forward
@@ -74,28 +71,36 @@ async def forwardHanlder(message, messagesRow, users):
     if not forward.from_id:
         messagesRow.append('0')
         return
-    messagesRow.append(str(forward.from_id))
-    users.add(forward.from_id)
-    
+    entity = forward.from_id
+    peerId = None
+    if isinstance(entity, types.PeerUser):
+        peerId = entity.user_id
+    elif isinstance(entity, types.PeerChannel):
+        peerId = entity.channel_id
+    elif isinstance(entity, types.PeerChat):
+        peerId = entity.chat_id
+    messagesRow.append(peerId)
+    users.add(peerId)
+ 
 async def textHandler(message, messagesRow):
     # check for text
     if message.text:
         messagesRow.append(f"{message.text}")
-    elif isinstance(message, MessageService):
+    elif isinstance(message, types.MessageService):
         action = message.action
-        if isinstance(action, MessageActionPinMessage):
+        if isinstance(action, types.MessageActionPinMessage):
             messagesRow.append(f"a messaage was pinned")
-        elif isinstance(action, MessageActionChatAddUser):
+        elif isinstance(action, types.MessageActionChatAddUser):
             messagesRow.append(f"{action.users} was added")
-        elif isinstance(action, MessageActionChatJoinedByLink):
+        elif isinstance(action, types.MessageActionChatJoinedByLink):
             messagesRow.append(f"{action.inviter_id} joined")
-        elif isinstance(action, MessageActionChatDeleteUser):
+        elif isinstance(action, types.MessageActionChatDeleteUser):
             messagesRow.append(f"{action.user_id} was kicked/left")
-        elif isinstance(action, MessageActionChatEditPhoto):
+        elif isinstance(action, types.MessageActionChatEditPhoto):
             messagesRow.append(f"chat photo changed")
-        elif isinstance(action, MessageActionChatEditTitle):
+        elif isinstance(action, types.MessageActionChatEditTitle):
             messagesRow.append(f"chat title changed to {action.title}")
-        elif isinstance(action, MessageActionChatCreate):
+        elif isinstance(action, types.MessageActionChatCreate):
             messagesRow.append(f"{action.title} was created with users: {action.users}")
         else:
             messagesRow.append(f"{action} was done.")
@@ -103,6 +108,7 @@ async def textHandler(message, messagesRow):
     else: 
         messagesRow.append("")
 
+# FIXME: something is wrong here
 async def reactionHandler(message, CSVReactionsWriter):
     reactions = message.reactions
     if not reactions: return
@@ -110,17 +116,25 @@ async def reactionHandler(message, CSVReactionsWriter):
 
     # For channels
     if not reactions.can_see_list:
-        for react in reactions.results:
+        for react in reactions.results or []:
             reactionsRow.append(react.reaction)
             reactionsRow.append(react.count)
         CSVReactionsWriter.writerow(reactionsRow)
         return
 
+    # FIXME: here, to be exact
     # For groups or chats
-    for react in reactions.recent_reactions:
+    for react in reactions.recent_reactions or []:
         reactionsRow.append(react.reaction.emoticon)
         reactionsRow.append(react.date)
-        reactionsRow.append(react.peer_id.user_id)
+        peerId = None
+        if isinstance(react.peer_id, types.PeerUser):
+            peerId = react.peer_id.user_id
+        elif isinstance(react.peer_id, types.PeerChannel):
+            peerId = react.peer_id.channel_id
+        elif isinstance(react.peer_id, types.PeerChat):
+            peerId = react.peer_id.chat_id
+        reactionsRow.append(peerId)
     CSVReactionsWriter.writerow(reactionsRow)
 
 
@@ -136,8 +150,8 @@ async def archiveGroup(dialog, dialogCounter):
     try:
         os.makedirs (f"{PATH}", exist_ok=True)
         os.makedirs (FILE_PATH, exist_ok=True)
-        texts = open(f"{PATH}/Text messages.csv", 'w')
-        reactions = open(f"{PATH}/Reactions.csv", 'w')
+        texts = open(f"{PATH}/Text messages.csv", 'a')
+        reactions = open(f"{PATH}/Reactions.csv", 'a')
         CSVMessagesWrtier = csv.writer(texts)
         CSVReactionsWriter = csv.writer(reactions)
     except OSError as e:
@@ -145,9 +159,15 @@ async def archiveGroup(dialog, dialogCounter):
         exit()
 
     users = set()
-    fileCounter = 1
+    fileCounter = 0
+    messageCounter = 0
+    dialogSavedCheckpoint = getCheckpoint(dialog.id, PATH)
+    if dialogSavedCheckpoint:
+        messageCounter = dialogSavedCheckpoint[0]
+        fileCounter = dialogSavedCheckpoint[1]
+
     try:
-        async for message in client.iter_messages(dialog.entity, reverse=True):
+        async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=messageCounter):
             # for writing into the file at once
             messagesRow = []
             messagesRow.append(str(message.id))
@@ -166,25 +186,51 @@ async def archiveGroup(dialog, dialogCounter):
 
             messagesRow.append(str(message.date))
             CSVMessagesWrtier.writerow(messagesRow)
+            messageCounter += 1
 
-        texts.close()    
+        texts.close()
+        saveCheckpoint(dialog.id, messageCounter, fileCounter, False, PATH)
+
     except FloodWaitError as e:
         print(f"You've been rate limited for {e.seconds}s")
         asyncio.sleep(e.seconds)
+        saveCheckpoint(dialog.id, messageCounter, fileCounter, False, PATH)
+    except Exception as e:
+        print(f"An error {e} occurred at message {messageCounter}")
+        saveCheckpoint(dialog.id, messageCounter, fileCounter, False, PATH)
 
-# TODO: Not done!
-# TODO: rate limit handler
-async def getDialogInfo(client, dialog, PATH):
-    with open(f"{PATH}/Dialog Info") as f:
-        messagesRow = []
-        messagesRow.append(str(dialog.id))
-        messagesRow.append(f"{dialog.name}")
-        if not dialog.is_user:
-            messagesRow.append(dialog.participants_count)
+async def getGroupOrChannelInfo(dialog, PATH, users):
+    if dialog.is_user: return
+    infoPath = f"{PATH}/Dialog Info"
+    os.makedirs(infoPath, exist_ok=True)
+    with open(f"{infoPath}/info.csv") as f:
+        infoRow = []
+        infoRow.append(str(dialog.id))
+        infoRow.append(f"{dialog.name}")
+        if dialog.username:
+            infoRow.append(dialog.username)
+        else:
+            infoRow.append(dialog.access_hash)
 
-        f.write(messagesRow)
-        pass
-    # async for photo in client.iter_profile_photos():
+        infoRow.append(dialog.participants_count)
+
+        CSVInfoWriter = csv.writer(f)
+        CSVInfoWriter.writerow(infoRow)
+        
+    async for photo in client.iter_profile_photos():
+        await client.download_file(photo, file=f"{infoPath}/{photo.date} : {photo.name}")
+
+    if not dialog.is_group: return
+
+    if not dialog.participants_hidden:
+        for user in dialog.users:
+            if user.id not in users:
+                users.add(user.id)
+    for user in users:
+        await getGroupOrChannelInfo(user, PATH, users)
+
+# TODO: async def getUserInfo(userId):
+# TODO: Archive channel
 
 async def calculateDialogSpace(dialog):
     sizeInMB = 0
@@ -212,15 +258,40 @@ async def calculateDialogSpace(dialog):
     print(f"It had taken {time.perf_counter() - totalTimeStart:.3f}s")
     print(f"Total size of the chat: {sizeInMB:.3f}mb")
 
+# TODO: maybe make this a class that waits for all inputs to be fulfilled or something, idk
+def saveCheckpoint(dialogId, messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath):
+    dialog = {}
+    try:
+        with open(f"{dialogPath}/state.json", 'r') as f:
+            dialog = json.load(f) 
+            # if any of the inputs is 0 means don't change it, like if you haven't parsed the dialog info yet
+            if messageCounter: dialog[0] = messageCounter
+            if fileCounter: dialog[1] = fileCounter
+            if flagOfGetDialogInfo: dialog[2] = flagOfGetDialogInfo
+    except (FileNotFoundError, json.JSONDecodeError):
+        dialog = [messageCounter, fileCounter, flagOfGetDialogInfo]
+        
+    with open(f"{dialogPath}/state.json", 'w') as f:
+        f.write(json.dumps(dialog))
+
+def getCheckpoint(dialogId, dialogPath):
+    try:
+        with open(f"{dialogPath}/state.json", 'r') as f:
+            dialogs = json.load(f)
+            return dialogs
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    
 
 async def main():
     print("Started...")
     os.makedirs("dialogs", exist_ok=True)
     dialogCounter = 1
 
-    async for dialog in client.iter_dialogs():
+    async for dialog in client.iter_dialogs():        
         if (input(f"Do you want to check the approximate size of {dialog.name}? (y) ") == 'y'):
             await calculateDialogSpace(dialog)
+
         if (input(f"Do you want to archive {dialog.name}? (y) ") == 'y'):
             if dialog.is_group:
                 await archiveGroup(dialog, dialogCounter)
