@@ -9,10 +9,12 @@ API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
 # FIXME: something is wrong with the reaction handler
+# FIXME: Users info may be duplicated
 # TODO: Keep a separate log of files to download later 
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
 # TODO: Add a time estimator
+# TODO: Sticker packs handler
 
 
 async def userIdHandler(message, messagesRow, users):
@@ -141,7 +143,13 @@ async def reactionHandler(message, CSVReactionsWriter):
     CSVReactionsWriter.writerow(reactionsRow)
 
 async def archiveGroup(dialog, dialogCounter):
-    PATH = f"dialogs/groups/{dialog.id}"
+    PATH = f"dialogs"
+
+    if isinstance(dialog.entity, types.User):
+        PATH += f"/users/{dialog.id}"
+    else:
+        PATH += f"/groups/{dialog.id}"
+
     FILE_PATH = f"{PATH}/file"
 
     try:
