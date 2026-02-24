@@ -280,18 +280,23 @@ async def getUserInfo(userId):
     await getPhotoInfo(user, filePath)
 
 async def calculateDialogSpace(dialog):
-    sizeInMB = 0
+    sizeInMB       = 0
     messageCounter = 0
-    mult = 0
     totalTimeStart = time.perf_counter()
     try:
         async for message in client.iter_messages(dialog.entity):
             messageCounter += 1
 
-            if messageCounter >= 10_000:
-                messageCounter = 0
-                mult += 1
-                print(f"Message {mult * 10_000}, current time {time.perf_counter() - totalTimeStart:.3f}s the current space: {sizeInMB:.3f}MB")
+            if not messageCounter % 1_000:
+                elapsedTime = time.perf_counter() - totalTimeStart
+
+                status = (
+                    f"Message {messageCounter:8} | "
+                    f"{elapsedTime:8.3f}s | "
+                    f"{sizeInMB:8.3f}MB"
+                )
+
+                print(status, end='\r')
 
             if not message.file: pass
             else: sizeInMB += message.file.size/(1024 ** 2)
@@ -311,8 +316,8 @@ def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath)
         with open(f"{dialogPath}/state.json", 'r') as f:
             dialog = json.load(f) 
             # if any of the inputs is 0 means don't change it, like if you haven't parsed the dialog info yet
-            if messageCounter: dialog[0] = messageCounter
-            if fileCounter: dialog[1] = fileCounter
+            if messageCounter:      dialog[0] = messageCounter
+            if fileCounter:         dialog[1] = fileCounter
             if flagOfGetDialogInfo: dialog[2] = flagOfGetDialogInfo
     except (FileNotFoundError, json.JSONDecodeError):
         dialog = [messageCounter, fileCounter, flagOfGetDialogInfo]
