@@ -10,7 +10,7 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 
 # FIXME: something is wrong with the reaction handler
 # FIXME: Users info may be duplicated
-# TODO: Keep a separate log of files to download later 
+# TODO: Make a config class
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
 # TODO: Add a time estimator
@@ -182,6 +182,14 @@ async def reactionHandler(message, CSVReactionsWriter):
         reactionsRow.append(peerId)
     CSVReactionsWriter.writerow(reactionsRow)
 
+def printProgress(totalNumber, currentNumber):
+    whiteBlock              = '█'
+    greyBlock               = '░'
+    progressInHundereds     = currentNumber / totalNumber * 100
+    progressInTens          = int (progressInHundereds // 10)
+    progressBar             = (whiteBlock * progressInTens + greyBlock * (10 - progressInTens))
+    print(f"Progress: {progressInHundereds:3.0f}% {progressBar}...")
+    
 async def archiveGroup(dialog):
     PATH = f"dialogs"
 
@@ -201,16 +209,20 @@ async def archiveGroup(dialog):
         print(f"Error making the folders/files: {e}")
         exit()
 
-    users                 = set()
-    fileLog               = []
-    messageCounter        = 0
-    fileCounter           = 0
-    gotChatInfo           = False
-    dialogSavedCheckpoint = getCheckpoint(PATH)
+    users                               = set()
+    fileLog                             = []
+    messageCounter                      = 0
+    totalNumberOfMessagegs              = (await client.get_messages(dialog, limit=0)).total
+    hunderedOfTotalNumberOfMessagegs    = max(totalNumberOfMessagegs//100, 1)
+    fileCounter                         = 0
+    gotChatInfo                         = False
+    dialogSavedCheckpoint               = getCheckpoint(PATH)
     if dialogSavedCheckpoint:
-        messageCounter    = dialogSavedCheckpoint[0]
-        fileCounter       = dialogSavedCheckpoint[1]
-        gotChatInfo       = dialogSavedCheckpoint[2]
+        messageCounter                  = dialogSavedCheckpoint[0]
+        fileCounter                     = dialogSavedCheckpoint[1]
+        gotChatInfo                     = dialogSavedCheckpoint[2]
+
+    printProgress(totalNumberOfMessagegs, fileCounter)
 
     try:
         with open(f"{PATH}/Text messages.csv", 'a') as texts, \
@@ -241,6 +253,9 @@ async def archiveGroup(dialog):
                 CSVMessagesWrtier.writerow(messagesRow)
                 messageCounter += 1
 
+                if messageCounter % hunderedOfTotalNumberOfMessagegs == 0:
+                    clearLastLine()
+                    printProgress(totalNumberOfMessagegs, messageCounter)
                 emptyFileLog(fileLog, CSVBigFilessWriter, 100)
 
             if not gotChatInfo:
@@ -248,6 +263,8 @@ async def archiveGroup(dialog):
 
             await usersHandler(users, PATH)
             saveCheckpoint(messageCounter, fileCounter, True, PATH)
+
+            clearLastLine(2)
 
             emptyFileLog(fileLog, CSVBigFilessWriter, 0)
             await bigFilesHandler(fileLog, FILE_PATH, fileCounter, dialog)
@@ -381,9 +398,10 @@ def getCheckpoint(dialogPath):
     except (FileNotFoundError, json.JSONDecodeError):
         return None
 
-def clearLastLine():
+def clearLastLine(numberOfLines = 1):
     # It literally removes the last line in the command prompt
-    print("\033[F\033[K", end="")
+    for _ in range(numberOfLines):
+        print("\033[F\033[K", end="")
 
 async def main():
     print("Started...")
