@@ -147,60 +147,61 @@ async def archiveGroup(dialog, dialogCounter):
 
     if isinstance(dialog.entity, types.User):
         PATH += f"/users/{dialog.id}"
+    elif isinstance(dialog.entity, types.Chat):
+        PATH += f"/chats/{dialog.id}"
     else:
         PATH += f"/groups/{dialog.id}"
 
-    FILE_PATH = f"{PATH}/file"
+    FILE_PATH = f"{PATH}/files"
 
     try:
         os.makedirs (f"{PATH}", exist_ok=True)
         os.makedirs (FILE_PATH, exist_ok=True)
-        texts = open(f"{PATH}/Text messages.csv", 'a')
-        reactions = open(f"{PATH}/Reactions.csv", 'a')
-        CSVMessagesWrtier = csv.writer(texts)
-        CSVReactionsWriter = csv.writer(reactions)
     except OSError as e:
         print(f"Error making the folders/files: {e}")
         exit()
 
-    users = set()
-    fileCounter = 0
-    messageCounter = 0
+    users                 = set()
+    messageCounter        = 0
+    fileCounter           = 0
+    gotChatInfo           = False
     dialogSavedCheckpoint = getCheckpoint(PATH)
-    gotChatInfo = False
     if dialogSavedCheckpoint:
-        messageCounter = dialogSavedCheckpoint[0]
-        fileCounter    = dialogSavedCheckpoint[1]
-        gotChatInfo    = dialogSavedCheckpoint[2]
-
+        messageCounter    = dialogSavedCheckpoint[0]
+        fileCounter       = dialogSavedCheckpoint[1]
+        gotChatInfo       = dialogSavedCheckpoint[2]
 
     try:
-        async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=messageCounter):
-            # for writing into the file at once
-            messagesRow = []
-            messagesRow.append(message.id)
-            
-            await userIdHandler (message, messagesRow, users)
+        with open(f"{PATH}/Text messages.csv", 'a') as texts, open(f"{PATH}/Reactions.csv", 'a') as reactions:
+            CSVMessagesWrtier = csv.writer(texts)
+            CSVReactionsWriter = csv.writer(reactions)
 
-            fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH)
-            
-            await replyHandler (message, messagesRow)
+            async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=messageCounter):
+                # for writing into the file at once
+                messagesRow = []
+                messagesRow.append(message.id)
+                
+                await userIdHandler (message, messagesRow, users)
 
-            await forwardHanlder (message, messagesRow, users)
-            
-            await textHandler (message, messagesRow)
-            
-            await reactionHandler(message, CSVReactionsWriter)
+                fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH)
+                
+                await replyHandler (message, messagesRow)
 
-            messagesRow.append(message.date)
-            CSVMessagesWrtier.writerow(messagesRow)
-            messageCounter += 1
+                await forwardHanlder (message, messagesRow, users)
+                
+                await textHandler (message, messagesRow)
+                
+                await reactionHandler(message, CSVReactionsWriter)
 
-        texts.close()
-        if not gotChatInfo:
-            await getGroupOrChannelInfo(dialog, PATH, users)
-        await usersHandler(users, PATH)
-        saveCheckpoint(messageCounter, fileCounter, True, PATH)
+                messagesRow.append(message.date)
+                CSVMessagesWrtier.writerow(messagesRow)
+                messageCounter += 1
+
+            texts.close()
+            if not gotChatInfo:
+                await getGroupOrChannelInfo(dialog, PATH, users)
+            await usersHandler(users, PATH)
+            saveCheckpoint(messageCounter, fileCounter, True, PATH)
 
 
     except FloodWaitError as e:
@@ -331,7 +332,6 @@ async def main():
     print("Started...")
     os.makedirs("dialogs", exist_ok=True)
     os.makedirs("dialogs/users", exist_ok=True)
-    dialogCounter = 1
 
     async for dialog in client.iter_dialogs():        
         if (input(f"Do you want to check the approximate size of {dialog.name}? (y) ") == 'y'):
@@ -339,10 +339,9 @@ async def main():
 
         if (input(f"Do you want to archive {dialog.name}? (y) ") == 'y'):
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
-                await archiveGroup(dialog, dialogCounter)
+                await archiveGroup(dialog)
             else:
                 print("Error: can't archive this!")
-            dialogCounter += 1
 
         print()
 
