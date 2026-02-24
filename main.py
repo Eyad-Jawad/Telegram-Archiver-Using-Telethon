@@ -15,6 +15,7 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: Handle migration
 # TODO: Add a time estimator
 # TODO: Sticker packs handler
+# TODO: asyncio.to_thread
 
 
 async def userIdHandler(message, messagesRow, users):
@@ -29,32 +30,71 @@ async def userIdHandler(message, messagesRow, users):
     if message.sender_id not in users:
         users.add(message.sender.id)
 
-async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH):
+async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog):
     if not message.file:
-        messagesRow.append(0)
-        messagesRow.append(0)
-        messagesRow.append(0)
+        messagesRow.append(0) # File ID
+        messagesRow.append(0) # File counter (relative ID)
+        messagesRow.append(0) # Big file (flag)
         return 0
-    file = message.file
-    # photos don't work with file id in telethon
-    if message.photo:
-        file = message.photo
 
-    fileName = f"{fileCounter} "
-    if message.file.name:
-        fileName += message.file.name
+    file = getFile(message)
 
     messagesRow.append(file.id)
     messagesRow.append(fileCounter)
     # if the file is bigger than 100mb, don't download it
     if message.photo or file.size < (1024 ** 2) * 100:
-        await message.download_media(file=f"{FILE_PATH}/{fileName}")
+        await downloadFile(message, FILE_PATH, fileCounter)
         messagesRow.append(0)
     else: 
         # keep log of files not downloaded
-        await message.forward_to("me")
+        fileLog.append(message.id)
         messagesRow.append(1)
     return 1
+
+async def bigFilesHandler(FILE_PATH, fileCounter, dialog):
+    fileLog = []
+    with open(f"{FILE_PATH}/BigFiles.csv", newline='', encoding="utf-8") as f:
+        CSVReader = csv.reader(f)
+        fileLog = list(CSVReader)
+            
+    if len(fileLog) == 0: return
+    answer = input(f"Do you want to download big files 100mb+? there are {len(fileLog)} of them? (y) ")
+    if answer != 'y':
+        clearLastLine()
+        return
+    clearLastLine()
+
+    index = 0
+    for fileID in fileLog:
+        message = await client.get_messages(dialog, ids=fileID)
+
+        print(f"{index}/{len(fileLog)} : {message.file.size / (1024 ** 2):.2f}MB", end='\r')
+
+        await downloadFile(message, FILE_PATH, fileCounter)
+        fileCounter += 1
+        index += 1
+
+async def downloadFile(message, FILE_PATH, fileCounter):
+    file = getFile(message)
+    fileName = f"{fileCounter} "
+
+    if message.photo:
+        fileName += ".jpg"
+    elif file.name:
+        fileName += file.name 
+
+    await message.download_media(file=f"{FILE_PATH}/{fileName}")
+
+def getFile(message):
+    file = message.file
+    # photos don't work with file id in telethon
+    if message.photo:
+        file = message.photo
+    return file
+
+def emptyFileLog(fileLog, CSVBigFilesWriter, threshold):
+    if len(fileLog) >= threshold:
+        CSVBigFilesWriter.write_rows(fileLog)
 
 async def replyHandler(message, messagesRow):
     # check if this message is a reply to another
@@ -142,7 +182,7 @@ async def reactionHandler(message, CSVReactionsWriter):
         reactionsRow.append(peerId)
     CSVReactionsWriter.writerow(reactionsRow)
 
-async def archiveGroup(dialog, dialogCounter):
+async def archiveGroup(dialog):
     PATH = f"dialogs"
 
     if isinstance(dialog.entity, types.User):
@@ -162,6 +202,7 @@ async def archiveGroup(dialog, dialogCounter):
         exit()
 
     users                 = set()
+    fileLog               = []
     messageCounter        = 0
     fileCounter           = 0
     gotChatInfo           = False
@@ -172,9 +213,12 @@ async def archiveGroup(dialog, dialogCounter):
         gotChatInfo       = dialogSavedCheckpoint[2]
 
     try:
-        with open(f"{PATH}/Text messages.csv", 'a') as texts, open(f"{PATH}/Reactions.csv", 'a') as reactions:
+        with open(f"{PATH}/Text messages.csv", 'a') as texts, \
+             open(f"{PATH}/Reactions.csv", 'a') as reactions, \
+             open(f"{FILE_PATH}/BigFiles.csv", 'w') as fileLogStream:
             CSVMessagesWrtier = csv.writer(texts)
             CSVReactionsWriter = csv.writer(reactions)
+            CSVBigFilessWriter = csv.writer(fileLogStream)
 
             async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=messageCounter):
                 # for writing into the file at once
@@ -183,7 +227,7 @@ async def archiveGroup(dialog, dialogCounter):
                 
                 await userIdHandler (message, messagesRow, users)
 
-                fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH)
+                fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH, fileLog)
                 
                 await replyHandler (message, messagesRow)
 
@@ -197,12 +241,16 @@ async def archiveGroup(dialog, dialogCounter):
                 CSVMessagesWrtier.writerow(messagesRow)
                 messageCounter += 1
 
-            texts.close()
+                emptyFileLog(fileLog, CSVBigFilessWriter, 100)
+
             if not gotChatInfo:
                 await getGroupOrChannelInfo(dialog, PATH, users)
+
             await usersHandler(users, PATH)
             saveCheckpoint(messageCounter, fileCounter, True, PATH)
 
+            emptyFileLog(fileLog, CSVBigFilessWriter, 0)
+            await bigFilesHandler(fileLog, FILE_PATH, fileCounter, dialog)
 
     except FloodWaitError as e:
         print(f"You've been rate limited for {e.seconds}s")
@@ -333,6 +381,10 @@ def getCheckpoint(dialogPath):
     except (FileNotFoundError, json.JSONDecodeError):
         return None
 
+def clearLastLine():
+    # It literally removes the last line in the command prompt
+    print("\033[F\033[K", end="")
+
 async def main():
     print("Started...")
     os.makedirs("dialogs", exist_ok=True)
@@ -341,6 +393,8 @@ async def main():
     async for dialog in client.iter_dialogs():        
         if (input(f"Do you want to check the approximate size of {dialog.name}? (y) ") == 'y'):
             await calculateDialogSpace(dialog)
+        
+        clearLastLine()
 
         if (input(f"Do you want to archive {dialog.name}? (y) ") == 'y'):
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
@@ -348,7 +402,7 @@ async def main():
             else:
                 print("Error: can't archive this!")
 
-        print()
+        clearLastLine()
 
 with client:
     client.loop.run_until_complete(main())
