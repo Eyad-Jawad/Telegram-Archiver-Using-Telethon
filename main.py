@@ -8,7 +8,7 @@ API_ID = os.getenv("TELEGRAM_API_KEY")
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
-# FIXME: something is wrong with the reaction handler
+# FIXME: something is wrong with the reaction handler : via GetMessageReactionsListRequest
 # FIXME: Users info may be duplicated
 # TODO: Make a config class
 # TODO: Outside dialog reply handler
@@ -156,21 +156,30 @@ async def textHandler(message, messagesRow):
 async def reactionHandler(message, CSVReactionsWriter):
     reactions = message.reactions
     if not reactions: return
-    reactionsRow = [message.id]
+    result = []
 
     # For channels
     if not reactions.can_see_list:
         for react in reactions.results or []:
-            reactionsRow.append(react.reaction)
-            reactionsRow.append(react.count)
-        CSVReactionsWriter.writerow(reactionsRow)
+            reactionsRow = [
+                message.id,
+                react.reaction,
+                react.count
+            ]
+
+            result.append(reactionsRow)
+
+        CSVReactionsWriter.writerows(result)
         return
 
     # FIXME: here, to be exact
     # For groups or chats
     for react in reactions.recent_reactions or []:
-        reactionsRow.append(react.reaction.emoticon)
-        reactionsRow.append(react.date)
+        reactionsRow = [
+            message.id,
+            react.reaction.emoticon,
+            react.date
+        ]
         peerId = None
         if isinstance(react.peer_id, types.PeerUser):
             peerId = react.peer_id.user_id
@@ -179,7 +188,22 @@ async def reactionHandler(message, CSVReactionsWriter):
         elif isinstance(react.peer_id, types.PeerChat):
             peerId = react.peer_id.chat_id
         reactionsRow.append(peerId)
-    CSVReactionsWriter.writerow(reactionsRow)
+
+        result.append(reactionsRow)
+    CSVReactionsWriter.writerows(result)
+
+def formatETA(seconds):
+    seconds = int(seconds)
+
+    h = seconds // 3600
+    m = (seconds % 3600) // 60
+    s = seconds % 60
+
+    if h:
+        return f"{h}h {m}m {s}s"
+    if m:
+        return f"{m}m {s}s"
+    return f"{s}s"
 
 def printProgress(totalNumber, currentNumber):
     if totalNumber <= 0:
@@ -191,15 +215,18 @@ def printProgress(totalNumber, currentNumber):
     progressBar     = ('█' * progressInTens + '░' * (10 - progressInTens))
     print(f"Progress: {progressPercent:3.0f}% {progressBar}...")
 
-def printProgressStatus(totalTimeStart, messageCounter, sizeInMB):
-    elapsedTime = time.perf_counter() - totalTimeStart
-    messageRate = messageCounter / elapsedTime if elapsedTime > 0 else 0
+def printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages):
+    elapsedTime   = time.perf_counter() - totalTimeStart
+    messageRate   = messageCounter / elapsedTime if elapsedTime > 0 else 0
+    remainingTime =  (totalNumberOfMessages - messageCounter) / messageRate if messageRate > 0 else 0
+    ETA           = formatETA(remainingTime)
 
     status = (
         f"Message {messageCounter:8} | "
         f"{elapsedTime:8.3f}s | "
         f"{sizeInMB:8.3f}MB | "
-        f"{messageRate:8.3f}msg/s"
+        f"{messageRate:8.3f}msg/s | "
+        f"ETA: {ETA:>10}"
     )
 
     print(status)
@@ -369,7 +396,7 @@ async def calculateDialogSpace(dialog):
     messageCounter         = 0
     totalTimeStart         = time.perf_counter()
     try:
-        printProgressStatus(totalTimeStart, messageCounter, sizeInMB)
+        printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
         printProgress(totalNumberOfMessages, messageCounter)
 
         async for message in client.iter_messages(dialog.entity):
@@ -377,7 +404,7 @@ async def calculateDialogSpace(dialog):
 
             if messageCounter % totalMessagesPercent == 0:
                 clearLastLine(2)
-                printProgressStatus(totalTimeStart, messageCounter, sizeInMB)
+                printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
                 printProgress(totalNumberOfMessages, messageCounter)
 
             if not message.file: pass
