@@ -28,7 +28,7 @@ async def userIdHandler(message, messagesRow, users):
     messagesRow.append(message.sender_id)
     # check if the sender is not saved
     if message.sender_id not in users:
-        users.add(message.sender.id)
+        users.add(message.sender_id)
 
 async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog):
     if not message.file:
@@ -45,11 +45,11 @@ async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog):
     if message.photo or file.size < (1024 ** 2) * 100:
         await downloadFile(message, FILE_PATH, fileCounter)
         messagesRow.append(0)
-    else: 
-        # keep log of files not downloaded
-        fileLog.append(message.id)
-        messagesRow.append(1)
-    return 1
+        return 1
+    # keep log of files not downloaded
+    fileLog.append(message.id)
+    messagesRow.append(1)
+    return 0
 
 async def bigFilesHandler(FILE_PATH, fileCounter, dialog):
     fileLog = []
@@ -65,8 +65,8 @@ async def bigFilesHandler(FILE_PATH, fileCounter, dialog):
     clearLastLine()
 
     index = 0
-    for fileID in fileLog:
-        message = await client.get_messages(dialog, ids=fileID)
+    for messageId in fileLog:
+        message = await client.get_messages(dialog, ids=messageId)
 
         print(f"{index}/{len(fileLog)} : {message.file.size / (1024 ** 2):.2f}MB", end='\r')
 
@@ -94,7 +94,7 @@ def getFile(message):
 
 def emptyFileLog(fileLog, CSVBigFilesWriter, threshold):
     if len(fileLog) >= threshold:
-        CSVBigFilesWriter.write_rows(fileLog)
+        CSVBigFilesWriter.writerows(fileLog)
 
 async def replyHandler(message, messagesRow):
     # check if this message is a reply to another
@@ -183,23 +183,32 @@ async def reactionHandler(message, CSVReactionsWriter):
     CSVReactionsWriter.writerow(reactionsRow)
 
 def printProgress(totalNumber, currentNumber):
-    whiteBlock              = '█'
-    greyBlock               = '░'
-    progressPercent         = currentNumber / totalNumber * 100
-    progressInTens          = int (progressPercent // 10)
-    progressBar             = (whiteBlock * progressInTens + greyBlock * (10 - progressInTens))
+    if totalNumber <= 0:
+        print("Progress: N/A")
+        return
+
+    progressPercent = currentNumber / totalNumber * 100
+    progressInTens  = int (progressPercent // 10)
+    progressBar     = ('█' * progressInTens + '░' * (10 - progressInTens))
     print(f"Progress: {progressPercent:3.0f}% {progressBar}...")
 
 def printProgressStatus(totalTimeStart, messageCounter, sizeInMB):
     elapsedTime = time.perf_counter() - totalTimeStart
+    messageRate = messageCounter / elapsedTime if elapsedTime > 0 else 0
 
     status = (
         f"Message {messageCounter:8} | "
         f"{elapsedTime:8.3f}s | "
-        f"{sizeInMB:8.3f}MB"
+        f"{sizeInMB:8.3f}MB | "
+        f"{messageRate:8.3f}msg/s"
     )
 
     print(status)
+
+async def handleFloodWait(error):
+    print(f"You've been rate limited for {error.seconds}s")
+    await asyncio.sleep(error.seconds)
+    clearLastLine()    
 
 async def archiveGroup(dialog):
     PATH = f"dialogs"
@@ -220,20 +229,20 @@ async def archiveGroup(dialog):
         print(f"Error making the folders/files: {e}")
         exit()
 
-    users                               = set()
-    fileLog                             = []
-    messageCounter                      = 0
-    totalNumberOfMessagegs              = (await client.get_messages(dialog, limit=0)).total
-    hunderedOfTotalNumberOfMessagegs    = max(totalNumberOfMessagegs//100, 1)
-    fileCounter                         = 0
-    gotChatInfo                         = False
-    dialogSavedCheckpoint               = getCheckpoint(PATH)
+    users                    = set()
+    fileLog                  = []
+    messageCounter           = 0
+    totalNumberOfMessages    = (await client.get_messages(dialog, limit=0)).total
+    totalMessagesPercent     = max(totalNumberOfMessages//100, 1)
+    fileCounter              = 0
+    gotChatInfo              = False
+    dialogSavedCheckpoint    = getCheckpoint(PATH)
     if dialogSavedCheckpoint:
-        messageCounter                  = dialogSavedCheckpoint[0]
-        fileCounter                     = dialogSavedCheckpoint[1]
-        gotChatInfo                     = dialogSavedCheckpoint[2]
+        messageCounter       = dialogSavedCheckpoint[0]
+        fileCounter          = dialogSavedCheckpoint[1]
+        gotChatInfo          = dialogSavedCheckpoint[2]
 
-    printProgress(totalNumberOfMessagegs, fileCounter)
+    printProgress(totalNumberOfMessages, fileCounter)
 
     try:
         with open(f"{PATH}/Text messages.csv", 'a') as texts, \
@@ -264,9 +273,9 @@ async def archiveGroup(dialog):
                 CSVMessagesWrtier.writerow(messagesRow)
                 messageCounter += 1
 
-                if messageCounter % hunderedOfTotalNumberOfMessagegs == 0:
+                if messageCounter % totalMessagesPercent == 0:
                     clearLastLine()
-                    printProgress(totalNumberOfMessagegs, messageCounter)
+                    printProgress(totalNumberOfMessages, messageCounter)
                 emptyFileLog(fileLog, CSVBigFilessWriter, 100)
 
             if not gotChatInfo:
@@ -278,11 +287,10 @@ async def archiveGroup(dialog):
             clearLastLine(2)
 
             emptyFileLog(fileLog, CSVBigFilessWriter, 0)
-            await bigFilesHandler(fileLog, FILE_PATH, fileCounter, dialog)
+            await bigFilesHandler(FILE_PATH, fileCounter, dialog)
 
     except FloodWaitError as e:
-        print(f"You've been rate limited for {e.seconds}s")
-        await asyncio.sleep(e.seconds)
+        await handleFloodWait(e)
         saveCheckpoint(messageCounter, fileCounter, False, PATH)
     except Exception as e:
         print(f"An error {e} occurred at message {messageCounter}")
@@ -356,30 +364,30 @@ async def getUserInfo(userId):
     await getPhotoInfo(user, filePath)
 
 async def calculateDialogSpace(dialog):
-    totalNumberOfMessagegs              = (await client.get_messages(dialog, limit=0)).total
-    hunderedOfTotalNumberOfMessagegs    = max(totalNumberOfMessagegs//100, 1)
-    sizeInMB                            = 0
-    messageCounter                      = 0
-    totalTimeStart                      = time.perf_counter()
+    totalNumberOfMessages  = (await client.get_messages(dialog, limit=0)).total
+    totalMessagesPercent   = max(totalNumberOfMessages//100, 1)
+    sizeInMB               = 0
+    messageCounter         = 0
+    totalTimeStart         = time.perf_counter()
     try:
         printProgressStatus(totalTimeStart, messageCounter, sizeInMB)
-        printProgress(totalNumberOfMessagegs, messageCounter)
+        printProgress(totalNumberOfMessages, messageCounter)
+
         async for message in client.iter_messages(dialog.entity):
             messageCounter += 1
 
-            if messageCounter % hunderedOfTotalNumberOfMessagegs == 0:
+            if messageCounter % totalMessagesPercent == 0:
                 clearLastLine(2)
                 printProgressStatus(totalTimeStart, messageCounter, sizeInMB)
-                printProgress(totalNumberOfMessagegs, messageCounter)
+                printProgress(totalNumberOfMessages, messageCounter)
+
             if not message.file: pass
             else: sizeInMB += message.file.size/(1024 ** 2)
 
         print(f"Dialog {dialog.title} will take about {sizeInMB:.3f}MB")
 
     except FloodWaitError as e:
-        print(f"You've been rate limited for {e.seconds}s")
-        await asyncio.sleep(e.seconds)
-        clearLastLine()
+        await handleFloodWait(e)
 
     clearLastLine(2)
     print(f"It had taken {time.perf_counter() - totalTimeStart:.3f}s")
