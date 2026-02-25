@@ -41,7 +41,7 @@ async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog):
     messagesRow.append(file.id)
     messagesRow.append(fileCounter)
     # if the file is bigger than 100mb, don't download it
-    if message.photo or file.size < (1024 ** 2) * 100:
+    if message.file.size < (1024 ** 2) * 100:
         await downloadFile(message, FILE_PATH, fileCounter)
         messagesRow.append(0)
         return 1
@@ -89,6 +89,7 @@ def getFile(message):
     # photos don't work with file id in telethon
     if message.photo:
         file = message.photo
+
     return file
 
 def emptyFileLog(fileLog, CSVBigFilesWriter, threshold):
@@ -210,23 +211,30 @@ def printProgress(totalNumber, currentNumber):
         print("Progress: N/A")
         return
 
-    progressPercent = currentNumber / totalNumber * 100
+    progressPercent = min(currentNumber / totalNumber * 100, 100)
     progressInTens  = int (progressPercent // 10)
     progressBar     = ('█' * progressInTens + '░' * (10 - progressInTens))
     print(f"Progress: {progressPercent:3.0f}% {progressBar}...")
 
 def printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages):
-    elapsedTime   = time.perf_counter() - totalTimeStart
-    messageRate   = messageCounter / elapsedTime if elapsedTime > 0 else 0
-    remainingTime =  (totalNumberOfMessages - messageCounter) / messageRate if messageRate > 0 else 0
-    ETA           = formatETA(remainingTime)
+    elapsedTime                 = time.perf_counter() - totalTimeStart
+    messageRate                 = 0
+    downloadRate                = 0
+    remainingTime               = 0
+    if elapsedTime > 0:
+        messageRate             = messageCounter / elapsedTime
+        downloadRate            = sizeInMB / elapsedTime
+        if messageRate > 0:
+            remainingTime       =  (totalNumberOfMessages - messageCounter) / messageRate
+    ETA                         = formatETA(remainingTime)
 
     status = (
-        f"Message {messageCounter:8} | "
-        f"{elapsedTime:8.3f}s | "
-        f"{sizeInMB:8.3f}MB | "
-        f"{messageRate:8.3f}msg/s | "
-        f"ETA: {ETA:>10}"
+        f"Message {messageCounter:^8} | "
+        f"{elapsedTime:^8.3f}s | "
+        f"{sizeInMB:^8.3f}MB | "
+        f"{messageRate:^8.3f}msg/s | "
+        f"{downloadRate:^8.3f}MB/s | "
+        f"ETA: {ETA:^10}"
     )
 
     print(status)
@@ -255,6 +263,9 @@ async def archiveGroup(dialog):
         print(f"Error making the folders/files: {e}")
         exit()
 
+    bytesToMBRatio           = 1024 ** 2
+    sizeInMB                 = 0
+    totalTimeStart           = time.perf_counter()
     users                    = set()
     fileLog                  = []
     messageCounter           = 0
@@ -269,6 +280,7 @@ async def archiveGroup(dialog):
         gotChatInfo          = dialogSavedCheckpoint[2]
 
     printProgress(totalNumberOfMessages, fileCounter)
+    printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
 
     try:
         with open(f"{PATH}/Text messages.csv", 'a') as texts, \
@@ -298,9 +310,12 @@ async def archiveGroup(dialog):
                 messagesRow.append(message.date)
                 CSVMessagesWrtier.writerow(messagesRow)
                 messageCounter += 1
+                if message.file:
+                    sizeInMB += message.file.size / bytesToMBRatio
 
                 if messageCounter % totalMessagesPercent == 0:
-                    clearLastLine()
+                    clearLastLine(2)
+                    printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
                     printProgress(totalNumberOfMessages, messageCounter)
                 emptyFileLog(fileLog, CSVBigFilessWriter, 100)
 
@@ -310,10 +325,11 @@ async def archiveGroup(dialog):
             await usersHandler(users, PATH)
             saveCheckpoint(messageCounter, fileCounter, True, PATH)
 
-            clearLastLine(2)
+            clearLastLine(3)
 
             emptyFileLog(fileLog, CSVBigFilessWriter, 0)
             await bigFilesHandler(FILE_PATH, fileCounter, dialog)
+            print(f"Done archiving {dialog.name}!")
 
     except FloodWaitError as e:
         await handleFloodWait(e)
@@ -390,6 +406,7 @@ async def getUserInfo(userId):
     await getPhotoInfo(user, filePath)
 
 async def calculateDialogSpace(dialog):
+    bytesToMBRatio         = 1024 ** 2
     totalNumberOfMessages  = (await client.get_messages(dialog, limit=0)).total
     totalMessagesPercent   = max(totalNumberOfMessages//100, 1)
     sizeInMB               = 0
@@ -406,11 +423,10 @@ async def calculateDialogSpace(dialog):
                 clearLastLine(2)
                 printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
                 printProgress(totalNumberOfMessages, messageCounter)
+                
+            if message.file: sizeInMB += message.file.size / bytesToMBRatio
 
-            if not message.file: pass
-            else: sizeInMB += message.file.size/(1024 ** 2)
-
-        clearLastLine(2)
+        clearLastLine(3)
         print(f"Dialog {dialog.title} will take about {sizeInMB:.3f}MB")
 
     except FloodWaitError as e:
@@ -442,8 +458,7 @@ def getCheckpoint(dialogPath):
 def clearLastLine(numberOfLines = 1):
     # It literally removes the last line in the command prompt
     for _ in range(numberOfLines):
-        print("\033[F\033[K", end="")
-
+        print("\033[F\033[K", end='')
 async def main():
     print("Started...")
     os.makedirs("dialogs", exist_ok=True)
@@ -452,6 +467,7 @@ async def main():
     async for dialog in client.iter_dialogs():        
         if (input(f"Do you want to check the approximate size of {dialog.name}? (y) ") == 'y'):
             clearLastLine()
+            print(f"Calculating the size of {dialog.name}...")
             await calculateDialogSpace(dialog)
         else:
             clearLastLine()
@@ -459,6 +475,7 @@ async def main():
         if (input(f"Do you want to archive {dialog.name}? (y) ") == 'y'):
             clearLastLine()
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
+                print(f"Archiving {dialog.name}...")
                 await archiveGroup(dialog)
             else:
                 print("Error: can't archive this!")
