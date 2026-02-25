@@ -8,7 +8,6 @@ API_ID = os.getenv("TELEGRAM_API_KEY")
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
-# FIXME: something is wrong with the reaction handler : via GetMessageReactionsListRequest
 # FIXME: Users info may be duplicated
 # TODO: Make a config class
 # TODO: Outside dialog reply handler
@@ -154,7 +153,50 @@ async def textHandler(message, messagesRow):
     else: 
         messagesRow.append("")
 
-async def reactionHandler(message, CSVReactionsWriter):
+async def getReactionList(dialog, message):
+    id = message.id
+    offset = None
+
+    reactions = []
+    while True:
+        request = await client (
+            functions.messages.GetMessageReactionsListRequest(
+                peer=dialog,
+                id=id,
+                reaction=None,
+                limit=100,
+                offset=offset
+            )
+        )
+        result = request.reactions
+
+        for react in result:
+            reaction = [message.id]        
+            peerId = None
+
+            if isinstance(react.peer_id, types.PeerUser):
+                peerId = react.peer_id.user_id
+
+            elif isinstance(react.peer_id, types.PeerChannel):
+                peerId = react.peer_id.channel_id
+
+            elif isinstance(react.peer_id, types.PeerChat):
+                peerId = react.peer_id.chat_id
+
+            reaction.append(peerId)
+            reaction.append(react.date)
+            reaction.append(react.reaction.emoticon)
+
+            reactions.append(reaction)
+
+        if not request.next_offset:
+            break
+
+        offset = request.next_offset
+
+    return reactions
+
+async def reactionHandler(message, CSVReactionsWriter, dialog):
     reactions = message.reactions
     if not reactions: return
     result = []
@@ -173,24 +215,8 @@ async def reactionHandler(message, CSVReactionsWriter):
         CSVReactionsWriter.writerows(result)
         return
 
-    # FIXME: here, to be exact
     # For groups or chats
-    for react in reactions.recent_reactions or []:
-        reactionsRow = [
-            message.id,
-            react.reaction.emoticon,
-            react.date
-        ]
-        peerId = None
-        if isinstance(react.peer_id, types.PeerUser):
-            peerId = react.peer_id.user_id
-        elif isinstance(react.peer_id, types.PeerChannel):
-            peerId = react.peer_id.channel_id
-        elif isinstance(react.peer_id, types.PeerChat):
-            peerId = react.peer_id.chat_id
-        reactionsRow.append(peerId)
-
-        result.append(reactionsRow)
+    result = await getReactionList(dialog, message)
     CSVReactionsWriter.writerows(result)
 
 def formatETA(seconds):
@@ -244,6 +270,16 @@ async def handleFloodWait(error):
     await asyncio.sleep(error.seconds)
     clearLastLine()    
 
+def handleError(dialog, error, messageCounter, fileCounter, PATH, savedDialogInfo):
+    if messageCounter and fileCounter and PATH:
+        saveCheckpoint(messageCounter, fileCounter, savedDialogInfo, PATH)
+    with open("dialogs/erros.txt", 'a') as f:
+        f.write(
+            f"Error occured in {dialog} "
+            f"at message {messageCounter}:\n"
+            f"{error}\n\n"
+        )
+
 async def archiveGroup(dialog):
     PATH = f"dialogs"
 
@@ -260,8 +296,7 @@ async def archiveGroup(dialog):
         os.makedirs (f"{PATH}", exist_ok=True)
         os.makedirs (FILE_PATH, exist_ok=True)
     except OSError as e:
-        print(f"Error making the folders/files: {e}")
-        exit()
+        handleError(dialog.name, e, 0, 0, 0, False)
 
     bytesToMBRatio           = 1024 ** 2
     sizeInMB                 = 0
@@ -305,7 +340,7 @@ async def archiveGroup(dialog):
                 
                 await textHandler (message, messagesRow)
                 
-                await reactionHandler(message, CSVReactionsWriter)
+                await reactionHandler(message, CSVReactionsWriter, dialog)
 
                 messagesRow.append(message.date)
                 CSVMessagesWrtier.writerow(messagesRow)
@@ -332,11 +367,10 @@ async def archiveGroup(dialog):
             print(f"Done archiving {dialog.name}!")
 
     except FloodWaitError as e:
+        handleError(dialog.name, e, messageCounter, fileCounter, PATH, False)
         await handleFloodWait(e)
-        saveCheckpoint(messageCounter, fileCounter, False, PATH)
     except Exception as e:
-        print(f"An error {e} occurred at message {messageCounter}")
-        saveCheckpoint(messageCounter, fileCounter, False, PATH)
+        handleError(dialog.name, e, messageCounter, fileCounter, PATH, False)
 
 async def getGroupOrChannelInfo(dialog, PATH, users):
     dialog = dialog.entity    
@@ -377,7 +411,7 @@ async def addUsersToSet(dialog, users):
             if user.id not in users:
                 users.add(user.id)
     except (ChatAdminRequiredError, ChannelPrivateError, Exception) as e:
-        return users.add(f"Exception: {e}")
+        handleError(dialog.name, e, 0, 0, 0, False)
 
 async def usersHandler(users, path):
     with open(f"{path}/users.csv", 'w') as f:
@@ -397,8 +431,10 @@ async def getUserInfo(userId):
     try:
         os.mkdir(filePath)
     except OSError:
+        handleError("N/A", e, 0, 0, 0, False)
         return
     except Exception as e:
+        handleError("N/A", e, 0, 0, 0, False)
         print(f"Error occurred while trying to archive users:\n{e}")
         return
     
@@ -430,6 +466,7 @@ async def calculateDialogSpace(dialog):
         print(f"Dialog {dialog.title} will take about {sizeInMB:.3f}MB")
 
     except FloodWaitError as e:
+        handleError(dialog.name, e, 0, 0, 0, False)
         await handleFloodWait(e)
 
 def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath):
