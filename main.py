@@ -185,11 +185,22 @@ async def reactionHandler(message, CSVReactionsWriter):
 def printProgress(totalNumber, currentNumber):
     whiteBlock              = '█'
     greyBlock               = '░'
-    progressInHundereds     = currentNumber / totalNumber * 100
-    progressInTens          = int (progressInHundereds // 10)
+    progressPercent         = currentNumber / totalNumber * 100
+    progressInTens          = int (progressPercent // 10)
     progressBar             = (whiteBlock * progressInTens + greyBlock * (10 - progressInTens))
-    print(f"Progress: {progressInHundereds:3.0f}% {progressBar}...")
-    
+    print(f"Progress: {progressPercent:3.0f}% {progressBar}...")
+
+def printProgressStatus(totalTimeStart, messageCounter, sizeInMB):
+    elapsedTime = time.perf_counter() - totalTimeStart
+
+    status = (
+        f"Message {messageCounter:8} | "
+        f"{elapsedTime:8.3f}s | "
+        f"{sizeInMB:8.3f}MB"
+    )
+
+    print(status)
+
 async def archiveGroup(dialog):
     PATH = f"dialogs"
 
@@ -345,24 +356,21 @@ async def getUserInfo(userId):
     await getPhotoInfo(user, filePath)
 
 async def calculateDialogSpace(dialog):
-    sizeInMB       = 0
-    messageCounter = 0
-    totalTimeStart = time.perf_counter()
+    totalNumberOfMessagegs              = (await client.get_messages(dialog, limit=0)).total
+    hunderedOfTotalNumberOfMessagegs    = max(totalNumberOfMessagegs//100, 1)
+    sizeInMB                            = 0
+    messageCounter                      = 0
+    totalTimeStart                      = time.perf_counter()
     try:
+        printProgressStatus(totalTimeStart, messageCounter, sizeInMB)
+        printProgress(totalNumberOfMessagegs, messageCounter)
         async for message in client.iter_messages(dialog.entity):
             messageCounter += 1
 
-            if not messageCounter % 1_000:
-                elapsedTime = time.perf_counter() - totalTimeStart
-
-                status = (
-                    f"Message {messageCounter:8} | "
-                    f"{elapsedTime:8.3f}s | "
-                    f"{sizeInMB:8.3f}MB"
-                )
-
-                print(status, end='\r')
-
+            if messageCounter % hunderedOfTotalNumberOfMessagegs == 0:
+                clearLastLine(2)
+                printProgressStatus(totalTimeStart, messageCounter, sizeInMB)
+                printProgress(totalNumberOfMessagegs, messageCounter)
             if not message.file: pass
             else: sizeInMB += message.file.size/(1024 ** 2)
 
@@ -371,7 +379,9 @@ async def calculateDialogSpace(dialog):
     except FloodWaitError as e:
         print(f"You've been rate limited for {e.seconds}s")
         await asyncio.sleep(e.seconds)
+        clearLastLine()
 
+    clearLastLine(2)
     print(f"It had taken {time.perf_counter() - totalTimeStart:.3f}s")
     print(f"Total size of the chat: {sizeInMB:.3f}mb")
 
