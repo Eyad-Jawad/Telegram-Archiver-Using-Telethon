@@ -13,7 +13,6 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: Make a config class
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
-# TODO: Add a time estimator
 # TODO: Sticker packs handler
 # TODO: asyncio.to_thread
 
@@ -384,14 +383,11 @@ async def calculateDialogSpace(dialog):
             if not message.file: pass
             else: sizeInMB += message.file.size/(1024 ** 2)
 
+        clearLastLine(2)
         print(f"Dialog {dialog.title} will take about {sizeInMB:.3f}MB")
 
     except FloodWaitError as e:
         await handleFloodWait(e)
-
-    clearLastLine(2)
-    print(f"It had taken {time.perf_counter() - totalTimeStart:.3f}s")
-    print(f"Total size of the chat: {sizeInMB:.3f}mb")
 
 def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath):
     dialog = {}
@@ -428,17 +424,19 @@ async def main():
 
     async for dialog in client.iter_dialogs():        
         if (input(f"Do you want to check the approximate size of {dialog.name}? (y) ") == 'y'):
+            clearLastLine()
             await calculateDialogSpace(dialog)
-        
-        clearLastLine()
+        else:
+            clearLastLine()
 
         if (input(f"Do you want to archive {dialog.name}? (y) ") == 'y'):
+            clearLastLine()
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
                 await archiveGroup(dialog)
             else:
                 print("Error: can't archive this!")
-
-        clearLastLine()
+        else:
+            clearLastLine()
 
 with client:
     client.loop.run_until_complete(main())
