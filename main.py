@@ -13,7 +13,6 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
 # TODO: Sticker packs handler
-# TODO: asyncio.to_thread
 # TODO: forwarded from Pic
 # TODO: Handle keyboard interrupt
 # TODO: stories
@@ -70,7 +69,7 @@ async def bigFilesHandler(FILE_PATH, fileCounter, dialog):
         fileLog = list(CSVReader)
             
     if len(fileLog) == 0: return
-    answer = input(f"Do you want to download big files 100mb+? there are {len(fileLog)} of them? (y) ")
+    answer = await asyncio.to_thread(input, f"Do you want to download big files 100mb+? there are {len(fileLog)} of them? (y) ")
     if answer != 'y':
         clearLastLine()
         return
@@ -557,15 +556,16 @@ async def main():
     os.makedirs("dialogs", exist_ok=True)
     os.makedirs("dialogs/users", exist_ok=True)
 
-    async for dialog in client.iter_dialogs():        
-        if (input(f"Do you want to check the approximate size of {dialog.name}? (y) ") == 'y'):
+    async for dialog in client.iter_dialogs():
+        ans = await asyncio.to_thread(input, f"Do you want to check the approximate size of {dialog.name}? (y) ")
+        if (ans == 'y'):
             clearLastLine()
             print(f"Calculating the size of {dialog.name}...")
             await calculateDialogSpace(dialog)
         else:
             clearLastLine()
-
-        if (input(f"Do you want to archive {dialog.name}? (y) ") == 'y'):
+        ans = await asyncio.to_thread(input, f"Do you want to archive {dialog.name}? (y) ")
+        if (ans == 'y'):
             clearLastLine()
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
                 print(f"Archiving {dialog.name}...")
