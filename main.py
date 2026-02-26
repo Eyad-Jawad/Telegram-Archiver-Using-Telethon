@@ -18,6 +18,7 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: special emoticon
 # TODO: edit date
 # TODO: reverse the process (GUI)
+# TODO: Save users when exiting ctrl+c
 
 @dataclass ()
 class Config:
@@ -390,6 +391,13 @@ async def archiveGroup(dialog, config: Config):
         clearLastLine(3)
         print("Please wait a moment while the saving the checkpoint")
         saveCheckpoint(messageCounter, fileCounter, gotChatInfo, PATH)
+
+        if config.userInfo:
+            with open(f"{PATH}/Users.csv", 'w') as f:
+                CSVUserWriter = csv.writer(f)
+                for user in users:
+                    CSVUserWriter.writerow([user])
+
         clearLastLine()
         print("Done!")
         exit(0)
@@ -439,11 +447,20 @@ async def addUsersToSet(dialog, users):
 
 async def usersHandler(users, path):
     if not users: return
+    try:
+        with open(f"{path}/Users.csv", 'r', newline='', encoding='utf-8') as f:
+            CSVReader = csv.reader(f)
+            readUsers = list(CSVReader)
+            for user in readUsers:
+                if user not in users:
+                    users.add(int(user))
 
-    with open(f"{path}/Users.csv", 'w') as f:
-        CSVWriter = csv.writer(f)
-        row = list(users)
-        CSVWriter.writerows(row)
+        with open(f"{path}/Users.csv", 'w') as f:
+            CSVWriter = csv.writer(f)
+            row = list(users)
+            CSVWriter.writerows(row)
+    except OSError as e:
+        handleError("N/A", e, 0 ,0, 0, False)
 
     for user in users:
         if isinstance(user, int):
