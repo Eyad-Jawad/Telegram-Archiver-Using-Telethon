@@ -129,4 +129,4 @@ This project did take a good chunk of time to finish, or at least get it to work
 I also learnt a good bite of error handling, while it is not sublime, error handling is good here.  
 I'd like to add a way to reverse the process and get a GUI out of it, I've seen that on discord archivers, I'd also want to add a way to compress stuff, like files, or at least do something about them because they take A LOT of space.  
 All in all, I'm pretty much satisfied with this project, it took me about 50h? idk, but I do feel like I'm missing some features.  
-- Eyad.
+Thank you for reading -Eyad.
