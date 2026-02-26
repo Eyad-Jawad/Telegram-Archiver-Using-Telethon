@@ -1,7 +1,8 @@
-import json, asyncio, os, csv, time
+import json, asyncio, os, csv, time, argparse
 from telethon import TelegramClient, functions, types
 from telethon.errors import FloodWaitError, ChatAdminRequiredError, ChannelPrivateError
 from telethon.tl import types
+from dataclasses import dataclass
 
 # Get the API keys
 API_ID = os.getenv("TELEGRAM_API_KEY")
@@ -9,12 +10,25 @@ API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
 # FIXME: Users info may be duplicated
-# TODO: Make a config class
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
 # TODO: Sticker packs handler
 # TODO: asyncio.to_thread
+# TODO: forwarded from Pic
+# TODO: Handle keyboard interrupt
+# TODO: stories
+# TODO: special emoticon
+# TODO: edit date
+# TODO: reverse the process (GUI)
 
+@dataclass ()
+class Config:
+    texts: bool = True
+    reactions: bool = True
+    dialogInfo: bool = True
+    userInfo: bool = True
+    files: bool = True
+    fileSizeThresholdInBytes: int = (1024 ** 2) * 100
 
 async def userIdHandler(message, messagesRow, users):
     # check for the id of the user to add to the message
@@ -28,7 +42,7 @@ async def userIdHandler(message, messagesRow, users):
     if message.sender_id not in users:
         users.add(message.sender_id)
 
-async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog):
+async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog, config: Config):
     if not message.file:
         messagesRow.append(0) # File ID
         messagesRow.append(0) # File counter (relative ID)
@@ -40,7 +54,7 @@ async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog):
     messagesRow.append(file.id)
     messagesRow.append(fileCounter)
     # if the file is bigger than 100mb, don't download it
-    if message.file.size < (1024 ** 2) * 100:
+    if message.file.size < config.fileSizeThresholdInBytes:
         await downloadFile(message, FILE_PATH, fileCounter)
         messagesRow.append(0)
         return 1
@@ -280,7 +294,7 @@ def handleError(dialog, error, messageCounter, fileCounter, PATH, savedDialogInf
             f"{error}\n\n"
         )
 
-async def archiveGroup(dialog):
+async def archiveGroup(dialog, config: Config):
     PATH = f"dialogs"
 
     if isinstance(dialog.entity, types.User):
@@ -327,43 +341,50 @@ async def archiveGroup(dialog):
 
             async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=messageCounter):
                 # for writing into the file at once
-                messagesRow = []
-                messagesRow.append(message.id)
-                
-                await userIdHandler (message, messagesRow, users)
+                if config.texts:
+                    messagesRow = []
+                    messagesRow.append(message.id)
 
-                fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH, fileLog)
-                
-                await replyHandler (message, messagesRow)
+                    await replyHandler (message, messagesRow)
 
-                await forwardHanlder (message, messagesRow, users)
-                
-                await textHandler (message, messagesRow)
-                
-                await reactionHandler(message, CSVReactionsWriter, dialog)
+                    await forwardHanlder (message, messagesRow, users)
+                    
+                    await textHandler (message, messagesRow)
+                    
+                    await userIdHandler (message, messagesRow, users)
 
-                messagesRow.append(message.date)
-                CSVMessagesWrtier.writerow(messagesRow)
+                    messagesRow.append(message.date)
+                    CSVMessagesWrtier.writerow(messagesRow)
+
+                if config.files:
+                    fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH, fileLog, config)
+                    if message.file:
+                        sizeInMB += message.file.size / bytesToMBRatio
+
+                if config.reactions:
+                    await reactionHandler(message, CSVReactionsWriter, dialog)
+
                 messageCounter += 1
-                if message.file:
-                    sizeInMB += message.file.size / bytesToMBRatio
-
+                
                 if messageCounter % totalMessagesPercent == 0:
                     clearLastLine(2)
                     printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
                     printProgress(totalNumberOfMessages, messageCounter)
-                emptyFileLog(fileLog, CSVBigFilessWriter, 100)
+                    if config.files:
+                        emptyFileLog(fileLog, CSVBigFilessWriter, 100)
 
-            if not gotChatInfo:
+            if config.dialogInfo and not gotChatInfo:
                 await getGroupOrChannelInfo(dialog, PATH, users)
 
-            await usersHandler(users, PATH)
+            if config.userInfo:
+                await usersHandler(users, PATH)
+
             saveCheckpoint(messageCounter, fileCounter, True, PATH)
 
             clearLastLine(3)
-
-            emptyFileLog(fileLog, CSVBigFilessWriter, 0)
-            await bigFilesHandler(FILE_PATH, fileCounter, dialog)
+            if config.files:
+                emptyFileLog(fileLog, CSVBigFilessWriter, 0)
+                await bigFilesHandler(FILE_PATH, fileCounter, dialog)
             print(f"Done archiving {dialog.name}!")
 
     except FloodWaitError as e:
@@ -430,7 +451,7 @@ async def getUserInfo(userId):
 
     try:
         os.mkdir(filePath)
-    except OSError:
+    except OSError as e:
         handleError("N/A", e, 0, 0, 0, False)
         return
     except Exception as e:
@@ -496,7 +517,42 @@ def clearLastLine(numberOfLines = 1):
     # It literally removes the last line in the command prompt
     for _ in range(numberOfLines):
         print("\033[F\033[K", end='')
+
 async def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-a", "--archive-all", action="store_true", help="archive everything")
+    parser.add_argument("-t", "--archive-text", action="store_true", help="archive text messages (including forward, reply, edit, and sender_id)")
+    parser.add_argument("-r", "--archive-reactions", action="store_true", help="archive message reactions")
+    parser.add_argument("-d", "--archive-dialog-info", action="store_true", help="archive dialog info like title, bio, pfps, and etc.")
+    parser.add_argument("-u", "--archive-user-info", action="store_true", help="archive info of users in a dialog, like name, bio, pfps, and etc.")
+    parser.add_argument("-f", "--archive-file", action="store_true", help="archive files, like photos, videos, documents, and etc. with a size threshold (default: 100MB)")
+    parser.add_argument("-b", "--archive-big-files", action="store_true", help="archive all files ignoring the default of 100MB")
+    parser.add_argument("-s", "--size-threshold", default=100, type=int, metavar="MB", help="the size threshold for files (default: 100MB)")
+
+    config = Config()
+
+    args = parser.parse_args()
+
+    if args.archive_all:
+        config.texts = True
+        config.reactions = True
+        config.dialogInfo = True
+        config.userInfo = True
+        config.files = True
+        config.fileSizeThresholdInBytes = float('inf')
+
+    else:
+        config.texts = args.archive_text
+        config.reactions = args.archive_reactions
+        config.dialogInfo = args.archive_dialog_info
+        config.userInfo = args.archive_user_info
+        config.files = args.archive_file
+        if args.archive_big_files:
+            config.files = True
+            config.fileSizeThresholdInBytes = float('inf')
+        else:
+            config.fileSizeThresholdInBytes = args.size_threshold * (1024 ** 2)
+
     print("Started...")
     os.makedirs("dialogs", exist_ok=True)
     os.makedirs("dialogs/users", exist_ok=True)
@@ -513,7 +569,7 @@ async def main():
             clearLastLine()
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
                 print(f"Archiving {dialog.name}...")
-                await archiveGroup(dialog)
+                await archiveGroup(dialog, config)
             else:
                 print("Error: can't archive this!")
         else:
