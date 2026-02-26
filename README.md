@@ -29,16 +29,16 @@ Author: Eyad Jawad
 ### WARNING:
 
 DO NOT RUN THIS PROGRAM AGRESSIVELY!  
-I haven't tried running the program for extended periods of time, but if you run it for say, days, you might be rate limited multiple times, even though the program handles rate limit, too much rate limit might very well get your account banned, so I'd suggest you be caruful when using it for large dialogs.
+I haven't tried running the program for extended periods of time, but if you run it for say, days, you might be rate limited multiple times, even though the program handles rate limit, too much rate limit might very well get your account banned, so I'd suggest you be careful when using it for large dialogs.
 
 ### Setting The API keys
 
-You have to get the API keys from telegram.org and then set them using the command:  
+You have to get the API keys from telegram.org and then set them in the .env:  
 
 ```
 
-setx TELEGRAM_API_KEY "123456"
-setx TELEGRAM_API_HASH "abcdefg" 
+TELEGRAM_API_KEY "123456"
+TELEGRAM_API_HASH "abcdefg" 
 
 ```
 This is probably the safest way possible to ensure that your keys don't get leaked, I would never put mine straight into the program, you could read them from a file, but don't forget to add it to the gitignore.
@@ -56,7 +56,7 @@ After that, you just have to run the command:
 
 ```
 
-python main.py --flag --flag -f
+python main.py -t -r -f -s 10
 
 ```
 ## Archiving Schemas
@@ -70,7 +70,7 @@ message_id, sender_id, file_forwarded (if bigger than size-threshold), replyed_t
 
 ### Reactions.csv
 
-This one is aplit into two genres, one for channels, and another one for chats where you can see the users who reacted.  
+This one is split into two genres, one for channels, and another one for chats where you can see the users who reacted.  
 Channels:
 
 ```
@@ -126,7 +126,8 @@ For each one of those, if it doesn't exist (like a message not forwarded) it'll 
 
 I learnt a lot about file managment, and how to parse things in general, but the coolest thing if you ask me is the progress bar, that is cool.  
 This project did take a good chunk of time to finish, or at least get it to work, and I did it mainly because I love archiving things locally, it works pretty well in my opinion.  
-I also learnt a good bite of error handling, while it is not sublime, error handling is good here.  
+I also learnt a good amount of error handling, while it is not sublime, error handling is good here.  
 I'd like to add a way to reverse the process and get a GUI out of it, I've seen that on discord archivers, I'd also want to add a way to compress stuff, like files, or at least do something about them because they take A LOT of space.  
 All in all, I'm pretty much satisfied with this project, it took me about 50h? idk, but I do feel like I'm missing some features.  
+I have listed a good list of todos and fixme in the code, I might do them one day...? idk, I hopne it'll be good, inshallah.  
 Thank you for reading -Eyad.
