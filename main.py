@@ -389,8 +389,9 @@ async def archiveGroup(dialog, config: Config):
         await handleFloodWait(e)
     except (KeyboardInterrupt, asyncio.CancelledError) as e:
         clearLastLine(3)
-        print("Please wait a moment while the saving the checkpoint", '\r')
+        print("Please wait a moment while the saving the checkpoint")
         saveCheckpoint(messageCounter, fileCounter, False, PATH)
+        clearLastLine()
         print("Done!")
         exit(0)
     except Exception as e:
