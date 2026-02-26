@@ -315,7 +315,8 @@ async def archiveGroup(dialog, config: Config):
     users                    = set()
     fileLog                  = []
     messageCounter           = 0
-    totalNumberOfMessages    = (await client.get_messages(dialog, limit=0)).total
+    lastMessageId            = None
+    totalNumberOfMessages    = (await client.get_messages(dialog, limit=1))[0].id
     totalMessagesPercent     = max(totalNumberOfMessages//100, 1)
     fileCounter              = 0
     gotChatInfo              = False
@@ -362,6 +363,7 @@ async def archiveGroup(dialog, config: Config):
                     await reactionHandler(message, CSVReactionsWriter, dialog)
 
                 messageCounter += 1
+                lastMessageId   = message.id
                 
                 if messageCounter % totalMessagesPercent == 0:
                     clearLastLine(2)
@@ -376,7 +378,7 @@ async def archiveGroup(dialog, config: Config):
             if config.userInfo:
                 await usersHandler(users, PATH)
 
-            saveCheckpoint(messageCounter, fileCounter, True, PATH)
+            saveCheckpoint(lastMessageId, fileCounter, True, PATH)
 
             clearLastLine(3)
             if config.files:
@@ -385,12 +387,12 @@ async def archiveGroup(dialog, config: Config):
             print(f"Done archiving {dialog.name}!")
 
     except FloodWaitError as e:
-        handleError(dialog.name, e, messageCounter, fileCounter, PATH, False)
+        handleError(dialog.name, e, lastMessageId, fileCounter, PATH, False)
         await handleFloodWait(e)
     except (KeyboardInterrupt, asyncio.CancelledError) as e:
         clearLastLine(3)
         print("Please wait a moment while the saving the checkpoint")
-        saveCheckpoint(messageCounter, fileCounter, gotChatInfo, PATH)
+        saveCheckpoint(lastMessageId, fileCounter, gotChatInfo, PATH)
 
         if config.userInfo:
             with open(f"{PATH}/Users.csv", 'w') as f:
@@ -402,7 +404,7 @@ async def archiveGroup(dialog, config: Config):
         print("Done!")
         exit(0)
     except Exception as e:
-        handleError(dialog.name, e, messageCounter, fileCounter, PATH, False)
+        handleError(dialog.name, e, lastMessageId, fileCounter, PATH, False)
 
 async def getGroupOrChannelInfo(dialog, PATH, users):
     dialog = dialog.entity    
