@@ -169,7 +169,6 @@ async def textHandler(message, messagesRow):
 async def getReactionList(dialog, message):
     id = message.id
     offset = None
-
     reactions = []
     while True:
         request = await client (
@@ -213,7 +212,6 @@ async def reactionHandler(message, CSVReactionsWriter, dialog):
     reactions = message.reactions
     if not reactions: return
     result = []
-
     # For channels
     if not reactions.can_see_list:
         for react in reactions.results or []:
@@ -331,7 +329,7 @@ async def archiveGroup(dialog, config: Config):
     printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
 
     try:
-        with open(f"{PATH}/Text messages.csv", 'a') as texts, \
+        with open(f"{PATH}/TextMessages.csv", 'a') as texts, \
              open(f"{PATH}/Reactions.csv", 'a') as reactions, \
              open(f"{FILE_PATH}/BigFiles.csv", 'w') as fileLogStream:
             CSVMessagesWrtier = csv.writer(texts)
@@ -344,13 +342,13 @@ async def archiveGroup(dialog, config: Config):
                     messagesRow = []
                     messagesRow.append(message.id)
 
-                    await replyHandler (message, messagesRow)
-
+                    await userIdHandler (message, messagesRow, users)
+                    
                     await forwardHanlder (message, messagesRow, users)
                     
+                    await replyHandler (message, messagesRow)
+
                     await textHandler (message, messagesRow)
-                    
-                    await userIdHandler (message, messagesRow, users)
 
                     messagesRow.append(message.date)
                     CSVMessagesWrtier.writerow(messagesRow)
@@ -416,7 +414,7 @@ async def getFullRequest(dialog, Path):
         f.write(fullRequest.stringify())
 
 async def getPhotoInfo(dialog, Path):
-    with open(f"{Path}/photosInfo.csv", 'w') as f:
+    with open(f"{Path}/PhotoInfo.csv", 'w') as f:
         CSVInfoWriter = csv.writer(f)
         photoDataRow = []
 
@@ -434,12 +432,13 @@ async def addUsersToSet(dialog, users):
         handleError(dialog.name, e, 0, 0, 0, False)
 
 async def usersHandler(users, path):
-    with open(f"{path}/users.csv", 'w') as f:
+    if not users: return
+
+    with open(f"{path}/Users.csv", 'w') as f:
         CSVWriter = csv.writer(f)
         row = list(users)
-        CSVWriter.writerow(row)
+        CSVWriter.writerows(row)
 
-    if not users: return
     for user in users:
         if isinstance(user, int):
             await getUserInfo(user)
@@ -492,7 +491,7 @@ async def calculateDialogSpace(dialog):
 def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath):
     dialog = {}
     try:
-        with open(f"{dialogPath}/state.json", 'r') as f:
+        with open(f"{dialogPath}/CheckPoint.json", 'r') as f:
             dialog = json.load(f) 
             # if any of the inputs is 0 means don't change it, like if you haven't parsed the dialog info yet
             if messageCounter:      dialog[0] = messageCounter
@@ -501,12 +500,12 @@ def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath)
     except (FileNotFoundError, json.JSONDecodeError):
         dialog = [messageCounter, fileCounter, flagOfGetDialogInfo]
         
-    with open(f"{dialogPath}/state.json", 'w') as f:
+    with open(f"{dialogPath}/CheckPoint.json", 'w') as f:
         f.write(json.dumps(dialog))
 
 def getCheckpoint(dialogPath):
     try:
-        with open(f"{dialogPath}/state.json", 'r') as f:
+        with open(f"{dialogPath}/CheckPoint.json", 'r') as f:
             dialogs = json.load(f)
             return dialogs
     except (FileNotFoundError, json.JSONDecodeError):
