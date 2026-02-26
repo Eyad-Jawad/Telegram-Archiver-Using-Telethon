@@ -14,7 +14,6 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: Handle migration
 # TODO: Sticker packs handler
 # TODO: forwarded from Pic
-# TODO: Handle keyboard interrupt
 # TODO: stories
 # TODO: special emoticon
 # TODO: edit date
@@ -390,7 +389,7 @@ async def archiveGroup(dialog, config: Config):
     except (KeyboardInterrupt, asyncio.CancelledError) as e:
         clearLastLine(3)
         print("Please wait a moment while the saving the checkpoint")
-        saveCheckpoint(messageCounter, fileCounter, False, PATH)
+        saveCheckpoint(messageCounter, fileCounter, gotChatInfo, PATH)
         clearLastLine()
         print("Done!")
         exit(0)
