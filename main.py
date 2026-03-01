@@ -262,6 +262,7 @@ def printProgress(totalNumber, currentNumber):
 
 def printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages):
     elapsedTime                 = time.perf_counter() - totalTimeStart
+    ETAElapsed                  = formatETA(elapsedTime)
     messageRate                 = 0
     downloadRate                = 0
     remainingTime               = 0
@@ -274,7 +275,7 @@ def printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfM
 
     status = (
         f"Message {messageCounter:^8} | "
-        f"{elapsedTime:^8.3f}s | "
+        f"{ETAElapsed:^8.3f}s | "
         f"{sizeInMB:^8.3f}MB | "
         f"{messageRate:^8.3f}msg/s | "
         f"{downloadRate:^8.3f}MB/s | "
