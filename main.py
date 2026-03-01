@@ -274,11 +274,11 @@ def printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfM
     ETA                         = formatETA(remainingTime)
 
     status = (
-        f"Message {messageCounter:^8} | "
-        f"{ETAElapsed:^8.3f}s | "
-        f"{sizeInMB:^8.3f}MB | "
-        f"{messageRate:^8.3f}msg/s | "
-        f"{downloadRate:^8.3f}MB/s | "
+        f"Message {messageCounter:^14} | "
+        f"{ETAElapsed:^14.3f}s | "
+        f"{sizeInMB:^14.3f}MB | "
+        f"{messageRate:^14.3f}msg/s | "
+        f"{downloadRate:^14.3f}MB/s | "
         f"ETA: {ETA:^10}"
     )
 
