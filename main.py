@@ -10,6 +10,8 @@ API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
 # FIXME: Users info may be duplicated
+# FIXME: Resume chat archiving ETA skyrocketting
+# FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
 # TODO: Sticker packs handler
@@ -18,7 +20,6 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: special emoticon
 # TODO: edit date
 # TODO: reverse the process (GUI)
-# TODO: Save users when exiting ctrl+c
 
 @dataclass ()
 class Config:
@@ -599,5 +600,6 @@ async def main():
         else:
             clearLastLine()
 
-with client:
-    client.loop.run_until_complete(main())
+if __name__ == "__main__":
+    with client:
+        client.loop.run_until_complete(main())
