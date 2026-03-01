@@ -236,11 +236,14 @@ async def reactionHandler(message, CSVReactionsWriter, dialog):
 
 def formatETA(seconds):
     seconds = int(seconds)
-
-    h = seconds // 3600
+    
+    d = seconds // (3600 * 24)
+    h = (seconds % (3600 * 24)) // 3600
     m = (seconds % 3600) // 60
     s = seconds % 60
 
+    if d:
+        return f"{d}d {h}h {m}m {s}s"
     if h:
         return f"{h}h {m}m {s}s"
     if m:
@@ -598,7 +601,7 @@ async def main():
                 await calculateDialogSpace(dialog)
             else:
                 clearLastLine()
-                
+
         ans = await asyncio.to_thread(input, f"Do you want to archive {dialog.name}? (y) ")
         if (ans == 'y'):
             clearLastLine()
