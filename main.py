@@ -275,7 +275,7 @@ def printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfM
 
     status = (
         f"Message {messageCounter:^14} | "
-        f"{ETAElapsed:^14.3f}s | "
+        f"{ETAElapsed:^10}s | "
         f"{sizeInMB:^14.3f}MB | "
         f"{messageRate:^14.3f}msg/s | "
         f"{downloadRate:^14.3f}MB/s | "
