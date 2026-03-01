@@ -44,6 +44,7 @@ TELEGRAM_API_HASH "abcdefg"
 This is probably the safest way possible to ensure that your keys don't get leaked, I would never put mine straight into the program, you could read them from a file, but don't forget to add it to the gitignore.
 
 ### Arguments
+`c`, `--check-size`: `check dialog size beforehand`  
 `-a`, `--archive-all`: `archive everything`  
 `-t`, `--archive-text`: `archive text messages (including forward, reply, edit, and sender_id)`  
 `-r`, `--archive-reactions`: `archive message reactions`  
@@ -100,7 +101,7 @@ user_id
 
 ```
 
-message_count, file_count, saved_dialog_info
+message_count, file_count, saved_dialog_info, elapsed_time
 
 ```
 

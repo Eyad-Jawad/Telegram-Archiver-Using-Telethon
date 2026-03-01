@@ -12,7 +12,6 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: Use objects
 
 
-
 # FIXME: Users info may be duplicated
 # FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
 # TODO: Outside dialog reply handler
@@ -26,6 +25,7 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 
 @dataclass ()
 class Config:
+    checkSize: bool = False
     texts: bool = True
     reactions: bool = True
     dialogInfo: bool = True
@@ -550,6 +550,7 @@ def clearLastLine(numberOfLines = 1):
 
 async def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("-c", "--check-size", action="store_true", help="check dialog size beforehand")
     parser.add_argument("-a", "--archive-all", action="store_true", help="archive everything")
     parser.add_argument("-t", "--archive-text", action="store_true", help="archive text messages (including forward, reply, edit, and sender_id)")
     parser.add_argument("-r", "--archive-reactions", action="store_true", help="archive message reactions")
@@ -563,6 +564,7 @@ async def main():
 
     args = parser.parse_args()
 
+    config.checkSize = args.check_size
     if args.archive_all:
         config.texts = True
         config.reactions = True
@@ -588,13 +590,15 @@ async def main():
     os.makedirs("dialogs/users", exist_ok=True)
 
     async for dialog in client.iter_dialogs():
-        ans = await asyncio.to_thread(input, f"Do you want to check the approximate size of {dialog.name}? (y) ")
-        if (ans == 'y'):
-            clearLastLine()
-            print(f"Calculating the size of {dialog.name}...")
-            await calculateDialogSpace(dialog)
-        else:
-            clearLastLine()
+        if config.checkSize:
+            ans = await asyncio.to_thread(input, f"Do you want to check the approximate size of {dialog.name}? (y) ")
+            if (ans == 'y'):
+                clearLastLine()
+                print(f"Calculating the size of {dialog.name}...")
+                await calculateDialogSpace(dialog)
+            else:
+                clearLastLine()
+                
         ans = await asyncio.to_thread(input, f"Do you want to archive {dialog.name}? (y) ")
         if (ans == 'y'):
             clearLastLine()
