@@ -9,8 +9,11 @@ API_ID = os.getenv("TELEGRAM_API_KEY")
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
+# TODO: Use objects
+
+
+
 # FIXME: Users info may be duplicated
-# FIXME: Resume chat archiving ETA skyrocketting
 # FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
@@ -282,9 +285,9 @@ async def handleFloodWait(error):
     await asyncio.sleep(error.seconds)
     clearLastLine()    
 
-def handleError(dialog, error, messageCounter, fileCounter, PATH, savedDialogInfo):
+def handleError(dialog, error, messageCounter, fileCounter, PATH, savedDialogInfo, totalTimeStart):
     if messageCounter and fileCounter and PATH:
-        saveCheckpoint(messageCounter, fileCounter, savedDialogInfo, PATH)
+        saveCheckpoint(messageCounter, fileCounter, savedDialogInfo, PATH, totalTimeStart)
     with open("dialogs/erros.txt", 'a') as f:
         f.write(
             f"Error occured in {dialog} "
@@ -308,7 +311,7 @@ async def archiveGroup(dialog, config: Config):
         os.makedirs (f"{PATH}", exist_ok=True)
         os.makedirs (FILE_PATH, exist_ok=True)
     except OSError as e:
-        handleError(dialog.name, e, 0, 0, 0, False)
+        handleError(dialog.name, e, 0, 0, 0, False, 0)
 
     bytesToMBRatio           = 1024 ** 2
     sizeInMB                 = 0
@@ -326,6 +329,7 @@ async def archiveGroup(dialog, config: Config):
         messageCounter       = dialogSavedCheckpoint[0]
         fileCounter          = dialogSavedCheckpoint[1]
         gotChatInfo          = dialogSavedCheckpoint[2]
+        totalTimeStart       = totalTimeStart - dialogSavedCheckpoint[3]
 
     printProgress(totalNumberOfMessages, fileCounter)
     printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
@@ -358,7 +362,7 @@ async def archiveGroup(dialog, config: Config):
                     fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH, fileLog, config)
                     if message.file:
                         sizeInMB += message.file.size / bytesToMBRatio
-                        
+
                 CSVMessagesWrtier.writerow(messagesRow)
 
                 if config.reactions:
@@ -380,7 +384,7 @@ async def archiveGroup(dialog, config: Config):
             if config.userInfo:
                 await usersHandler(users, PATH)
 
-            saveCheckpoint(lastMessageId, fileCounter, True, PATH)
+            saveCheckpoint(lastMessageId, fileCounter, True, PATH, totalTimeStart)
 
             clearLastLine(3)
             if config.files:
@@ -389,12 +393,12 @@ async def archiveGroup(dialog, config: Config):
             print(f"Done archiving {dialog.name}!")
 
     except FloodWaitError as e:
-        handleError(dialog.name, e, lastMessageId, fileCounter, PATH, False)
+        handleError(dialog.name, e, lastMessageId, fileCounter, PATH, False, totalTimeStart)
         await handleFloodWait(e)
     except (KeyboardInterrupt, asyncio.CancelledError) as e:
         clearLastLine(3)
         print("Please wait a moment while the saving the checkpoint")
-        saveCheckpoint(lastMessageId, fileCounter, gotChatInfo, PATH)
+        saveCheckpoint(lastMessageId, fileCounter, gotChatInfo, PATH, totalTimeStart)
 
         if config.userInfo:
             with open(f"{PATH}/Users.csv", 'w') as f:
@@ -406,7 +410,7 @@ async def archiveGroup(dialog, config: Config):
         print("Done!")
         exit(0)
     except Exception as e:
-        handleError(dialog.name, e, lastMessageId, fileCounter, PATH, False)
+        handleError(dialog.name, e, lastMessageId, fileCounter, PATH, False, totalTimeStart)
 
 async def getGroupOrChannelInfo(dialog, PATH, users):
     dialog = dialog.entity    
@@ -447,7 +451,7 @@ async def addUsersToSet(dialog, users):
             if user.id not in users:
                 users.add(user.id)
     except (ChatAdminRequiredError, ChannelPrivateError, Exception) as e:
-        handleError(dialog.name, e, 0, 0, 0, False)
+        handleError(dialog.name, e, 0, 0, 0, False, 0)
 
 async def usersHandler(users, path):
     if not users: return
@@ -464,7 +468,7 @@ async def usersHandler(users, path):
             row = list(users)
             CSVWriter.writerows(row)
     except OSError as e:
-        handleError("N/A", e, 0 ,0, 0, False)
+        handleError("N/A", e, 0 ,0, 0, False, 0)
 
     for user in users:
         if isinstance(user, int):
@@ -477,10 +481,10 @@ async def getUserInfo(userId):
     try:
         os.mkdir(filePath)
     except OSError as e:
-        handleError("N/A", e, 0, 0, 0, False)
+        handleError("N/A", e, 0, 0, 0, False, 0)
         return
     except Exception as e:
-        handleError("N/A", e, 0, 0, 0, False)
+        handleError("N/A", e, 0, 0, 0, False, 0)
         print(f"Error occurred while trying to archive users:\n{e}")
         return
     
@@ -512,10 +516,10 @@ async def calculateDialogSpace(dialog):
         print(f"Dialog {dialog.title} will take about {sizeInMB:.3f}MB")
 
     except FloodWaitError as e:
-        handleError(dialog.name, e, 0, 0, 0, False)
+        handleError(dialog.name, e, 0, 0, 0, False, totalTimeStart)
         await handleFloodWait(e)
 
-def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath):
+def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath, totalTimeStart):
     dialog = {}
     try:
         with open(f"{dialogPath}/CheckPoint.json", 'r') as f:
@@ -524,8 +528,9 @@ def saveCheckpoint(messageCounter, fileCounter, flagOfGetDialogInfo, dialogPath)
             if messageCounter:      dialog[0] = messageCounter
             if fileCounter:         dialog[1] = fileCounter
             if flagOfGetDialogInfo: dialog[2] = flagOfGetDialogInfo
+            if totalTimeStart:      dialog[3] = time.perf_counter() - totalTimeStart
     except (FileNotFoundError, json.JSONDecodeError):
-        dialog = [messageCounter, fileCounter, flagOfGetDialogInfo]
+        dialog = [messageCounter, fileCounter, flagOfGetDialogInfo, time.perf_counter() - totalTimeStart]
         
     with open(f"{dialogPath}/CheckPoint.json", 'w') as f:
         f.write(json.dumps(dialog))
