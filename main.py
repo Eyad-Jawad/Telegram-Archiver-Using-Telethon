@@ -353,12 +353,13 @@ async def archiveGroup(dialog, config: Config):
                     await textHandler (message, messagesRow)
 
                     messagesRow.append(message.date)
-                    CSVMessagesWrtier.writerow(messagesRow)
 
                 if config.files:
                     fileCounter += await fileHanlder (message, messagesRow, fileCounter, FILE_PATH, fileLog, config)
                     if message.file:
                         sizeInMB += message.file.size / bytesToMBRatio
+                        
+                CSVMessagesWrtier.writerow(messagesRow)
 
                 if config.reactions:
                     await reactionHandler(message, CSVReactionsWriter, dialog)
