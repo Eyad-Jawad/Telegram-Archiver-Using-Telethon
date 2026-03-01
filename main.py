@@ -22,6 +22,7 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: special emoticon
 # TODO: edit date
 # TODO: reverse the process (GUI)
+# TODO: add the method of only extracting one's messages 
 
 @dataclass ()
 class Config:
@@ -201,7 +202,14 @@ async def getReactionList(dialog, message):
 
             reaction.append(peerId)
             reaction.append(react.date)
-            reaction.append(react.reaction.emoticon)
+
+            # for now to avoid errors we'll skip it
+            if isinstance(react.reaction, types.ReactionEmoji):
+                reaction.append(react.reaction.emoticon)
+            elif isinstance(react.reaction, types.ReactionCustomEmoji):
+                reaction.append("Custom emoji")
+            else:
+                reaction.append("Unkown reaction type")
 
             reactions.append(reaction)
 
@@ -335,8 +343,8 @@ async def archiveGroup(dialog, config: Config):
         gotChatInfo          = dialogSavedCheckpoint[2]
         totalTimeStart       = totalTimeStart - dialogSavedCheckpoint[3]
 
-    printProgress(totalNumberOfMessages, fileCounter)
     printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
+    printProgress(totalNumberOfMessages, messageCounter)
 
     try:
         with open(f"{PATH}/TextMessages.csv", 'a') as texts, \
