@@ -11,9 +11,11 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 
 # TODO: Use objects
 
-
 # FIXME: Users info may be duplicated
 # FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
+# FIXME: bigfiles.csv doesn't seem to be working
+# FIXME: When getting a floodwait a message will be skipped
+# FIXME: When replying to a message from a private chat the method fails:'TotalList' object has no attribute 'id'
 # TODO: Outside dialog reply handler
 # TODO: Handle migration
 # TODO: Sticker packs handler
@@ -23,6 +25,8 @@ client = TelegramClient("Scrapper", API_ID, API_HASH)
 # TODO: edit date
 # TODO: reverse the process (GUI)
 # TODO: add the method of only extracting one's messages 
+# TODO: Save size in checkpoint as well for printprogress
+# TODO: Use message counter not id for print progress
 
 @dataclass ()
 class Config:
@@ -57,7 +61,6 @@ async def fileHanlder(message, messagesRow, fileCounter, FILE_PATH, fileLog, con
 
     messagesRow.append(file.id)
     messagesRow.append(fileCounter)
-    # if the file is bigger than 100mb, don't download it
     if message.file.size < config.fileSizeThresholdInBytes:
         await downloadFile(message, FILE_PATH, fileCounter)
         messagesRow.append(0)
@@ -276,18 +279,20 @@ def printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfM
     remainingTime               = 0
     if elapsedTime > 0:
         messageRate             = messageCounter / elapsedTime
-        downloadRate            = sizeInMB / elapsedTime
+        downloadRate            = f"{sizeInMB / elapsedTime:.3f}MB/s"
         if messageRate > 0:
             remainingTime       =  (totalNumberOfMessages - messageCounter) / messageRate
     ETA                         = formatETA(remainingTime)
+    messageRateFormatted = f"{messageCounter / elapsedTime:.3f}msg/s"
+    sizeInMBFormatted = f"{sizeInMB:.3f}MB"
 
     status = (
         f"Message {messageCounter:^14} | "
-        f"{ETAElapsed:^10}s | "
-        f"{sizeInMB:^14.3f}MB | "
-        f"{messageRate:^14.3f}msg/s | "
-        f"{downloadRate:^14.3f}MB/s | "
-        f"ETA: {ETA:^10}"
+        f"{ETAElapsed:^14} | "
+        f"{sizeInMBFormatted:^8} | "
+        f"{messageRateFormatted:^8} | "
+        f"{downloadRate:^8} | "
+        f"ETA: {ETA:^14}"
     )
 
     print(status)
@@ -332,7 +337,7 @@ async def archiveGroup(dialog, config: Config):
     fileLog                  = []
     messageCounter           = 0
     lastMessageId            = None
-    totalNumberOfMessages    = (await client.get_messages(dialog, limit=1))[0].id
+    totalNumberOfMessages    = (await client.get_messages(dialog, limit=0)).total
     totalMessagesPercent     = max(totalNumberOfMessages//100, 1)
     fileCounter              = 0
     gotChatInfo              = False
@@ -503,7 +508,7 @@ async def getUserInfo(userId):
     await getFullRequest(user, filePath)
     await getPhotoInfo(user, filePath)
 
-async def calculateDialogSpace(dialog):
+async def calculateDialogSpace(dialog, config: Config):
     bytesToMBRatio         = 1024 ** 2
     totalNumberOfMessages  = (await client.get_messages(dialog, limit=0)).total
     totalMessagesPercent   = max(totalNumberOfMessages//100, 1)
@@ -522,10 +527,12 @@ async def calculateDialogSpace(dialog):
                 printProgressStatus(totalTimeStart, messageCounter, sizeInMB, totalNumberOfMessages)
                 printProgress(totalNumberOfMessages, messageCounter)
                 
-            if message.file: sizeInMB += message.file.size / bytesToMBRatio
+            if message.file and message.file.size < config.fileSizeThresholdInBytes:
+                sizeInMB += message.file.size / bytesToMBRatio
 
         clearLastLine(3)
         print(f"Dialog {dialog.title} will take about {sizeInMB:.3f}MB")
+        return sizeInMB
 
     except FloodWaitError as e:
         handleError(dialog.name, e, 0, 0, 0, False, totalTimeStart)
@@ -602,18 +609,13 @@ async def main():
     os.makedirs("dialogs/users", exist_ok=True)
 
     async for dialog in client.iter_dialogs():
-        if config.checkSize:
-            ans = await asyncio.to_thread(input, f"Do you want to check the approximate size of {dialog.name}? (y) ")
-            if (ans == 'y'):
-                clearLastLine()
-                print(f"Calculating the size of {dialog.name}...")
-                await calculateDialogSpace(dialog)
-            else:
-                clearLastLine()
-
         ans = await asyncio.to_thread(input, f"Do you want to archive {dialog.name}? (y) ")
         if (ans == 'y'):
             clearLastLine()
+            if config.checkSize:
+                print(f"Calculating the size of {dialog.name}...")
+                await calculateDialogSpace(dialog)
+
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
                 print(f"Archiving {dialog.name}...")
                 await archiveGroup(dialog, config)
