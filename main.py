@@ -1,7 +1,6 @@
 import json, asyncio, os, csv, time, argparse
-from telethon import TelegramClient, functions, types
+from telethon import TelegramClient, functions, custom, types
 from telethon.errors import FloodWaitError, ChatAdminRequiredError, ChannelPrivateError
-from telethon.tl import types, custom
 from dataclasses import dataclass
 
 # Get the API keys
@@ -46,23 +45,27 @@ class File:
     async def handle(self, message: custom.message.Message, messagesRow: list) -> None:
         file = message.file
         if not file:
-            messagesRow.append(0) # File ID
-            messagesRow.append(0) # File counter (relative ID)
-            messagesRow.append(0) # Big file (flag)
+            messagesRow[7] = 0 # File ID
+            messagesRow[8] = 0 # File counter (relative ID)
+            messagesRow[9] = 0 # Big file (flag)
             return
 
         if message.photo:
-            messagesRow.append(message.photo.id)
+            messagesRow[7] = message.photo.id
         else:
-            messagesRow.append(file.id)
+            messagesRow[7] = file.id
 
         if file.size < self.sizeThreshold:
-            messagesRow.append(0)
+            messagesRow[8] = self.counter
+            self.counter += 1
+
+            messagesRow[9] = 0
             await self.downloadFiles(message)
             return
 
         # keep log of files not downloaded
-        messagesRow.append(1)
+        messagesRow[8] = 0
+        messagesRow[9] = 1
 
         self.skippedStack.append(message.id)
         if len(self.skippedStack) >= 100:
@@ -156,7 +159,7 @@ class Errors:
 
         self.fileClass.emptyBigFilesLog()
 
-        with open("dialogs/erros.txt", 'a') as f:
+        with open("dialogs/errors.txt", 'a') as f:
             f.write(
                 f"Error occured in {self.path} "
                 f"at message {self.progressClass.lastMessageID}:\n"
@@ -187,35 +190,38 @@ def formatETA(seconds: float) -> str:
 async def userIdHandler(message, messagesRow, users):
     # check for the id of the user to add to the message
     if message.post_author:
-        messagesRow.append(message.post_author)
-    elif not message.sender_id: 
-        messagesRow.append(0)
+        messagesRow[1] = message.post_author
         return
-    messagesRow.append(message.sender_id)
+    elif not message.sender_id: 
+        messagesRow[1] = 0
+        return
+
+    messagesRow[1] = message.sender_id
     # check if the sender is not saved
     if message.sender_id not in users:
         users.add(message.sender_id)
 
+
 async def replyHandler(message, messagesRow):
     # check if this message is a reply to another
     if not message.is_reply:
-        messagesRow.append(0)
+        messagesRow[4] = 0
         return
     reply = await message.get_reply_message()
     if reply:
-        messagesRow.append(reply.id)
+        messagesRow[4] = reply.id
     else:
-        messagesRow.append(0)
+        messagesRow[4] = 0
 
-async def forwardHanlder(message, messagesRow, users):
+async def forwardHandler(message, messagesRow, users):
     forward = message.forward
     if not forward:
-        messagesRow.append(0)
-        messagesRow.append(0)
+        messagesRow[2] = 0
+        messagesRow[3] = 0
         return
-    messagesRow.append(f"{forward.from_name}")
+    messagesRow[2] = f"{forward.from_name}"
     if not forward.from_id:
-        messagesRow.append(0)
+        messagesRow[3] = 0
         return
     entity = forward.from_id
     peerId = None
@@ -225,34 +231,34 @@ async def forwardHanlder(message, messagesRow, users):
         peerId = entity.channel_id
     elif isinstance(entity, types.PeerChat):
         peerId = entity.chat_id
-    messagesRow.append(peerId)
+    messagesRow[3] = peerId
     users.add(peerId)
  
 async def textHandler(message, messagesRow):
     # check for text
+    text = ""
     if message.text:
-        messagesRow.append(f"{message.text}")
+        text = (f"{message.text}")
     elif isinstance(message, types.MessageService):
         action = message.action
         if isinstance(action, types.MessageActionPinMessage):
-            messagesRow.append(f"a messaage was pinned")
+            text = (f"a message was pinned")
         elif isinstance(action, types.MessageActionChatAddUser):
-            messagesRow.append(f"{action.users} was added")
+            text = (f"{action.users} was added")
         elif isinstance(action, types.MessageActionChatJoinedByLink):
-            messagesRow.append(f"{action.inviter_id} joined")
+            text = (f"{action.inviter_id} joined")
         elif isinstance(action, types.MessageActionChatDeleteUser):
-            messagesRow.append(f"{action.user_id} was kicked/left")
+            text = (f"{action.user_id} was kicked/left")
         elif isinstance(action, types.MessageActionChatEditPhoto):
-            messagesRow.append(f"chat photo changed")
+            text = (f"chat photo changed")
         elif isinstance(action, types.MessageActionChatEditTitle):
-            messagesRow.append(f"chat title changed to {action.title}")
+            text = (f"chat title changed to {action.title}")
         elif isinstance(action, types.MessageActionChatCreate):
-            messagesRow.append(f"{action.title} was created with users: {action.users}")
+            text = (f"{action.title} was created with users: {action.users}")
         else:
-            messagesRow.append(f"{action} was done.")
+            text = (f"{action} was done.")
 
-    else: 
-        messagesRow.append("")
+    messagesRow[5] = text
 
 async def getReactionList(dialog, message):
     id = message.id
@@ -360,27 +366,33 @@ async def archiveGroup(dialog, config: Config):
     
     print(progress)
 
-    try:
+    try: 
         with open(f"{PATH}/TextMessages.csv", 'a') as texts, \
              open(f"{PATH}/Reactions.csv", 'a') as reactions:
-            CSVMessagesWrtier = csv.writer(texts)
+            CSVMessagesWrtier  = csv.writer(texts)
             CSVReactionsWriter = csv.writer(reactions)
 
             async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=progress.messageCounter):
                 # for writing into the file at once
-                messagesRow = []
+
+                # messageID, senderID, 
+                # forwardedFromName, forwardedFromID, 
+                # repliedToMessageID, messageText, 
+                # messageDate, fileID, fileCount, BigFile
+
+                messagesRow = [0] * 10
                 if config.texts:
-                    messagesRow.append(message.id)
+                    messagesRow[0] = message.id
 
-                    await userIdHandler (message, messagesRow, users)
+                    await userIdHandler(message, messagesRow, users)
+
+                    await forwardHandler(message, messagesRow, users)
                     
-                    await forwardHanlder (message, messagesRow, users)
+                    await replyHandler(message, messagesRow)
                     
-                    await replyHandler (message, messagesRow)
+                    await textHandler(message, messagesRow)
 
-                    await textHandler (message, messagesRow)
-
-                    messagesRow.append(message.date)
+                    messagesRow[6] = message.date
 
                 if config.files:
                     await fileHandler.handle(message, messagesRow)
