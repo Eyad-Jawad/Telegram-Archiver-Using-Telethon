@@ -9,7 +9,7 @@ API_ID = os.getenv("TELEGRAM_API_KEY")
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
-# TODO: Use objects
+# TODO: change message row so it has fixed length
 
 # FIXME: Users info may be duplicated
 # FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
@@ -44,11 +44,6 @@ class File:
         self.counter:       int       = 1
         self.path:          str       = path + "/files"
         self.skippedStack:  list[int] = []
-        self.downloadStack: list[custom.message.Message] = []
-
-    async def empty(self) -> None:
-        await self.downloadFiles()
-        self.emptyBigFilesLog()
 
     async def handle(self, message: custom.message.Message, messagesRow: list) -> None:
         file = message.file
@@ -65,11 +60,7 @@ class File:
 
         if file.size < self.sizeThreshold:
             messagesRow.append(0)
-
-            self.downloadStack.append(message)
-            if len(self.downloadStack) >= 100:
-                await self.downloadFiles("")
-
+            await self.downloadFiles(message)
             return
 
         # keep log of files not downloaded
@@ -81,20 +72,18 @@ class File:
 
         return
     
-    async def downloadFiles(self) -> None:
-        while self.downloadStack:
-            message = self.downloadStack.pop()
-            file = message.file
+    async def downloadFiles(self, message: custom.message.Message) -> None:
+        file = message.file
 
-            fileName = f"{self.counter} "
-            self.counter += 1
+        fileName = f"{self.counter} "
+        self.counter += 1
 
-            if message.photo:
-                fileName += ".jpg"
-            elif file.name:
-                fileName += file.name 
+        if message.photo:
+            fileName += ".jpg"
+        elif file.name:
+            fileName += file.name 
 
-            await message.download_media(file=f"{self.path}/{fileName}")
+        await message.download_media(file=f"{self.path}/{fileName}")
 
     def emptyBigFilesLog(self) -> None:
         with open(f"{self.path}/bigfiles.csv", 'a') as f:
@@ -104,37 +93,35 @@ class File:
 
 class Progress:
     def __init__(self, totalMessages: int) -> None:
-        self.MbToByte                   = 1024 ** 2
-        self.sizeInMb                   = 0
-        self.timeStart                  = time.perf_counter()
-        self.totalMessages              = totalMessages
-        self.totalMessagesPercent       = max(totalMessages//100, 1)
-        self.messageCounter:int         = 1
+        self.MbToByte:             int   = 1024 ** 2
+        self.sizeInMb:             int   = 0
+        self.timeStart:            float = time.perf_counter()
+        self.totalMessages:        int   = totalMessages
+        self.totalMessagesPercent: int   = max(totalMessages//100, 1)
+        self.messageCounter:       int   = 1
   
-    def print(self) -> str:
-        clearLastLine(2)
+    def __str__(self) -> str:
         if self.totalMessages <= 0:
-            print("Progress: N/A")
-            return
+            return "Progress: N/A"
 
-        progressPercent         = min(self.messageCounter / self.totalMessages * 100, 100)
-        progressInTens          = int (progressPercent // 10)
-        progressBar             = ('█' * progressInTens + '░' * (10 - progressInTens))
-        elapsedTime             = time.perf_counter() - self.timeStart
-        ETAElapsed              = formatETA(elapsedTime)
-        messageRate             = 0
-        downloadRate            = 0
-        remainingTime           = 0
+        progressPercent: float      = min(self.messageCounter / self.totalMessages * 100, 100)
+        progressInTens:  int        = int (progressPercent // 10)
+        progressBar:     str        = ('█' * progressInTens + '░' * (10 - progressInTens))
+        elapsedTime:     float      = time.perf_counter() - self.timeStart
+        ETAElapsed:      str        = formatETA(elapsedTime)
+        messageRate:     float      = 0.0
+        downloadRate:    float      = 0.0
+        remainingTime:   float      = 0.0
 
         if elapsedTime > 0:
-            messageRate         = self.messageCounter / elapsedTime
-            downloadRate        = f"{self.sizeInMb / elapsedTime:.3f}MB/s"
+            messageRate             = self.messageCounter / elapsedTime
+            downloadRate            = f"{self.sizeInMb / elapsedTime:.3f}MB/s"
             if messageRate > 0:
-                remainingTime   =  (self.totalMessages - self.messageCounter) / messageRate
+                remainingTime       =  (self.totalMessages - self.messageCounter) / messageRate
 
-        ETARemaining            = formatETA(remainingTime)
-        messageRateFormatted    = f"{self.messageCounter / elapsedTime:.3f}msg/s"
-        sizeInMBFormatted       = f"{self.sizeInMb:.3f}MB"
+        ETARemaining:         str   = formatETA(remainingTime)
+        messageRateFormatted: str   = f"{self.messageCounter / elapsedTime:.3f}msg/s"
+        sizeInMBFormatted:    str   = f"{self.sizeInMb:.3f}MB"
 
         status = (
             f"Message {self.messageCounter:^14} | "
@@ -146,9 +133,9 @@ class Progress:
             f"Progress: {progressBar}..."
         )
 
-        print(status)
+        return status
 
-    def checkProgress(self):
+    def checkProgress(self) -> None:
         if self.messageCounter % self.totalMessagesPercent == 0:
             clearLastLine(2)
             print(self)
@@ -156,10 +143,10 @@ class Progress:
 def formatETA(seconds: float) -> str:
     seconds = int(seconds)
     
-    d = seconds // (3600 * 24)
-    h = (seconds % (3600 * 24)) // 3600
-    m = (seconds % 3600) // 60
-    s = seconds % 60
+    d: int = seconds // (3600 * 24)
+    h: int = (seconds % (3600 * 24)) // 3600
+    m: int = (seconds % 3600) // 60
+    s: int = seconds % 60
 
     if d:
         return f"{d}d {h}h {m}m {s}s"
@@ -344,8 +331,8 @@ async def archiveGroup(dialog, config: Config):
         handleError(dialog.name, e, 0, 0, 0, False, 0)
 
     totalMessages: int          = (await client.get_messages(dialog, limit=0)).total
-    fileHandler: File           = File(PATH, config.fileSizeThresholdInBytes)
-    progress: Progress          = Progress(totalMessages)
+    fileHandler:   File         = File(PATH, config.fileSizeThresholdInBytes)
+    progress:      Progress     = Progress(totalMessages)
 
     users                       = set()
     lastMessageId               = None
@@ -357,7 +344,7 @@ async def archiveGroup(dialog, config: Config):
         gotChatInfo             = dialogSavedCheckpoint[2]
         progress.timeStart     -= dialogSavedCheckpoint[3]
     
-    progress.print()
+    print(progress)
 
     try:
         with open(f"{PATH}/TextMessages.csv", 'a') as texts, \
@@ -367,8 +354,8 @@ async def archiveGroup(dialog, config: Config):
 
             async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=progress.messageCounter):
                 # for writing into the file at once
+                messagesRow = []
                 if config.texts:
-                    messagesRow = []
                     messagesRow.append(message.id)
 
                     await userIdHandler (message, messagesRow, users)
@@ -394,7 +381,7 @@ async def archiveGroup(dialog, config: Config):
                 progress.messageCounter += 1
                 lastMessageId            = message.id
                 
-                progress.print()
+                progress.checkProgress()
 
             if config.dialogInfo and not gotChatInfo:
                 await getGroupOrChannelInfo(dialog, PATH, users)
@@ -403,7 +390,7 @@ async def archiveGroup(dialog, config: Config):
                 await usersHandler(users, PATH)
 
             if config.files:
-                await fileHandler.empty()
+                fileHandler.emptyBigFilesLog()
 
             saveCheckpoint(lastMessageId, fileHandler.counter, True, PATH, progress.timeStart)
             clearLastLine(3)
@@ -412,9 +399,13 @@ async def archiveGroup(dialog, config: Config):
     except FloodWaitError as e:
         handleError(dialog.name, e, lastMessageId, fileHandler.counter, PATH, False, progress.timeStart)
         await handleFloodWait(e)
+
     except (KeyboardInterrupt, asyncio.CancelledError) as e:
         clearLastLine(3)
         print("Please wait a moment while the saving the checkpoint")
+
+        fileHandler.emptyBigFilesLog()
+
         saveCheckpoint(lastMessageId, fileHandler.counter, gotChatInfo, PATH, progress.timeStart)
 
         if config.userInfo:
