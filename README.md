@@ -65,7 +65,7 @@ python main.py -t -r -f -s 10
 
 ``` 
 
-message_id, sender_id (or author_name in channels), forward_from_username, forward_from_user_id, replyed_to_message_id, message_text, message_date, file_id, file_relative_id, file_forwarded (if bigger than size-threshold)
+message_id, sender_id (or author_name in channels), forward_from_username, forward_from_user_id, replyed_to_message_id (or replyed_to_sender_id : replyed_to_messgage_id in case of replying something outside the dialog), message_text, message_date, file_id, file_relative_id, file_forwarded (if bigger than size-threshold)
 
 ```
 

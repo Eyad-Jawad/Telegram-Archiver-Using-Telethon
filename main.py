@@ -1,5 +1,5 @@
 import json, asyncio, os, csv, time, argparse
-from telethon import TelegramClient, functions, custom, types
+from telethon import TelegramClient, functions, custom, types, utils
 from telethon.errors import FloodWaitError, ChatAdminRequiredError, ChannelPrivateError
 from dataclasses import dataclass
 
@@ -8,13 +8,11 @@ API_ID = os.getenv("TELEGRAM_API_KEY")
 API_HASH = os.getenv("TELEGRAM_API_HASH")
 client = TelegramClient("Scrapper", API_ID, API_HASH)
 
-# TODO: change message row so it has fixed length
-
 # FIXME: Users info may be duplicated
 # FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
 # FIXME: When getting a floodwait a message will be skipped
 # FIXME: When replying to a message from a private chat the method fails:'TotalList' object has no attribute 'id'
-# TODO: Outside dialog reply handler
+# TODO: Channels VS Supergroups
 # TODO: Handle migration
 # TODO: Sticker packs handler
 # TODO: forwarded from Pic
@@ -77,7 +75,6 @@ class File:
         file = message.file
 
         fileName = f"{self.counter} "
-        self.counter += 1
 
         if message.photo:
             fileName += ".jpg"
@@ -107,24 +104,24 @@ class Progress:
         if self.totalMessages <= 0:
             return "Progress: N/A"
 
-        progressPercent: float      = min(self.messageCounter / self.totalMessages * 100, 100)
-        progressInTens:  int        = int (progressPercent // 10)
-        progressBar:     str        = ('█' * progressInTens + '░' * (10 - progressInTens))
-        elapsedTime:     float      = time.perf_counter() - self.timeStart
-        ETAElapsed:      str        = formatETA(elapsedTime)
-        messageRate:     float      = 0.0
-        downloadRate:    float      = 0.0
-        remainingTime:   float      = 0.0
+        progressPercent: float        = min(self.messageCounter / self.totalMessages * 100, 100)
+        progressInTens:  int          = int (progressPercent // 10)
+        progressBar:     str          = ('█' * progressInTens + '░' * (10 - progressInTens))
+        elapsedTime:     float        = time.perf_counter() - self.timeStart
+        ETAElapsed:      str          = formatETA(elapsedTime)
+        messageRate:     float        = 0.0
+        downloadRate:    float        = 0.0
+        remainingTime:   float        = 0.0
 
         if elapsedTime > 0:
-            messageRate             = self.messageCounter / elapsedTime
-            downloadRate            = f"{self.sizeInMb / elapsedTime:.3f}MB/s"
+            messageRate               = self.messageCounter / elapsedTime
+            messageRateFormatted: str = f"{self.messageCounter / elapsedTime:.3f}msg/s"
+            downloadRate              = f"{self.sizeInMb / elapsedTime:.3f}MB/s"
             if messageRate > 0:
-                remainingTime       =  (self.totalMessages - self.messageCounter) / messageRate
+                remainingTime         =  (self.totalMessages - self.messageCounter) / messageRate
 
-        ETARemaining:         str   = formatETA(remainingTime)
-        messageRateFormatted: str   = f"{self.messageCounter / elapsedTime:.3f}msg/s"
-        sizeInMBFormatted:    str   = f"{self.sizeInMb:.3f}MB"
+        ETARemaining:         str     = formatETA(remainingTime)
+        sizeInMBFormatted:    str     = f"{self.sizeInMb:.3f}MB"
 
         status = (
             f"Message {self.messageCounter:^14} | "
@@ -159,9 +156,9 @@ class Errors:
 
         self.fileClass.emptyBigFilesLog()
 
-        with open("dialogs/errors.txt", 'a') as f:
+        with open(f"{self.path}/errors.txt", 'a') as f:
             f.write(
-                f"Error occured in {self.path} "
+                f"Error occured: "
                 f"at message {self.progressClass.lastMessageID}:\n"
                 f"{error}\n\n"
             )
@@ -201,17 +198,21 @@ async def userIdHandler(message, messagesRow, users):
     if message.sender_id not in users:
         users.add(message.sender_id)
 
-
-async def replyHandler(message, messagesRow):
+async def replyHandler(message, messagesRow, users):
     # check if this message is a reply to another
-    if not message.is_reply:
+    if not message.reply_to:
         messagesRow[4] = 0
         return
-    reply = await message.get_reply_message()
-    if reply:
-        messagesRow[4] = reply.id
-    else:
-        messagesRow[4] = 0
+    messagesRow[4] = message.reply_to_msg_id
+
+    replyedTo = message.reply_to
+    if not (replyedTo and replyedTo.reply_to_peer_id): 
+        return
+    
+    replyedToID = utils.get_peer_id(replyedTo.reply_to_peer_id)
+    if replyedToID not in users:
+        messagesRow[4] = f"{replyedToID}:{message.reply_to_msg_id}"
+        users.add(replyedToID)
 
 async def forwardHandler(message, messagesRow, users):
     forward = message.forward
@@ -224,15 +225,10 @@ async def forwardHandler(message, messagesRow, users):
         messagesRow[3] = 0
         return
     entity = forward.from_id
-    peerId = None
-    if isinstance(entity, types.PeerUser):
-        peerId = entity.user_id
-    elif isinstance(entity, types.PeerChannel):
-        peerId = entity.channel_id
-    elif isinstance(entity, types.PeerChat):
-        peerId = entity.chat_id
+    peerId = utils.get_peer_id(entity)
     messagesRow[3] = peerId
-    users.add(peerId)
+    if peerId not in users:
+        users.add(peerId)
  
 async def textHandler(message, messagesRow):
     # check for text
@@ -335,11 +331,11 @@ async def archiveGroup(dialog, config: Config):
     PATH = f"dialogs"
 
     if isinstance(dialog.entity, types.User):
-        PATH += f"/users/{dialog.id}"
+        PATH += f"/Users/{dialog.id}"
     elif isinstance(dialog.entity, types.Chat):
-        PATH += f"/chats/{dialog.id}"
+        PATH += f"/Chats/{dialog.id}"
     else:
-        PATH += f"/groups/{dialog.id}"
+        PATH += f"/Groups/{dialog.id}"
 
     FILE_PATH = f"{PATH}/files"
 
@@ -365,6 +361,7 @@ async def archiveGroup(dialog, config: Config):
         progress.timeStart      -= dialogSavedCheckpoint[4]
     
     print(progress)
+    textPipeFunctions = [userIdHandler, forwardHandler, replyHandler]
 
     try: 
         with open(f"{PATH}/TextMessages.csv", 'a') as texts, \
@@ -372,27 +369,17 @@ async def archiveGroup(dialog, config: Config):
             CSVMessagesWrtier  = csv.writer(texts)
             CSVReactionsWriter = csv.writer(reactions)
 
-            async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=progress.messageCounter):
+            async for message in client.iter_messages(dialog.entity, reverse=True, offset_id=progress.lastMessageID):
                 # for writing into the file at once
-
-                # messageID, senderID, 
-                # forwardedFromName, forwardedFromID, 
-                # repliedToMessageID, messageText, 
-                # messageDate, fileID, fileCount, BigFile
-
                 messagesRow = [0] * 10
+                messagesRow[0] = message.id
                 if config.texts:
-                    messagesRow[0] = message.id
-
-                    await userIdHandler(message, messagesRow, users)
-
-                    await forwardHandler(message, messagesRow, users)
-                    
-                    await replyHandler(message, messagesRow)
+                    for function in textPipeFunctions:
+                        await function(message, messagesRow, users)
                     
                     await textHandler(message, messagesRow)
 
-                    messagesRow[6] = message.date
+                messagesRow[6] = message.date
 
                 if config.files:
                     await fileHandler.handle(message, messagesRow)
@@ -405,7 +392,7 @@ async def archiveGroup(dialog, config: Config):
                     await reactionHandler(message, CSVReactionsWriter, dialog)
 
                 progress.messageCounter += 1
-                progress.lastMessageId   = message.id
+                progress.lastMessageID   = message.id
                 
                 progress.checkProgress()
 
@@ -510,12 +497,12 @@ async def usersHandler(users, path, errorHandler: Errors):
         await errorHandler.handle(e)
 
     for user in users:
-        if isinstance(user, int):
-            await getUserInfo(user, errorHandler)
+        await getUserInfo(user, errorHandler)
 
 async def getUserInfo(userId, errorHandler: Errors):
     user = await client.get_entity(userId)
-    filePath = f"dialogs/users/{userId}"
+    userType = type(user).__name__
+    filePath = f"dialogs/{userType}s/{userId}"
 
     try:
         os.mkdir(filePath)
@@ -618,7 +605,7 @@ async def main():
 
     print("Started...")
     os.makedirs("dialogs", exist_ok=True)
-    os.makedirs("dialogs/users", exist_ok=True)
+    os.makedirs("dialogs/Users", exist_ok=True)
 
     async for dialog in client.iter_dialogs():
         ans = await asyncio.to_thread(input, f"Do you want to archive {dialog.name}? (y) ")
