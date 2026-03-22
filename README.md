@@ -33,7 +33,7 @@ I haven't tried running the program for extended periods of time, but if you run
 
 ### Setting The API keys
 
-You have to get the API keys from telegram.org and then set them in the .env:  
+You have to get the API keys from [telegram](https://my.telegram.org) and then set them in the .env:  
 
 ```
 
