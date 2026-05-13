@@ -37,11 +37,20 @@ You have to get the API keys from [telegram](https://my.telegram.org) and then s
 
 ```
 
-TELEGRAM_API_KEY "123456"
-TELEGRAM_API_HASH "abcdefg" 
+TELEGRAM_API_KEY = "123456"
+TELEGRAM_API_HASH = "abcdefg" 
 
 ```
 This is probably the safest way possible to ensure that your keys don't get leaked, I would never put mine straight into the program, you could read them from a file, but don't forget to add it to the gitignore.
+
+### Requirements
+You only need to install Telethon, and Pytest if you want to test:  
+
+```
+
+pip install telethon pytest pytest-asyncio
+
+```
 
 ### Arguments
 `-c`, `--check-size`: `check dialog size beforehand`  
@@ -123,12 +132,26 @@ photo_date
 
 For each one of those, if it doesn't exist (like a message not forwarded) it'll default to `0`
 
+## Tests
+
+There's only one simple test that checks the consistncy of the program.  
+To do it you'd have:  
+1- To join the group `EyadTest1` on Telegram.  
+2- Have Pytest, and Pytest-asyncio installed on your system.  
+3- Then run this command:  
+
+```
+
+PYTHONPATH=. pytest
+
+```
+
 ### What Did I Learn
 
 I learnt a lot about file managment, and how to parse things in general, but the coolest thing if you ask me is the progress bar, that is cool.  
 This project did take a good chunk of time to finish, or at least get it to work, and I did it mainly because I love archiving things locally, it works pretty well in my opinion.  
 I also learnt a good amount of error handling, while it is not sublime, error handling is good here.  
 I'd like to add a way to reverse the process and get a GUI out of it, I've seen that on discord archivers, I'd also want to add a way to compress stuff, like files, or at least do something about them because they take A LOT of space.  
-All in all, I'm pretty much satisfied with this project, it took me about 50h? idk, but I do feel like I'm missing some features.  
+All in all, I'm pretty much satisfied with this project, it took me about 50h? idk (probably 70h+ by now), but I do feel like I'm missing some features.  
 I have listed a good list of todos and fixme in the code, I might do them one day...? idk, I hopne it'll be good, inshallah.  
 Thank you for reading -Eyad.
