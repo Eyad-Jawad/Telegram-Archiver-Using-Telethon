@@ -19,7 +19,7 @@ class Progress:
         self.savedDialogInfo = checkpoint[3]
         self.timeStart      -= checkpoint[4]
     
-    def update(self, lastMessageID):
+    def update(self, lastMessageID: int) -> None:
         self.messageCounter += 1
         self.lastMessageID   = lastMessageID
         self.checkProgress()

@@ -10,15 +10,15 @@ from .progress import Progress as prog
 
 class Dialog:
     # client, config, dialog
-    def __init__(self, client, config, dialog):
+    def __init__(self, client, config: con, dialog) -> None:
         self.dialog = dialog
         self.entity = dialog.entity
-        self.config = config
+        self.config: con = config
         self.client = client
 
-        self.id = utils.get_peer_id(dialog.entity)
-        self.type = self.getDialogType()
-        self.path = f"dialogs/{self.type}/{self.id}"
+        self.id: int = utils.get_peer_id(dialog.entity)
+        self.type: str = self.getDialogType()
+        self.path: str = f"dialogs/{self.type}/{self.id}"
 
         try:
             os.makedirs (f"{self.path}", exist_ok=True)
@@ -52,20 +52,20 @@ class Dialog:
         self.file.useCheckpoint(checkpoint)
         self.progress.useCheckpoint(checkpoint)
 
-    def getDialogType(self):
+    def getDialogType(self) -> str:
         if isinstance(self.entity, types.User):
-            self.type = "User"
+            return "User"
         elif isinstance(self.entity, types.Chat):
-            self.type = "Chat"
+            return "Chat"
         elif isinstance(self.entity, types.Channel):
             if self.entity.broadcast:
-                self.type = "Channel"
+                return "Channel"
             else:
-                self.type = "Supergroup"
+                return "Supergroup"
         else:
-            self.type = "Unknown"
+            return "Unknown"
     
-    async def archive(self, client, config: con):
+    async def archive(self) -> None:
         textPipeFunctions: list = [
             helpers.info.userIdHandler, 
             helpers.text.forwardHandler, 
@@ -81,7 +81,7 @@ class Dialog:
                 CSVMessagesWrtier  = csv.writer(texts)
                 CSVReactionsWriter = csv.writer(reactions)
 
-                async for message in client.iter_messages(
+                async for message in self.client.iter_messages(
                     self.dialog.entity, 
                     reverse=True, 
                     offset_id=self.progress.lastMessageID
@@ -91,17 +91,17 @@ class Dialog:
                     messagesRow[0] = message.id
                     messagesRow[6] = message.date
 
-                    if config.texts:
+                    if self.config.texts:
                         for function in textPipeFunctions:
                             await function(message, messagesRow, self.users)
 
-                    if config.files and message.file:
+                    if self.config.files and message.file:
                         await self.file.handle(message, messagesRow)
                         self.progress.sizeInMb += message.file.size / self.progress.MbToByte
 
-                    if config.reactions:
+                    if self.config.reactions:
                         await helpers.reactions.reactionHandler(
-                            client, 
+                            self.client, 
                             self.dialog, 
                             message, 
                             CSVReactionsWriter
@@ -110,8 +110,9 @@ class Dialog:
                     CSVMessagesWrtier.writerow(messagesRow)
                     self.progress.update(message.id)
 
-                if config.dialogInfo and not self.progress.savedDialogInfo:
+                if self.config.dialogInfo and not self.progress.savedDialogInfo:
                     await helpers.info.getGroupOrChannelInfo(
+                        self.client,
                         self.dialog, 
                         self.path, 
                         self.users, 
@@ -119,14 +120,15 @@ class Dialog:
                     )
                     self.progress.savedDialogInfo = True
 
-                if config.userInfo:
+                if self.config.userInfo:
                     await helpers.info.usersHandler(
-                        self.user, 
+                        self.client,
+                        self.users, 
                         self.path, 
                         self.error
                     )
 
-                if config.files:
+                if self.config.files:
                     self.file.emptyBigFilesLog()
 
                 helpers.utils.saveCheckpoint (
@@ -155,10 +157,10 @@ class Dialog:
                 self.progress.timeStart
             )
 
-            if config.userInfo:
+            if self.config.userInfo:
                 with open(f"{self.path}/Users.csv", 'w') as f:
                     CSVUserWriter = csv.writer(f)
-                    for user in self.user:
+                    for user in self.users:
                         CSVUserWriter.writerow([user])
 
             helpers.clearLastLine()
@@ -166,23 +168,23 @@ class Dialog:
             exit(0)
 
         except Exception as e:
-            await self.error.handle(e)
+            await self.error.handle(e, self.archive)
     
-    async def calculateDialogSpace(self, client, dialog, config: con):
-        self.progress: prog = prog(dialog)
+    async def calculateDialogSpace(self):
+        self.progress: prog = prog(self.dialog)
 
         try:
             self.progress.print()
 
-            async for message in client.iter_messages(dialog.entity):
+            async for message in self.client.iter_messages(self.dialog.entity):
                 self.progress.messageCounter += 1
                 self.progress.checkProgress()
                 
-                if message.file and message.file.size < config.fileSizeThresholdInBytes:
+                if message.file and message.file.size < self.config.fileSizeThresholdInBytes:
                     self.progress.sizeInMb += message.file.size / self.progress.MbToByte
 
             helpers.clearLastLine(3)
-            print(f"Dialog {dialog.title} will take about {self.progress.sizeInMb:.3f}MB")
+            print(f"Dialog {self.dialog.title} will take about {self.progress.sizeInMb:.3f}MB")
             return self.progress.sizeInMb
 
         except FloodWaitError as e:

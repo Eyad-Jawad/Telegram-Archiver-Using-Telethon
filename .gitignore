@@ -1,5 +1,8 @@
 Scrapper.session
 Scrapper.session-journal
-dialogs
-.vs
+dialogs/
+.vs/
 .env
+__pycache__/
+.pytest_cache/
+*.txt

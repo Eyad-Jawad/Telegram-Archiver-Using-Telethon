@@ -1,6 +1,6 @@
-from telethon import types, utils
+from telethon import types, utils, custom
 
-async def replyHandler(message, messagesRow, users):
+async def replyHandler(message: custom.message.Message, messagesRow: list, users: set[int]) -> None:
     # check if this message is a reply to another
     if not message.reply_to:
         messagesRow[4] = 0
@@ -16,7 +16,7 @@ async def replyHandler(message, messagesRow, users):
         messagesRow[4] = f"{replyedToID}:{message.reply_to_msg_id}"
         users.add(replyedToID)
 
-async def forwardHandler(message, messagesRow, users):
+async def forwardHandler(message: custom.message.Message, messagesRow: list, users: set[int]) -> None:
     forward = message.forward
     if not forward:
         messagesRow[2] = 0
@@ -32,7 +32,7 @@ async def forwardHandler(message, messagesRow, users):
     if peerId not in users:
         users.add(peerId)
  
-async def textHandler(message, messagesRow, users: set):
+async def textHandler(message: custom.message.Message, messagesRow: list, users: set) -> None:
     # check for text
     text = ""
     if message.text:

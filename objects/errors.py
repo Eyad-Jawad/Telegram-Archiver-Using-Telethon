@@ -15,7 +15,7 @@ class Errors:
         self.progressClass  = progress
         self.fileClass      = fileHanlder
     
-    async def handle(self, error) -> None:
+    async def handle(self, error, comesFrom: str|None = None) -> None:
         saveCheckpoint(
             self.progressClass.lastMessageID, 
             self.progressClass.messageCounter,
@@ -31,7 +31,9 @@ class Errors:
             f.write(
                 f"Error occured: "
                 f"at message {self.progressClass.lastMessageID}:\n"
-                f"{error}\n\n"
+                f"{error}"
+                f"\nthis error was raised from {comesFrom} function\n\n" if comesFrom else ""
+                f"\n\n"
             )
 
         if isinstance(error, FloodWaitError):

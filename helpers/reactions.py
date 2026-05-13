@@ -1,6 +1,6 @@
-from telethon import functions, types
+from telethon import functions, types, custom
 
-async def getReactionList(client, dialog, message):
+async def getReactionList(client, dialog, message: custom.message.Message) -> list:
     id = message.id
     offset = None
     reactions = []
@@ -49,7 +49,7 @@ async def getReactionList(client, dialog, message):
 
     return reactions
 
-async def reactionHandler(client, dialog, message, CSVReactionsWriter):
+async def reactionHandler(client, dialog, message: custom.message.Message, CSVReactionsWriter) -> None:
     reactions = message.reactions
     if not reactions: return
     result = []
