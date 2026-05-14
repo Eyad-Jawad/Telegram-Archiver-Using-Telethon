@@ -6,13 +6,11 @@ from telethon import TelegramClient, types
 # FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
 # FIXME: When getting a floodwait a message will be skipped
 # FIXME: When replying to a message from a private chat the method fails:'TotalList' object has no attribute 'id'
-# FIXME: Make dirs prior to archiving
 
 # TODO: Logging
 # TODO: Unit tests / pytest
 # TODO: Make it installable in pip or something idk
 # TODO: Update the README
-# TODO: Channels VS Supergroups
 # TODO: Handle migration
 # TODO: Sticker packs handler
 # TODO: forwarded from Pic

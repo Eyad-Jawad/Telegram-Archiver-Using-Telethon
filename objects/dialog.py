@@ -81,6 +81,33 @@ class Dialog:
                 CSVMessagesWrtier  = csv.writer(texts)
                 CSVReactionsWriter = csv.writer(reactions)
 
+                secondCol = "Sender ID" if self.getDialogType() != "Channel" else "Author Name"
+                CSVMessagesWrtier.writerow([
+                    "Message Id", 
+                    secondCol,
+                    "Forward From username",
+                    "Forward From user Id", 
+                    "Replyed-To Ids", 
+                    "Text", 
+                    "Date", 
+                    "File Id", 
+                    "File Relative Id", 
+                    "Donwloaded Media"
+                ])
+                if self.getDialogType() == "Channel":
+                    CSVReactionsWriter.writerow([
+                        "Message Id", 
+                        "Reaction", 
+                        "Count"
+                    ])
+                else:
+                    CSVReactionsWriter.writerow([
+                        "Message Id", 
+                        "Reactor Id", 
+                        "Date Of Reacting", 
+                        "Reaction"
+                    ])
+
                 async for message in self.client.iter_messages(
                     self.dialog.entity, 
                     reverse=True, 
@@ -160,6 +187,7 @@ class Dialog:
             if self.config.userInfo:
                 with open(f"{self.path}/Users.csv", 'w') as f:
                     CSVUserWriter = csv.writer(f)
+                    CSVUserWriter.writerow(["User Id"])
                     for user in self.users:
                         CSVUserWriter.writerow([user])
 

@@ -65,6 +65,6 @@ async def test():
     await client.connect()
     try:
         await setUp()
-        assert getHash() == "8e4c418249193a41bc97af1964ecbb0e4b94011239137ae0b4f66ddc7527ac45"
+        assert getHash() == "a274344c51c0a727babecdf3a02a5b9e103b54b57f3290a27725f0acff12efcc"
     finally:
         await client.disconnect()

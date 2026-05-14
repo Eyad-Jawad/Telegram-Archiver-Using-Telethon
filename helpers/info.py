@@ -57,6 +57,7 @@ async def getPhotoInfo(client, dialog, Path: str, errorHandler: errors.Errors) -
     try:
         with open(f"{Path}/PhotoInfo.csv", 'w') as f:
             CSVInfoWriter = csv.writer(f)
+            CSVInfoWriter.writerow(["Photo Date"])
             photoDataRow = []
 
             async for photo in client.iter_profile_photos(dialog):
@@ -81,7 +82,7 @@ async def usersHandler(client, users: set[int], path: str, errorHandler: errors.
         with open(f"{path}/Users.csv", 'r', newline='', encoding='utf-8') as f:
             CSVReader = csv.reader(f)
             readUsers = list(CSVReader)
-            for user in readUsers:
+            for user in readUsers[1:]:
                 if user not in users:
                     users.add(int(user))
 
@@ -92,6 +93,7 @@ async def usersHandler(client, users: set[int], path: str, errorHandler: errors.
 
     with open(f"{path}/Users.csv", 'w') as f:
         CSVWriter = csv.writer(f)
+        CSVWriter.writerow(["User Id"])
         for user in users:
             CSVWriter.writerow([user])
 

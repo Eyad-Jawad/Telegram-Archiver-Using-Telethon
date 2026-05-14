@@ -6,6 +6,8 @@ class File:
         self.counter:       int       = 1
         self.path:          str       = path + "/files"
         self.skippedStack:  list[int] = []
+        with open(f"{self.path}/bigfiles.csv", 'w') as f:
+            f.write("Message Id\n")
     
     def useCheckpoint(self, checkpoint: list) -> None:
         if not checkpoint: return
