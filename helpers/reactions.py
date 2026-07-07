@@ -1,23 +1,20 @@
 from telethon import functions, types, custom
 
+
 async def getReactionList(client, dialog, message: custom.message.Message) -> list:
     id = message.id
     offset = None
     reactions = []
     while True:
-        request = await client (
+        request = await client(
             functions.messages.GetMessageReactionsListRequest(
-                peer=dialog,
-                id=id,
-                reaction=None,
-                limit=100,
-                offset=offset
+                peer=dialog, id=id, reaction=None, limit=100, offset=offset
             )
         )
         result = request.reactions
 
         for react in result:
-            reaction = [message.id]        
+            reaction = [message.id]
             peerId = None
 
             if isinstance(react.peer_id, types.PeerUser):
@@ -49,18 +46,18 @@ async def getReactionList(client, dialog, message: custom.message.Message) -> li
 
     return reactions
 
-async def reactionHandler(client, dialog, message: custom.message.Message, CSVReactionsWriter) -> None:
+
+async def reactionHandler(
+    client, dialog, message: custom.message.Message, CSVReactionsWriter
+) -> None:
     reactions = message.reactions
-    if not reactions: return
+    if not reactions:
+        return
     result = []
     # For channels
     if not reactions.can_see_list:
         for react in reactions.results or []:
-            reactionsRow = [
-                message.id,
-                react.reaction,
-                react.count
-            ]
+            reactionsRow = [message.id, react.reaction, react.count]
 
             result.append(reactionsRow)
 

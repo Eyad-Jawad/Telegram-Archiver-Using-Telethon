@@ -10,7 +10,6 @@ from telethon import TelegramClient, types
 # TODO: Logging
 # TODO: Unit tests / pytest
 # TODO: Make it installable in pip or something idk
-# TODO: Update the README
 # TODO: Handle migration
 # TODO: Sticker packs handler
 # TODO: forwarded from Pic
@@ -18,20 +17,62 @@ from telethon import TelegramClient, types
 # TODO: special emoticon
 # TODO: edit date
 # TODO: reverse the process (GUI)
-# TODO: add the method of only extracting one's messages 
+# TODO: add the method of only extracting one's messages
 # TODO: On channel get views
+
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--check-size",           action="store_true", help="check dialog size beforehand")
-    parser.add_argument("-a", "--archive-all",          action="store_true", help="archive everything")
-    parser.add_argument("-t", "--archive-text",         action="store_true", help="archive text messages (including forward, reply, edit, and sender_id)")
-    parser.add_argument("-r", "--archive-reactions",    action="store_true", help="archive message reactions")
-    parser.add_argument("-d", "--archive-dialog-info",  action="store_true", help="archive dialog info like title, bio, pfps, and etc.")
-    parser.add_argument("-u", "--archive-user-info",    action="store_true", help="archive info of users in a dialog, like name, bio, pfps, and etc.")
-    parser.add_argument("-f", "--archive-file",         action="store_true", help="archive files, like photos, videos, documents, and etc. with a size threshold (default: 100MB)")
-    parser.add_argument("-b", "--archive-big-files",    action="store_true", help="archive all files ignoring the default of 100MB")
-    parser.add_argument("-s", "--size-threshold",       default=100, type=int, metavar="MB", help="the size threshold for files (default: 100MB)")
+    parser.add_argument(
+        "-c", "--check-size", action="store_true", help="check dialog size beforehand"
+    )
+    parser.add_argument(
+        "-a", "--archive-all", action="store_true", help="archive everything"
+    )
+    parser.add_argument(
+        "-t",
+        "--archive-text",
+        action="store_true",
+        help="archive text messages (including forward, reply, edit, and sender_id)",
+    )
+    parser.add_argument(
+        "-r",
+        "--archive-reactions",
+        action="store_true",
+        help="archive message reactions",
+    )
+    parser.add_argument(
+        "-d",
+        "--archive-dialog-info",
+        action="store_true",
+        help="archive dialog info like title, bio, pfps, and etc.",
+    )
+    parser.add_argument(
+        "-u",
+        "--archive-user-info",
+        action="store_true",
+        help="archive info of users in a dialog, like name, bio, pfps, and etc.",
+    )
+    parser.add_argument(
+        "-f",
+        "--archive-file",
+        action="store_true",
+        help="archive files, like photos, videos, documents, and etc. with a size threshold (default: 100MB)",
+    )
+    parser.add_argument(
+        "-b",
+        "--archive-big-files",
+        action="store_true",
+        help="archive all files ignoring the default of 100MB",
+    )
+    parser.add_argument(
+        "-s",
+        "--size-threshold",
+        default=100,
+        type=int,
+        metavar="MB",
+        help="the size threshold for files (default: 100MB)",
+    )
 
     config = objects.config.Config()
 
@@ -39,23 +80,23 @@ async def main():
 
     config.checkSize = args.check_size
     if args.archive_all:
-        config.texts        = True
-        config.reactions    = True
-        config.dialogInfo   = True
-        config.userInfo     = True
-        config.files        = True
-        config.fileSizeThresholdInBytes = float('inf')
+        config.texts = True
+        config.reactions = True
+        config.dialogInfo = True
+        config.userInfo = True
+        config.files = True
+        config.fileSizeThresholdInBytes = float("inf")
     else:
-        config.texts        = args.archive_text
-        config.reactions    = args.archive_reactions
-        config.dialogInfo   = args.archive_dialog_info
-        config.userInfo     = args.archive_user_info
-        config.files        = args.archive_file
+        config.texts = args.archive_text
+        config.reactions = args.archive_reactions
+        config.dialogInfo = args.archive_dialog_info
+        config.userInfo = args.archive_user_info
+        config.files = args.archive_file
         if args.archive_big_files:
             config.files = True
-            config.fileSizeThresholdInBytes = float('inf')
+            config.fileSizeThresholdInBytes = float("inf")
         else:
-            config.fileSizeThresholdInBytes = args.size_threshold * (1024 ** 2)
+            config.fileSizeThresholdInBytes = args.size_threshold * (1024**2)
 
     print("Started...")
     os.makedirs("dialogs", exist_ok=True)
@@ -64,7 +105,7 @@ async def main():
         ans = input(f"Do you want to archive {dialog.name}? (y) ")
         helpers.utils.clearLastLine()
 
-        if (ans == 'y'):
+        if ans == "y":
             dialogClass = objects.dialog.Dialog(client, config, dialog)
             await dialogClass.setUp()
 
@@ -78,6 +119,7 @@ async def main():
 
             else:
                 print("Error: can't archive this!")
+
 
 if __name__ == "__main__":
     # Get the API keys

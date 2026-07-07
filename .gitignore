@@ -6,3 +6,4 @@ dialogs/
 __pycache__/
 .pytest_cache/
 *.txt
+venv/
