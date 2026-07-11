@@ -59,7 +59,6 @@ class Dialog:
 
     async def archive(self) -> None:
         textPipeFunctions: list = [
-            helpers.info.userIdHandler,
             helpers.text.forwardHandler,
             helpers.text.replyHandler,
             helpers.text.textHandler,
@@ -111,6 +110,7 @@ class Dialog:
                     if self.config.texts:
                         for function in textPipeFunctions:
                             await function(message, messagesRow, self.users)
+                        messagesRow[1] = helpers.info.userIdHandler(message, self.users)
 
                     if self.config.files and message.file:
                         await self.file.handle(message, messagesRow)

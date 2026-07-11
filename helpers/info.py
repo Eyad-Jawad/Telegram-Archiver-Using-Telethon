@@ -4,21 +4,20 @@ from telethon.errors import ChatAdminRequiredError, ChannelPrivateError
 from objects import errors
 
 
-async def userIdHandler(
-    message: custom.message.Message, messagesRow: list, users: set[int]
-) -> None:
+def userIdHandler(
+    message: custom.message.Message, users: set[int]
+) -> str | int:
     # check for the id of the user to add to the message
     if message.post_author:
-        messagesRow[1] = message.post_author
-        return
+        return message.post_author
     elif not message.sender_id:
-        messagesRow[1] = 0
-        return
+        return 0
 
-    messagesRow[1] = message.sender_id
     # check if the sender is not saved
     if message.sender_id not in users:
         users.add(message.sender_id)
+
+    return message.sender_id
 
 
 async def getGroupOrChannelInfo(
