@@ -101,7 +101,6 @@ class Dialog:
                     self.dialog,
                     self.users,
                     self.error,
-                    self.conn,
                     self.cursor,
                 )
 
