@@ -1,4 +1,4 @@
-import os, argparse, objects, helpers
+import os, argparse, objects, helpers, asyncio, signal
 from dotenv import load_dotenv
 from telethon import TelegramClient, types
 
@@ -32,6 +32,17 @@ On channel get views
 
 
 async def main():
+    loop = asyncio.get_running_loop()
+    mainTask = asyncio.current_task()
+
+    def handleKeyInterruption():
+        mainTask.cancel()
+    
+    try:
+        loop.add_signal_handler(signal.SIGINT, handleKeyInterruption)
+    except NotImplementedError:
+        pass
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--archive-all", action="store_true", help="archive everything"
@@ -119,25 +130,42 @@ async def main():
     print("Started...")
     os.makedirs("Media/", exist_ok=True)
 
-    async for dialog in client.iter_dialogs():
-        try:
-            ans = input(f"Do you want to archive {dialog.name}? (y) ")
-            helpers.utils.clearLastLine()
-        except KeyboardInterrupt:
-            print("\n\nHave a good day!")
-            exit(0)
+    try:
+        async for dialog in client.iter_dialogs():
+            try:
+                ans = input(f"Do you want to archive {dialog.name}? (y) ")
+                helpers.utils.clearLastLine()
+            except KeyboardInterrupt:
+                print("\n\nHave a good day!")
+                return
 
-        if ans == "y":
-            dialogClass = objects.dialog.Dialog(client, config, dialog)
-            await dialogClass.setUp()
+            if ans == "y":
+                dialogClass = objects.dialog.Dialog(client, config, dialog)
+                
+                try:
+                    loop.add_signal_handler(signal.SIGINT, handleKeyInterruption)
+                except NotImplementedError:
+                    pass
 
-            if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
-                print(f"Archiving {dialog.name}...\n\n")
-                await dialogClass.archive()
+                try:
+                    await dialogClass.setUp()
 
-            else:
-                print("Error: can't archive this!")
-
+                    if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
+                        print(f"Archiving {dialog.name}...\n\n")
+                        await dialogClass.archive()
+                    else:
+                        print("Error: can't archive this!")
+                finally:
+                    try:
+                        loop.remove_signal_handler(signal.SIGINT)
+                    except NotImplementedError:
+                        pass
+                        
+    except asyncio.CancelledError:
+        print("\nPlease wait a moment while the saving the checkpoint")
+    except KeyboardInterrupt:
+        print("\n\nHave a good day!")
+        exit(0)
 
 if __name__ == "__main__":
     # Get the API keys
@@ -149,4 +177,8 @@ if __name__ == "__main__":
     client = TelegramClient("Scrapper", API_ID, API_HASH)
 
     with client:
-        client.loop.run_until_complete(main())
+        try:
+            client.loop.run_until_complete(main())
+
+        except asyncio.CancelledError:
+            pass

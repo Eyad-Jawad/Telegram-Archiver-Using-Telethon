@@ -112,7 +112,7 @@ class Dialog:
             print(f"Done archiving {self.dialog.name}!\n\n")
 
         except (KeyboardInterrupt, asyncio.CancelledError) as e:
-            await self.handleKeyInterruption()
+            self.handleKeyInterruption()
 
         except Exception as e:
             await self.error.handle(e, self.archive)
@@ -210,18 +210,17 @@ class Dialog:
             ],
         )
 
-        self.conn.commit()
 
-    async def handleKeyInterruption(self):
+    def handleKeyInterruption(self):
         # helpers.utils.clearLastLine(3)
         print("\nPlease wait a moment while the saving the checkpoint")
 
         self.saveCheckpoint()
 
         if self.config.userInfo:
-            await helpers.info.usersHandler(
-                self.client, self.dialog, self.users, self.error, self.cursor, True
-            )
+            for user in self.users:
+                helpers.info.insertUsersIntoDB(self.cursor, user, self.dialog.id)
+
 
         self.conn.commit()
         self.conn.close()
