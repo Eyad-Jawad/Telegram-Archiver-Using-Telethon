@@ -1,5 +1,5 @@
 import time
-from helpers.utils import formatETA, clearLastLine
+from helpers.utils import formatETA
 
 
 class Progress:
@@ -11,20 +11,18 @@ class Progress:
         self.totalMessagesPercent: int = max(totalMessages // 100, 1)
         self.messageCounter: int = 1
         self.lastMessageID: int = 1
-        self.savedDialogInfo: bool = False
 
     def useCheckpoint(self, checkpoint: list) -> None:
         if not checkpoint:
             return
         self.lastMessageID = checkpoint[0]
         self.messageCounter = checkpoint[1]
-        self.savedDialogInfo = checkpoint[3]
-        self.timeStart -= checkpoint[4]
+        self.timeStart -= checkpoint[2]
 
-    def update(self, lastMessageID: int) -> None:
+    def update(self, lastMessageID: int) -> bool:
         self.messageCounter += 1
         self.lastMessageID = lastMessageID
-        self.checkProgress()
+        return self.checkProgress()
 
     def __str__(self) -> str:
         if self.totalMessages <= 0:
@@ -58,12 +56,11 @@ class Progress:
             f"{messageRateFormatted:^8} | "
             f"{downloadRate:^8} | "
             f"ETA: {ETARemaining:^14}\n"
-            f"Progress: {progressBar}..."
+            f"Progress: {progressBar}...\n\n"
         )
 
         return status
 
-    def checkProgress(self) -> None:
+    def checkProgress(self) -> bool:
         if self.messageCounter % self.totalMessagesPercent == 0:
-            clearLastLine(2)
-            print(self)
+            return True

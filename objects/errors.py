@@ -1,39 +1,39 @@
-import asyncio
-from . import file, progress
-from helpers.utils import saveCheckpoint, clearLastLine
+import asyncio, sqlite3
+from . import file, progress, dialog
+from helpers.utils import clearLastLine
 from telethon.errors import FloodWaitError
 
 
 class Errors:
     def __init__(
-        self, path: str, progress: progress.Progress, fileHanlder: file.File
+        self, id: int, conn: sqlite3.Connection, cursor: sqlite3.Cursor, progress: progress.Progress, fileHanlder: file.File, dialogObject: dialog.Dialog
     ) -> None:
 
-        self.path = path
+        self.id = id
+        self.conn = conn
+        self.cursor = cursor
         self.progressClass = progress
         self.fileClass = fileHanlder
+        self.dialogObject = dialogObject
 
     async def handle(self, error, comesFrom: str | None = None) -> None:
-        saveCheckpoint(
-            self.progressClass.lastMessageID,
-            self.progressClass.messageCounter,
-            self.fileClass.counter,
-            self.progressClass.savedDialogInfo,
-            self.path,
-            self.progressClass.timeStart,
-        )
+        self.dialogObject.saveCheckpoint()
 
-        self.fileClass.emptyBigFilesLog()
+        print(f"Error occured: {error}")
 
-        with open(f"{self.path}/errors.txt", "a") as f:
+        self.conn.commit()
+
+        with open("errors.txt", "a") as f:
             f.write(
                 f"Error occured: "
                 f"at message {self.progressClass.lastMessageID}:\n"
-                f"{error}"
-                f"\nthis error was raised from {comesFrom} function\n\n"
-                if comesFrom
-                else "" f"\n\n"
+                f"{error}\n"
             )
+            
+            if comesFrom:
+                f.write(
+                    f"This error was raised from {comesFrom} function\n\n"
+                )
 
         if isinstance(error, FloodWaitError):
             print(f"You've been rate limited for {error.seconds}s")

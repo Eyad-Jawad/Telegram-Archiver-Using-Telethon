@@ -1,0 +1,84 @@
+import sqlite3
+
+def makeTables(cursor: sqlite3.Cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dialogs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dialogId INTEGER UNIQUE,
+            name TEXT NOT NULL,
+            type TEXT NOT NULL,
+            totalNumberOfMessages INTEGER,
+            lastMessageId INTEGER NOT NULL DEFAULT 0,
+            messageCounter INTEGER NOT NULL DEFAULT 0,
+            archivingTime FLOAT NOT NULL DEFAULT 0.0
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dialogId INTEGER,
+            messageId INTEGER ,
+            authorName TEXT,
+            senderId INTEGER,
+            forwardFromUsername INTEGER,
+            forwardFromUserId INTEGER,
+            replyedToId INTEGER,
+            text TEXT,
+            date DATETIME,
+            filePath TEXT,
+            fileId TEXT UNIQUE,
+            fileRelativeId INTEGER,
+            downloadedMedia INTEGER NOT NULL DEFAULT 0,
+            UNIQUE (dialogId, messageId)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS reactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dialogId INTEGER,
+            messageId INTEGER,
+            reactorsId INTEGER,
+            dateOfReacting DATETIME,
+            reaction TEXT,
+            count INTEGER NOT NULL DEFAULT 1
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER,
+            dialogId INTEGER,
+            UNIQUE (userId, dialogId)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dialogInfo (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dialogId INTEGER UNIQUE,
+            fullRequest TEXT,
+            dateOfRequest DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dialogInfoArchive (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dialogId INTEGER,
+            fullRequest TEXT UNIQUE,
+            dateOfRequest DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS dialogPhotos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dialogId INTEGER,
+            photoId INTEGER UNIQUE,
+            photoPath TEXT,
+            photoDate DATETIME
+        )
+    """)

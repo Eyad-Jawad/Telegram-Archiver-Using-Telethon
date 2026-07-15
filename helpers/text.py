@@ -1,47 +1,54 @@
-from telethon import types, utils, custom
+from telethon import types, custom
+from telethon.utils import get_peer_id
 
-
-async def replyHandler(
-    message: custom.message.Message, messagesRow: list, users: set[int]
-) -> None:
+def replyHandler(
+    message: custom.message.Message, users: set[int]
+) -> str | int:
     # check if this message is a reply to another
-    if not message.reply_to:
-        messagesRow[4] = 0
-        return
-    messagesRow[4] = message.reply_to_msg_id
+    try:
+        if not message or not message.reply_to:
+            return 0
 
-    replyedTo = message.reply_to
-    if not (replyedTo and replyedTo.reply_to_peer_id):
-        return
+        # check if it's from a user or a channel
+        replyedTo = message.reply_to
+        if not (replyedTo and replyedTo.reply_to_peer_id):
+            return message.reply_to_msg_id
 
-    replyedToID = utils.get_peer_id(replyedTo.reply_to_peer_id)
-    if replyedToID not in users:
-        messagesRow[4] = f"{replyedToID}:{message.reply_to_msg_id}"
-        # users.add(replyedToID)
+        # if it's from a channel
+        replyedToID = get_peer_id(replyedTo.reply_to_peer_id)
 
+        if replyedToID not in users:
+            users.add(replyedToID)
 
-async def forwardHandler(
-    message: custom.message.Message, messagesRow: list, users: set[int]
-) -> None:
+        return f"{replyedToID}:{message.reply_to_msg_id}"
+    
+    except Exception as e:
+        print(f"\nUnlogged error occurred: {e}\n")
+        return 0
+
+def forwardHandler(
+    message: custom.message.Message, users: set[int]
+) -> list[str | int]:
+    if not message or not message.forward:
+        return [0, 0]
+    
     forward = message.forward
-    if not forward:
-        messagesRow[2] = 0
-        messagesRow[3] = 0
-        return
-    messagesRow[2] = f"{forward.from_name}"
+    
+    forwardFromName = f"{forward.from_name}"
     if not forward.from_id:
-        messagesRow[3] = 0
-        return
+        return [forwardFromName, 0]
+    
     entity = forward.from_id
-    peerId = utils.get_peer_id(entity)
-    messagesRow[3] = peerId
+    peerId = get_peer_id(entity)
+
     if peerId not in users:
         users.add(peerId)
 
+    return[forwardFromName, peerId]
 
-async def textHandler(
-    message: custom.message.Message, messagesRow: list, users: set
-) -> None:
+def textHandler(
+    message: custom.message.Message
+) -> str:
     # check for text
     text = ""
     if message.text:
@@ -65,4 +72,102 @@ async def textHandler(
         else:
             text = f"{action} was done."
 
-    messagesRow[5] = text
+    return text
+
+"""
+Available message action:
+
+MessageActionBoostApply
+MessageActionBotAllowed
+MessageActionChangeCreator
+MessageActionChannelCreate
+MessageActionChannelMigrateFrom
+MessageActionChatAddUser
+MessageActionChatCreate
+MessageActionChatDeletePhoto
+MessageActionChatDeleteUser
+MessageActionChatEditPhoto
+MessageActionChatEditTitle
+MessageActionChatJoinedByLink
+MessageActionChatJoinedByRequest
+MessageActionChatMigrateTo
+MessageActionConferenceCall
+MessageActionContactSignUp
+MessageActionCustomAction
+MessageActionEmpty
+MessageActionGameScore
+MessageActionGeoProximityReached
+MessageActionGiftCode
+MessageActionGiftPremium
+MessageActionGiftStars
+MessageActionGiftTon
+MessageActionGiveawayLaunch
+MessageActionGiveawayResults
+MessageActionGroupCall
+MessageActionGroupCallScheduled
+MessageActionHistoryClear
+MessageActionInviteToGroupCall
+MessageActionManagedBotCreated
+MessageActionNewCreatorPending
+MessageActionNoForwardsRequest
+MessageActionNoForwardsToggle
+MessageActionPaidMessagesPrice
+MessageActionPaidMessagesRefunded
+MessageActionPaymentRefunded
+MessageActionPaymentSent
+MessageActionPaymentSentMe
+MessageActionPhoneCall
+MessageActionPinMessage
+MessageActionPollAppendAnswer
+MessageActionPollDeleteAnswer
+MessageActionPrizeStars
+MessageActionRequestedPeer
+MessageActionRequestedPeerSentMe
+MessageActionScreenshotTaken
+MessageActionSecureValuesSent
+MessageActionSecureValuesSentMe
+MessageActionSetChatTheme
+MessageActionSetChatWallPaper
+MessageActionSetMessagesTTL
+MessageActionStarGift
+MessageActionStarGiftPurchaseOffer
+MessageActionStarGiftPurchaseOfferDeclined
+MessageActionStarGiftUnique
+MessageActionSuggestBirthday
+MessageActionSuggestProfilePhoto
+MessageActionSuggestedPostApproval
+MessageActionSuggestedPostRefund
+MessageActionSuggestedPostSuccess
+MessageActionTodoAppendTasks
+MessageActionTodoCompletions
+MessageActionTopicCreate
+MessageActionTopicEdit
+MessageActionWebViewDataSent
+MessageActionWebViewDataSentMe
+
+
+Todo Actions:
+
+MessageActionChannelCreate
+MessageActionChannelMigrateFrom
+MessageActionChatAddUser
+MessageActionChatCreate
+MessageActionChatDeletePhoto
+MessageActionChatDeleteUser
+MessageActionChatEditPhoto
+MessageActionChatEditTitle
+MessageActionChatJoinedByLink
+MessageActionChatJoinedByRequest
+MessageActionChatMigrateTo
+MessageActionConferenceCall
+MessageActionGroupCall
+MessageActionGroupCallScheduled
+MessageActionHistoryClear
+MessageActionInviteToGroupCall
+MessageActionPhoneCall
+MessageActionPinMessage
+MessageActionSetChatTheme
+MessageActionSetChatWallPaper
+MessageActionTopicEdit
+
+"""

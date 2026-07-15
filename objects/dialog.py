@@ -1,6 +1,6 @@
-import asyncio, os, csv
-from telethon import types, utils
-from telethon.errors import FloodWaitError
+import asyncio, sqlite3, time
+from telethon import types, utils, custom
+from rich.live import Live
 
 import helpers
 from .errors import Errors as err
@@ -12,6 +12,8 @@ from .progress import Progress as prog
 class Dialog:
     # client, config, dialog
     def __init__(self, client, config: con, dialog) -> None:
+        self.conn = sqlite3.connect("telegram.db")
+        self.cursor = self.conn.cursor()
         self.dialog = dialog
         self.entity = dialog.entity
         self.config: con = config
@@ -19,30 +21,39 @@ class Dialog:
 
         self.id: int = utils.get_peer_id(dialog.entity)
         self.type: str = self.getDialogType()
-        self.path: str = f"dialogs/{self.type}/{self.id}"
 
-        try:
-            os.makedirs(f"{self.path}", exist_ok=True)
-            os.makedirs(f"{self.path}/files", exist_ok=True)
-        except OSError as e:
-            print(f"Error: {e} occurred.")
+        helpers.sqlTables.makeTables(self.cursor)
+        self.conn.commit()
+
+        self.cursor.execute(
+            "INSERT OR IGNORE INTO dialogs (dialogId, name, type) VALUES  (?, ?, ?)",
+            [self.id, self.dialog.name , self.type]
+        )
+
+        self.conn.commit()
 
     async def setUp(self):
         self.totalMessages: int = (
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
+        self.cursor.execute(
+            "UPDATE dialogs SET totalNumberOfMessages = ? WHERE dialogId = ?",
+            [self.totalMessages, self.id]
+        )
+
         self.progress: prog = prog(self.totalMessages)
 
-        self.file: file = file(self.path, self.config.fileSizeThresholdInBytes)
+        self.file: file = file(self.config.fileSizeThresholdInBytes)
 
-        self.error: err = err(self.path, self.progress, self.file)
+        self.error: err = err(self.id, self.conn, self.cursor, self.progress, self.file, self)
 
         self.users = set()
 
-        checkpoint: list = helpers.utils.getCheckpoint(self.path)
-        self.file.useCheckpoint(checkpoint)
+        checkpoint: list = self.getCheckpoint()
         self.progress.useCheckpoint(checkpoint)
+
+        self.conn.commit()
 
     def getDialogType(self) -> str:
         if isinstance(self.entity, types.User):
@@ -57,151 +68,130 @@ class Dialog:
         else:
             return "Unknown"
 
-    async def archive(self) -> None:
-        textPipeFunctions: list = [
-            helpers.text.forwardHandler,
-            helpers.text.replyHandler,
-            helpers.text.textHandler,
-        ]
-
-        print(self.progress)
-
+    async def archive(self) -> None:        
         try:
-            with open(f"{self.path}/TextMessages.csv", "a") as texts, open(
-                f"{self.path}/Reactions.csv", "a"
-            ) as reactions:
-                CSVMessagesWrtier = csv.writer(texts)
-                CSVReactionsWriter = csv.writer(reactions)
-
-                secondCol = (
-                    "Sender ID" if self.getDialogType() != "Channel" else "Author Name"
-                )
-                CSVMessagesWrtier.writerow(
-                    [
-                        "Message Id",
-                        secondCol,
-                        "Forward From username",
-                        "Forward From user Id",
-                        "Replyed-To Ids",
-                        "Text",
-                        "Date",
-                        "File Id",
-                        "File Relative Id",
-                        "Donwloaded Media",
-                    ]
-                )
-                if self.getDialogType() == "Channel":
-                    CSVReactionsWriter.writerow(["Message Id", "Reaction", "Count"])
-                else:
-                    CSVReactionsWriter.writerow(
-                        ["Message Id", "Reactor Id", "Date Of Reacting", "Reaction"]
-                    )
-
+            with Live(str(self.progress), auto_refresh=False) as live:
                 async for message in self.client.iter_messages(
                     self.dialog.entity,
                     reverse=True,
                     offset_id=self.progress.lastMessageID,
                 ):
-                    # for writing into the file at once
-                    messagesRow = [0] * 10
-                    messagesRow[0] = message.id
-                    messagesRow[6] = message.date
+                    await self.archiveMessage(message)
 
-                    if self.config.texts:
-                        for function in textPipeFunctions:
-                            await function(message, messagesRow, self.users)
-                        messagesRow[1] = helpers.info.userIdHandler(message, self.users)
+                    if self.progress.update(message.id):
+                        live.update(str(self.progress), refresh=True)
 
-                    if self.config.files and message.file:
-                        await self.file.handle(message, messagesRow)
-                        self.progress.sizeInMb += (
-                            message.file.size / self.progress.MbToByte
-                        )
+                live.update(str(self.progress), refresh=True)                        
 
-                    if self.config.reactions:
-                        await helpers.reactions.reactionHandler(
-                            self.client, self.dialog, message, CSVReactionsWriter
-                        )
-
-                    CSVMessagesWrtier.writerow(messagesRow)
-                    self.progress.update(message.id)
-
-                if self.config.dialogInfo and not self.progress.savedDialogInfo:
-                    await helpers.info.getGroupOrChannelInfo(
-                        self.client, self.dialog, self.path, self.users, self.error
-                    )
-                    self.progress.savedDialogInfo = True
-
-                if self.config.userInfo:
-                    await helpers.info.usersHandler(
-                        self.client, self.users, self.path, self.error
-                    )
-
-                if self.config.files:
-                    self.file.emptyBigFilesLog()
-
-                helpers.utils.saveCheckpoint(
-                    self.progress.lastMessageID,
-                    self.progress.messageCounter,
-                    self.file.counter,
-                    self.progress.savedDialogInfo,
-                    self.path,
-                    self.progress.timeStart,
+            if self.config.dialogInfo:
+                await helpers.info.getDialogInfo(
+                    self.client, self.dialog, self.users, self.error, self.cursor
                 )
-                helpers.utils.clearLastLine(3)
-                print(f"Done archiving {self.dialog.name}!")
-
-        except (KeyboardInterrupt, asyncio.CancelledError) as e:
-            helpers.utils.clearLastLine(3)
-            print("Please wait a moment while the saving the checkpoint")
-
-            self.file.emptyBigFilesLog()
-
-            helpers.saveCheckpoint(
-                self.progress.lastMessageID,
-                self.progress.messageCounter,
-                self.file.counter,
-                self.progress.savedDialogInfo,
-                self.path,
-                self.progress.timeStart,
-            )
 
             if self.config.userInfo:
-                with open(f"{self.path}/Users.csv", "w") as f:
-                    CSVUserWriter = csv.writer(f)
-                    CSVUserWriter.writerow(["User Id"])
-                    for user in self.users:
-                        CSVUserWriter.writerow([user])
+                await helpers.info.usersHandler(self.client, self.dialog, self.users, self.error, self.conn, self.cursor)
 
-            helpers.clearLastLine()
-            print("Done!")
-            exit(0)
+            self.saveCheckpoint()
+
+            self.conn.commit()
+            self.conn.close()
+            print(f"Done archiving {self.dialog.name}!\n\n")
+
+        except (KeyboardInterrupt, asyncio.CancelledError) as e:
+            await self.handelKeyInterruption()
 
         except Exception as e:
             await self.error.handle(e, self.archive)
 
-    async def calculateDialogSpace(self):
-        self.progress: prog = prog(self.dialog)
+    def saveCheckpoint(self) -> None:
+        dialog = self.getCheckpoint()
+        args = [self.progress.lastMessageID, self.progress.messageCounter, self.progress.timeStart]
+        for i, value in enumerate(args[:-1]):
+            if value:
+                dialog[i] = value
+                
+        if self.progress.timeStart:
+            dialog[-1] = time.perf_counter() - self.progress.timeStart
 
-        try:
-            self.progress.print()
+        dialog.append(self.dialog.id)
 
-            async for message in self.client.iter_messages(self.dialog.entity):
-                self.progress.messageCounter += 1
-                self.progress.checkProgress()
+        self.cursor.execute("""
+            UPDATE dialogs 
+            SET 
+                lastMessageId = ?,
+                messageCounter = ?, 
+                archivingTime = ?
+            WHERE dialogId = ?
+        """,
+            dialog
+        )
 
-                if (
-                    message.file
-                    and message.file.size < self.config.fileSizeThresholdInBytes
-                ):
-                    self.progress.sizeInMb += message.file.size / self.progress.MbToByte
 
-            helpers.clearLastLine(3)
-            print(
-                f"Dialog {self.dialog.title} will take about {self.progress.sizeInMb:.3f}MB"
+    def getCheckpoint(self) -> list:
+        self.cursor.execute(
+            "SELECT * FROM dialogs WHERE dialogId = ?", 
+            [self.dialog.id]
+        )
+
+        return list(self.cursor.fetchone()[-3:])
+
+
+    async def archiveMessage(self, message: custom.message.Message):
+        # for writing into the file at once
+        dialogId = self.id
+        messageId = message.id
+        authorName = ""
+        senderId = 0
+        forwardFromName = ""
+        forwardFromId = 0
+        replyedToId = 0
+        text = ""
+        date = message.date
+        filePath = ""
+        fileId = 0
+        bigFileFlag = 0
+
+        if self.config.texts:
+            [authorName, senderId] = helpers.info.userIdHandler(message, self.users)
+            [forwardFromName, forwardFromId] = helpers.text.forwardHandler(message, self.users)
+            replyedToId = helpers.text.replyHandler(message, self.users)
+            text = helpers.text.textHandler(message)
+
+        if self.config.files and message.file:
+            [filePath, fileId, bigFileFlag] = await self.file.handle(message)
+            self.progress.sizeInMb += (
+                message.file.size / self.progress.MbToByte
             )
-            return self.progress.sizeInMb
 
-        except FloodWaitError as e:
-            print(f"You've been rate limited for {e.seconds}s")
-            await asyncio.sleep(e.seconds)
+        if self.config.reactions:
+            await helpers.reactions.reactionHandler(
+                self.client, self.dialog, message, self.cursor
+            )
+
+        self.cursor.execute("""
+            INSERT OR IGNORE INTO messages 
+            (dialogId, messageId, authorName, senderId, forwardFromUsername, 
+            forwardFromUserId, replyedToId, text, date, 
+            filePath, fileId, downloadedMedia) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        [dialogId, messageId, authorName, senderId, forwardFromName, forwardFromId, replyedToId, text, date, filePath, fileId, bigFileFlag],
+        )
+
+        self.conn.commit()
+
+    async def handleKeyInterruption(self):
+        # helpers.utils.clearLastLine(3)
+        print("\nPlease wait a moment while the saving the checkpoint")
+
+        self.saveCheckpoint()
+
+        if self.config.userInfo:
+            await helpers.info.usersHandler(self.client, self.dialog, self.users, self.error, self.cursor, True)
+
+        self.conn.commit()
+        self.conn.close()
+
+        # helpers.utils.clearLastLine()
+        print("\nDone!\n")
+        exit(0)

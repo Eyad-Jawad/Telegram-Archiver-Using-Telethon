@@ -2,64 +2,30 @@ from telethon import custom
 
 
 class File:
-    def __init__(self, path: str, sizeThreshold: int) -> None:
+    def __init__(self, sizeThreshold: int) -> None:
         self.sizeThreshold: int = sizeThreshold  # in bytes
-        self.counter: int = 1
-        self.path: str = path + "/files"
-        self.skippedStack: list[int] = []
-        with open(f"{self.path}/bigfiles.csv", "w") as f:
-            f.write("Message Id\n")
+        self.PATH: str = "Media/"
 
-    def useCheckpoint(self, checkpoint: list) -> None:
-        if not checkpoint:
-            return
-        self.counter = checkpoint[2]
-
-    async def handle(self, message: custom.message.Message, messagesRow: list) -> None:
+    async def handle(self, message: custom.message.Message) -> list[int]:
+        if not message or not message.file:
+            return [
+                0, # File Path
+                0, # File ID
+                0, # Big file (flag)
+            ]
+        
         file = message.file
-        if not file:
-            messagesRow[7] = 0  # File ID
-            messagesRow[8] = 0  # File counter (relative ID)
-            messagesRow[9] = 0  # Big file (flag)
-            return
 
+        fileId = None
         if message.photo:
-            messagesRow[7] = message.photo.id
+            fileId = message.photo.id
         else:
-            messagesRow[7] = file.id
+            fileId = file.id
 
+        # if the file is withing the threshold, download it
         if file.size < self.sizeThreshold:
-            messagesRow[8] = self.counter
-            self.counter += 1
+            filePath = await message.download_media(file=self.PATH)
 
-            messagesRow[9] = 0
-            await self.downloadFiles(message)
-            return
+            return [filePath, fileId, 0]
 
-        # keep log of files not downloaded
-        messagesRow[8] = 0
-        messagesRow[9] = 1
-
-        self.skippedStack.append(message.id)
-        if len(self.skippedStack) >= 100:
-            self.emptyBigFilesLog()
-
-        return
-
-    async def downloadFiles(self, message: custom.message.Message) -> None:
-        file = message.file
-
-        fileName = f"{self.counter} "
-
-        if message.photo:
-            fileName += ".jpg"
-        elif file.name:
-            fileName += file.name
-
-        await message.download_media(file=f"{self.path}/{fileName}")
-
-    def emptyBigFilesLog(self) -> None:
-        with open(f"{self.path}/bigfiles.csv", "a") as f:
-            while self.skippedStack:
-                messageID: int = self.skippedStack.pop()
-                f.write(f"{messageID}\n")
+        return [0, fileId, 1]

@@ -2,30 +2,38 @@ import os, argparse, objects, helpers
 from dotenv import load_dotenv
 from telethon import TelegramClient, types
 
-# FIXME: Users info may be duplicated
-# FIXME: Memory issues for some data types (iterators): (write into a file perhaps)
-# FIXME: When getting a floodwait a message will be skipped
-# FIXME: When replying to a message from a private chat the method fails:'TotalList' object has no attribute 'id'
+"""
+FIXME:
+When replying to a message from a private chat the method fails:'TotalList' object has no attribute 'id'
+checkpoint takes messageId instead of messageCounter
 
-# TODO: Logging
-# TODO: Unit tests / pytest
-# TODO: Make it installable in pip or something idk
-# TODO: Handle migration
-# TODO: Sticker packs handler
-# TODO: forwarded from Pic
-# TODO: stories
-# TODO: special emoticon
-# TODO: edit date
-# TODO: reverse the process (GUI)
-# TODO: add the method of only extracting one's messages
-# TODO: On channel get views
+TODO:
+
+:::::::::::::::::::::::::::::
+        conn.close()
+:::::::::::::::::::::::::::::
+
+for logging, make info.insertUsers log nulls or something
+
+Logging
+Unit tests / pytest
+Make it installable in pip or something idk
+Handle migration
+Sticker packs handler
+forwarded from Pic
+stories
+special emoticon
+edit date
+reverse the process (GUI)
+add the method of only extracting one's messages
+On channel get views
+
+"""
+
 
 
 async def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "-c", "--check-size", action="store_true", help="check dialog size beforehand"
-    )
     parser.add_argument(
         "-a", "--archive-all", action="store_true", help="archive everything"
     )
@@ -78,7 +86,6 @@ async def main():
 
     args = parser.parse_args()
 
-    config.checkSize = args.check_size
     if args.archive_all:
         config.texts = True
         config.reactions = True
@@ -99,22 +106,22 @@ async def main():
             config.fileSizeThresholdInBytes = args.size_threshold * (1024**2)
 
     print("Started...")
-    os.makedirs("dialogs", exist_ok=True)
+    os.makedirs("Media/", exist_ok=True)
 
     async for dialog in client.iter_dialogs():
-        ans = input(f"Do you want to archive {dialog.name}? (y) ")
-        helpers.utils.clearLastLine()
+        try:
+            ans = input(f"Do you want to archive {dialog.name}? (y) ")
+            helpers.utils.clearLastLine()
+        except KeyboardInterrupt:
+            print("\n\nHave a good day!")
+            exit(0)
 
         if ans == "y":
             dialogClass = objects.dialog.Dialog(client, config, dialog)
             await dialogClass.setUp()
 
-            if config.checkSize:
-                print(f"Calculating the size of {dialog.name}...")
-                await dialogClass.calculateDialogSpace()
-
             if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
-                print(f"Archiving {dialog.name}...")
+                print(f"Archiving {dialog.name}...\n\n")
                 await dialogClass.archive()
 
             else:
