@@ -25,13 +25,13 @@ class Errors:
     async def handle(self, error, comesFrom: str | None = None) -> None:
         self.dialogObject.saveCheckpoint()
 
-        print(f"Error occured: {error}")
+        print(f"Error occurred: {error}")
 
         self.conn.commit()
 
         with open("errors.txt", "a") as f:
             f.write(
-                f"Error occured: "
+                f"Error occurred: "
                 f"at message {self.progressClass.lastMessageID}:\n"
                 f"{error}\n"
             )

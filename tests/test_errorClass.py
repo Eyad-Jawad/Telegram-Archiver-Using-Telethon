@@ -13,7 +13,6 @@ def mockErr():
     fileHanlder = MagicMock()
     dialogObject = MagicMock()
 
-    progress.__str__.return_value = "Progress"
     progress.lastMessageID = 5
 
     err = errors.Errors(id, conn, cursor, progress, fileHanlder, dialogObject)
@@ -48,11 +47,11 @@ def testErrorClassAttributes():
             "Me",
             2,
             [
-                call("Error occured: at message 5:\nError\n"),
+                call("Error occurred: at message 5:\nError\n"),
                 call("This error was raised from Me function\n\n"),
             ],
         ),
-        (None, 1, [call("Error occured: at message 5:\nError\n")]),
+        (None, 1, [call("Error occurred: at message 5:\nError\n")]),
     ],
 )
 async def testErrorClassWithNormalError(
@@ -67,7 +66,7 @@ async def testErrorClassWithNormalError(
     await mockErr.handle(err, comesFrom)
 
     captured = capsys.readouterr()
-    assert captured.out == "Progress\n"
+    assert captured.out == "Error occurred: Error\nProgress\n"
 
     mockErr.dialogObject.saveCheckpoint.assert_called_once()
     mockOpen.assert_called_once_with("errors.txt", "a")
@@ -96,6 +95,6 @@ async def testErrorClassWithNormalError(
     mockOpen.assert_called_once()
     file.write.assert_called_once()
 
-    assert captured.out == "Progress\nYou've been rate limited for 10s\n"
+    assert captured.out == "Error occurred: Error\nYou've been rate limited for 10s\n"
     mockSleep.assert_awaited_once_with(10)
     mockClearLine.assert_called_once()

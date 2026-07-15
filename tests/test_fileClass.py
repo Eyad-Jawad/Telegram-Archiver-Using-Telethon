@@ -17,14 +17,14 @@ def testFileClassAttributes():
 
 @pytest.mark.asyncio
 async def testFileHandleWithNoMessage(fileClass):
-    assert await fileClass.handle(None) == [0, 0, 0]
+    assert await fileClass.handle(None) == [0, 0, 0.0, 0]
 
 
 @pytest.mark.asyncio
 async def testFileHandleWithNoFile(fileClass):
     message = AsyncMock()
     message.file = None
-    assert await fileClass.handle(message) == [0, 0, 0]
+    assert await fileClass.handle(message) == [0, 0, 0.0, 0]
 
 
 @pytest.mark.asyncio
@@ -40,7 +40,7 @@ async def testFileHandleWithPhoto(fileClass):
 
     message.download_media.return_value = "Somewhere"
 
-    assert await fileClass.handle(message) == ["Somewhere", 5, 0]
+    assert await fileClass.handle(message) == ["Somewhere", 5, 3.814697265625e-06, 0]
     message.download_media.assert_awaited_once_with(file="Media/")
 
 
@@ -56,7 +56,7 @@ async def testFileHandleWithFile(fileClass):
 
     message.download_media.return_value = "There"
 
-    assert await fileClass.handle(message) == ["There", 15, 0]
+    assert await fileClass.handle(message) == ["There", 15, 1.9073486328125e-06, 0]
     message.download_media.assert_awaited_once_with(file="Media/")
 
 
@@ -70,4 +70,4 @@ async def testFileHandleWithBigFile(fileClass):
     message.photo = None
     message.file = file
 
-    assert await fileClass.handle(message) == [0, 3, 1]
+    assert await fileClass.handle(message) == [0, 3, 4.76837158203125e-05, 1]

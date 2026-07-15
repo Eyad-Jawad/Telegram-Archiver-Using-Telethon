@@ -112,7 +112,7 @@ class Dialog:
             print(f"Done archiving {self.dialog.name}!\n\n")
 
         except (KeyboardInterrupt, asyncio.CancelledError) as e:
-            await self.handelKeyInterruption()
+            await self.handleKeyInterruption()
 
         except Exception as e:
             await self.error.handle(e, self.archive)
@@ -165,6 +165,7 @@ class Dialog:
         date = message.date
         filePath = ""
         fileId = 0
+        fileSize = 0.0
         bigFileFlag = 0
 
         if self.config.texts:
@@ -176,7 +177,7 @@ class Dialog:
             text = helpers.text.textHandler(message)
 
         if self.config.files and message.file:
-            [filePath, fileId, bigFileFlag] = await self.file.handle(message)
+            [filePath, fileId, fileSize, bigFileFlag] = await self.file.handle(message)
             self.progress.sizeInMb += message.file.size / self.progress.MbToByte
 
         if self.config.reactions:
@@ -189,8 +190,8 @@ class Dialog:
             INSERT OR IGNORE INTO messages 
             (dialogId, messageId, authorName, senderId, forwardFromUsername, 
             forwardFromUserId, replyedToId, text, date, 
-            filePath, fileId, downloadedMedia) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            filePath, fileId, fileSize, downloadedMedia) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             [
                 dialogId,
@@ -204,6 +205,7 @@ class Dialog:
                 date,
                 filePath,
                 fileId,
+                fileSize,
                 bigFileFlag,
             ],
         )

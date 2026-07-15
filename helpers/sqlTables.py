@@ -30,6 +30,7 @@ def makeTables(cursor: sqlite3.Cursor):
             filePath TEXT,
             fileId TEXT UNIQUE,
             fileRelativeId INTEGER,
+            fileSize FLOAT NOT NULL DEFAULT 0.0,
             downloadedMedia INTEGER NOT NULL DEFAULT 0,
             UNIQUE (dialogId, messageId)
         )
