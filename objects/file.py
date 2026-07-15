@@ -9,11 +9,11 @@ class File:
     async def handle(self, message: custom.message.Message) -> list[int]:
         if not message or not message.file:
             return [
-                0, # File Path
-                0, # File ID
-                0, # Big file (flag)
+                0,  # File Path
+                0,  # File ID
+                0,  # Big file (flag)
             ]
-        
+
         file = message.file
 
         fileId = None

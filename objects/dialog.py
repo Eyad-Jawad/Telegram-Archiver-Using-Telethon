@@ -27,7 +27,7 @@ class Dialog:
 
         self.cursor.execute(
             "INSERT OR IGNORE INTO dialogs (dialogId, name, type) VALUES  (?, ?, ?)",
-            [self.id, self.dialog.name , self.type]
+            [self.id, self.dialog.name, self.type],
         )
 
         self.conn.commit()
@@ -39,14 +39,16 @@ class Dialog:
 
         self.cursor.execute(
             "UPDATE dialogs SET totalNumberOfMessages = ? WHERE dialogId = ?",
-            [self.totalMessages, self.id]
+            [self.totalMessages, self.id],
         )
 
         self.progress: prog = prog(self.totalMessages)
 
         self.file: file = file(self.config.fileSizeThresholdInBytes)
 
-        self.error: err = err(self.id, self.conn, self.cursor, self.progress, self.file, self)
+        self.error: err = err(
+            self.id, self.conn, self.cursor, self.progress, self.file, self
+        )
 
         self.users = set()
 
@@ -68,8 +70,9 @@ class Dialog:
         else:
             return "Unknown"
 
-    async def archive(self) -> None:        
+    async def archive(self) -> None:
         try:
+            lastRefreshOfProgress = time.monotonic()
             with Live(str(self.progress), auto_refresh=False) as live:
                 async for message in self.client.iter_messages(
                     self.dialog.entity,
@@ -78,10 +81,14 @@ class Dialog:
                 ):
                     await self.archiveMessage(message)
 
-                    if self.progress.update(message.id):
+                    if (
+                        self.progress.update(message.id)
+                        or time.monotonic() - lastRefreshOfProgress > 10
+                    ):
+                        lastRefreshOfProgress = time.monotonic()
                         live.update(str(self.progress), refresh=True)
 
-                live.update(str(self.progress), refresh=True)                        
+                live.update(str(self.progress), refresh=True)
 
             if self.config.dialogInfo:
                 await helpers.info.getDialogInfo(
@@ -89,7 +96,14 @@ class Dialog:
                 )
 
             if self.config.userInfo:
-                await helpers.info.usersHandler(self.client, self.dialog, self.users, self.error, self.conn, self.cursor)
+                await helpers.info.usersHandler(
+                    self.client,
+                    self.dialog,
+                    self.users,
+                    self.error,
+                    self.conn,
+                    self.cursor,
+                )
 
             self.saveCheckpoint()
 
@@ -105,17 +119,22 @@ class Dialog:
 
     def saveCheckpoint(self) -> None:
         dialog = self.getCheckpoint()
-        args = [self.progress.lastMessageID, self.progress.messageCounter, self.progress.timeStart]
+        args = [
+            self.progress.lastMessageID,
+            self.progress.messageCounter,
+            self.progress.timeStart,
+        ]
         for i, value in enumerate(args[:-1]):
             if value:
                 dialog[i] = value
-                
+
         if self.progress.timeStart:
             dialog[-1] = time.perf_counter() - self.progress.timeStart
 
         dialog.append(self.dialog.id)
 
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             UPDATE dialogs 
             SET 
                 lastMessageId = ?,
@@ -123,18 +142,15 @@ class Dialog:
                 archivingTime = ?
             WHERE dialogId = ?
         """,
-            dialog
+            dialog,
         )
-
 
     def getCheckpoint(self) -> list:
         self.cursor.execute(
-            "SELECT * FROM dialogs WHERE dialogId = ?", 
-            [self.dialog.id]
+            "SELECT * FROM dialogs WHERE dialogId = ?", [self.dialog.id]
         )
 
         return list(self.cursor.fetchone()[-3:])
-
 
     async def archiveMessage(self, message: custom.message.Message):
         # for writing into the file at once
@@ -153,29 +169,43 @@ class Dialog:
 
         if self.config.texts:
             [authorName, senderId] = helpers.info.userIdHandler(message, self.users)
-            [forwardFromName, forwardFromId] = helpers.text.forwardHandler(message, self.users)
+            [forwardFromName, forwardFromId] = helpers.text.forwardHandler(
+                message, self.users
+            )
             replyedToId = helpers.text.replyHandler(message, self.users)
             text = helpers.text.textHandler(message)
 
         if self.config.files and message.file:
             [filePath, fileId, bigFileFlag] = await self.file.handle(message)
-            self.progress.sizeInMb += (
-                message.file.size / self.progress.MbToByte
-            )
+            self.progress.sizeInMb += message.file.size / self.progress.MbToByte
 
         if self.config.reactions:
             await helpers.reactions.reactionHandler(
                 self.client, self.dialog, message, self.cursor
             )
 
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             INSERT OR IGNORE INTO messages 
             (dialogId, messageId, authorName, senderId, forwardFromUsername, 
             forwardFromUserId, replyedToId, text, date, 
             filePath, fileId, downloadedMedia) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
-        [dialogId, messageId, authorName, senderId, forwardFromName, forwardFromId, replyedToId, text, date, filePath, fileId, bigFileFlag],
+            [
+                dialogId,
+                messageId,
+                authorName,
+                senderId,
+                forwardFromName,
+                forwardFromId,
+                replyedToId,
+                text,
+                date,
+                filePath,
+                fileId,
+                bigFileFlag,
+            ],
         )
 
         self.conn.commit()
@@ -187,7 +217,9 @@ class Dialog:
         self.saveCheckpoint()
 
         if self.config.userInfo:
-            await helpers.info.usersHandler(self.client, self.dialog, self.users, self.error, self.cursor, True)
+            await helpers.info.usersHandler(
+                self.client, self.dialog, self.users, self.error, self.cursor, True
+            )
 
         self.conn.commit()
         self.conn.close()

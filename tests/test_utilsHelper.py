@@ -1,6 +1,7 @@
 from helpers import utils
 import pytest
 
+
 @pytest.mark.parametrize(
     ("seconds, output"),
     [

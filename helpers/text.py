@@ -1,9 +1,8 @@
 from telethon import types, custom
 from telethon.utils import get_peer_id
 
-def replyHandler(
-    message: custom.message.Message, users: set[int]
-) -> str | int:
+
+def replyHandler(message: custom.message.Message, users: set[int]) -> str | int:
     # check if this message is a reply to another
     try:
         if not message or not message.reply_to:
@@ -21,34 +20,32 @@ def replyHandler(
             users.add(replyedToID)
 
         return f"{replyedToID}:{message.reply_to_msg_id}"
-    
+
     except Exception as e:
         print(f"\nUnlogged error occurred: {e}\n")
         return 0
 
-def forwardHandler(
-    message: custom.message.Message, users: set[int]
-) -> list[str | int]:
+
+def forwardHandler(message: custom.message.Message, users: set[int]) -> list[str | int]:
     if not message or not message.forward:
         return [0, 0]
-    
+
     forward = message.forward
-    
+
     forwardFromName = f"{forward.from_name}"
     if not forward.from_id:
         return [forwardFromName, 0]
-    
+
     entity = forward.from_id
     peerId = get_peer_id(entity)
 
     if peerId not in users:
         users.add(peerId)
 
-    return[forwardFromName, peerId]
+    return [forwardFromName, peerId]
 
-def textHandler(
-    message: custom.message.Message
-) -> str:
+
+def textHandler(message: custom.message.Message) -> str:
     # check for text
     text = ""
     if message.text:
@@ -73,6 +70,7 @@ def textHandler(
             text = f"{action} was done."
 
     return text
+
 
 """
 Available message action:

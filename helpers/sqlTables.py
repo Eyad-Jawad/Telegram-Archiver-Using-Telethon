@@ -1,5 +1,6 @@
 import sqlite3
 
+
 def makeTables(cursor: sqlite3.Cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS dialogs (

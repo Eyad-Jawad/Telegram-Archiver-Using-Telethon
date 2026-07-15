@@ -3,13 +3,16 @@ from unittest.mock import MagicMock, patch
 from telethon import types
 import pytest
 
+
 def testReplyHandlerWithNoMessage():
     assert text.replyHandler(None, None) == 0
+
 
 def testReplyHandlerWithEmptyMessage():
     message = MagicMock()
     message.reply_to = None
     assert text.replyHandler(message, None) == 0
+
 
 def testReplyHandlerWithReplyToUser():
     message = MagicMock()
@@ -18,6 +21,7 @@ def testReplyHandlerWithReplyToUser():
     message.reply_to_msg_id = 10
 
     assert text.replyHandler(message, None) == 10
+
 
 @patch("helpers.text.get_peer_id")
 def testReplyHandlerWithReplyToChannel(mockGetId):
@@ -33,14 +37,17 @@ def testReplyHandlerWithReplyToChannel(mockGetId):
     assert users == {1001}
     mockGetId.assert_called_once_with(1)
 
+
 def testForwardHandlerWithNoMessage():
     assert text.forwardHandler(None, None) == [0, 0]
+
 
 def testForwardHandlerWithNoForward():
     message = MagicMock()
     message.forward = None
-    
+
     assert text.forwardHandler(message, None) == [0, 0]
+
 
 def testForwardHandlerWithForwardAndNoUser():
     message = MagicMock()
@@ -52,6 +59,7 @@ def testForwardHandlerWithForwardAndNoUser():
     forward.from_id = None
 
     assert text.forwardHandler(message, None) == ["Me", 0]
+
 
 @patch("helpers.text.get_peer_id")
 def testForwardHandlerWithForwardAndUser(mockGetId):
@@ -70,18 +78,20 @@ def testForwardHandlerWithForwardAndUser(mockGetId):
     mockGetId.assert_called_once_with(1)
     assert users == {1001}
 
+
 def testTextHandlerWithTextlMessage():
     message = MagicMock()
     message.text = "Noice"
-    
+
     assert text.textHandler(message) == "Noice"
+
 
 @pytest.mark.parametrize(
     ("actionType, outputMessage"),
     [
-        (types.MessageActionPinMessage, "a message was pinned"), 
-        (types.MessageActionChatAddUser, "Me was added"), 
-        (types.MessageActionChatJoinedByLink, "1234 joined"), 
+        (types.MessageActionPinMessage, "a message was pinned"),
+        (types.MessageActionChatAddUser, "Me was added"),
+        (types.MessageActionChatJoinedByLink, "1234 joined"),
         (types.MessageActionChatDeleteUser, "4321 was kicked/left"),
         (types.MessageActionChatEditPhoto, "chat photo changed"),
         (types.MessageActionChatEditTitle, "chat title changed to Da Chat"),
@@ -104,4 +114,3 @@ def testTextHandlerWithActionMessage(actionType, outputMessage):
     message.action = action
 
     assert text.textHandler(message) == outputMessage
-

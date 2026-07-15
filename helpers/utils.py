@@ -14,8 +14,8 @@ def formatETA(seconds: float) -> str:
         return f"{m}m {s}s"
     return f"{s}s"
 
+
 def clearLastLine(numberOfLines=1):
     # It literally removes the last line in the command prompt
     for _ in range(numberOfLines):
         print("\033[F\033[K", end="")
-

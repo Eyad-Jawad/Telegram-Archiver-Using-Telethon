@@ -14,6 +14,7 @@ def cursor():
 
     conn.close()
 
+
 @pytest.fixture
 def latestPhotFixture(cursor):
     cursor.execute("""
@@ -24,6 +25,7 @@ def latestPhotFixture(cursor):
     """)
 
     return cursor
+
 
 @pytest.fixture
 def isArchivedFixture(cursor):
@@ -36,6 +38,7 @@ def isArchivedFixture(cursor):
 
     return cursor
 
+
 @pytest.fixture
 def pushInfoFixture(isArchivedFixture):
     cursor = isArchivedFixture
@@ -45,10 +48,10 @@ def pushInfoFixture(isArchivedFixture):
             dialogId INTEGER,
             fullRequest TEXT
         )
-    """
-    )
+    """)
 
     return cursor
+
 
 @pytest.fixture
 def pushPhotosFixture(cursor):
@@ -62,6 +65,7 @@ def pushPhotosFixture(cursor):
     """)
 
     return cursor
+
 
 @pytest.fixture
 def insertUsersFixture():
@@ -80,6 +84,7 @@ def insertUsersFixture():
 
     conn.close()
 
+
 @pytest.mark.parametrize(
     "postAuthorInput",
     ["eyad", "EYAD", "\\//\\//", "12", "🥀something"],
@@ -92,6 +97,7 @@ def testUserIdHanderWithPostAuthor(postAuthorInput):
     assert info.userIdHandler(message, usersSet) == [postAuthorInput, 0]
     assert len(usersSet) == 0
 
+
 def testUserIdHanderWithSenderId():
     message = MagicMock()
     message.post_author = None
@@ -99,12 +105,14 @@ def testUserIdHanderWithSenderId():
 
     assert info.userIdHandler(message, set()) == [0, 1234]
 
+
 def testUserIdHanderWithNoSenderId():
     message = MagicMock()
     message.post_author = None
     message.sender_id = None
 
     assert info.userIdHandler(message, set()) == [0, 0]
+
 
 def testUserIdHanderForUsersSet():
     usersSet = set()
@@ -126,7 +134,8 @@ def testUserIdHanderForUsersSet():
     info.userIdHandler(message, usersSet)
 
     assert usersSet == {1234, 4321}
-    
+
+
 def dateConsts():
     return [
         datetime(1900, 1, 1, tzinfo=timezone.utc),
@@ -135,47 +144,75 @@ def dateConsts():
         datetime(2026, 10, 10, 10, 10, 10, tzinfo=timezone.utc),
     ]
 
+
 def testGetLatestPhotoDateForEmptyDB(latestPhotFixture):
     assert info.getLatestPhotoDate(latestPhotFixture, 21) == dateConsts()[0]
+
 
 def testGetLatestPhotoDateForEmptyEntry(latestPhotFixture):
     cursor = latestPhotFixture
 
     cursor.execute("INSERT INTO dialogPhotos (dialogId) VALUES (?)", [1])
     assert info.getLatestPhotoDate(cursor, 1) == dateConsts()[0]
-    
+
+
 def testGetLatestPhotoDateForOneEntry(latestPhotFixture):
     cursor = latestPhotFixture
 
     DATES = dateConsts()
 
-    cursor.execute("INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)", [1, datetime.isoformat(DATES[1])])
+    cursor.execute(
+        "INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)",
+        [1, datetime.isoformat(DATES[1])],
+    )
     assert info.getLatestPhotoDate(cursor, 1) == DATES[1]
+
 
 def testGetLatestPhotoDateForManyDates(latestPhotFixture):
     cursor = latestPhotFixture
 
     DATES = dateConsts()
 
-    cursor.execute("INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)", [1, datetime.isoformat(DATES[1])])
-    cursor.execute("INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)", [1, datetime.isoformat(DATES[2])])
-    cursor.execute("INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)", [1, datetime.isoformat(DATES[3])])
+    cursor.execute(
+        "INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)",
+        [1, datetime.isoformat(DATES[1])],
+    )
+    cursor.execute(
+        "INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)",
+        [1, datetime.isoformat(DATES[2])],
+    )
+    cursor.execute(
+        "INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)",
+        [1, datetime.isoformat(DATES[3])],
+    )
 
     assert info.getLatestPhotoDate(cursor, 1) == DATES[3]
+
 
 def testGetLatestPhotoDateForManyEntries(latestPhotFixture):
     cursor = latestPhotFixture
 
     DATES = dateConsts()
 
-    cursor.execute("INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)", [1, datetime.isoformat(DATES[1])])
-    cursor.execute("INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)", [2, datetime.isoformat(DATES[2])])
-    cursor.execute("INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)", [3, datetime.isoformat(DATES[3])])
+    cursor.execute(
+        "INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)",
+        [1, datetime.isoformat(DATES[1])],
+    )
+    cursor.execute(
+        "INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)",
+        [2, datetime.isoformat(DATES[2])],
+    )
+    cursor.execute(
+        "INSERT INTO dialogPhotos (dialogId, photoDate) VALUES (?, ?)",
+        [3, datetime.isoformat(DATES[3])],
+    )
 
     assert info.getLatestPhotoDate(cursor, 1) == DATES[1]
 
+
 def testIsArchivedForEmptyDB(isArchivedFixture):
     assert info.isArchived(isArchivedFixture, 123) == False
+
 
 @pytest.mark.parametrize(
     ("fullRequest, output"),
@@ -184,18 +221,31 @@ def testIsArchivedForEmptyDB(isArchivedFixture):
 def testIsArchivedForOneEntry(isArchivedFixture, fullRequest, output):
     cursor = isArchivedFixture
 
-    cursor.execute("INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [1, fullRequest])
+    cursor.execute(
+        "INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [1, fullRequest]
+    )
     assert info.isArchived(cursor, 1) == output
+
 
 def testIsArchivedForManyEntries(isArchivedFixture):
     cursor = isArchivedFixture
 
-    cursor.execute("INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [1, None])
-    cursor.execute("INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [2, None])
-    cursor.execute("INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [3, "Chickens"])
-    cursor.execute("INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [4, "Chicken Wings"])
+    cursor.execute(
+        "INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [1, None]
+    )
+    cursor.execute(
+        "INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [2, None]
+    )
+    cursor.execute(
+        "INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [3, "Chickens"]
+    )
+    cursor.execute(
+        "INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)",
+        [4, "Chicken Wings"],
+    )
     assert info.isArchived(cursor, 1) == False
     assert info.isArchived(cursor, 3) == True
+
 
 def testPushInfoNotArchived(pushInfoFixture):
     cursor = pushInfoFixture
@@ -207,10 +257,13 @@ def testPushInfoNotArchived(pushInfoFixture):
 
     assert "Chickens" == cursor.fetchone()[0]
 
+
 def testPushInfoArchived(pushInfoFixture):
     cursor = pushInfoFixture
 
-    cursor.execute("INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [1, "Chickens"])
+    cursor.execute(
+        "INSERT INTO dialogInfo (dialogId, fullRequest) VALUES (?, ?)", [1, "Chickens"]
+    )
     info.pushInfoIntoAppropriateTable(cursor, 1, "Chicken wings")
 
     cursor.execute("SELECT fullRequest FROM dialogInfo WHERE dialogId = 1")
@@ -221,6 +274,7 @@ def testPushInfoArchived(pushInfoFixture):
 
     assert "Chicken wings" == cursor.fetchone()[0]
 
+
 @pytest.mark.parametrize(
     ("photoData"),
     [None, [], [[]]],
@@ -228,10 +282,11 @@ def testPushInfoArchived(pushInfoFixture):
 def testPushPhotosInfoWithNothing(pushPhotosFixture, photoData):
     cursor = pushPhotosFixture
     info.pushPhotosInfo(cursor, photoData)
-    
+
     cursor.execute("SELECT * FROM dialogPhotos")
 
     assert None == cursor.fetchone()
+
 
 def testPushPhotosInfoWithOneEntry(pushPhotosFixture):
     cursor = pushPhotosFixture
@@ -243,6 +298,7 @@ def testPushPhotosInfoWithOneEntry(pushPhotosFixture):
     cursor.execute("SELECT * FROM dialogPhotos")
 
     assert photoInfo == (cursor.fetchall())
+
 
 def testPushPhotosInfoWithManyEntries(pushPhotosFixture):
     cursor = pushPhotosFixture
@@ -259,10 +315,8 @@ def testPushPhotosInfoWithManyEntries(pushPhotosFixture):
 
     assert photoInfo == (cursor.fetchall())
 
-@pytest.mark.parametrize(
-    "dialogId, output",
-    [(1, (1, None)), (None, None)]
-)
+
+@pytest.mark.parametrize("dialogId, output", [(1, (1, None)), (None, None)])
 def testEnsureDialogRowExistsWithNoRow(isArchivedFixture, dialogId, output):
     cursor = isArchivedFixture
 
@@ -271,6 +325,7 @@ def testEnsureDialogRowExistsWithNoRow(isArchivedFixture, dialogId, output):
     cursor.execute("SELECT * FROM dialogInfo")
 
     assert output == cursor.fetchone()
+
 
 def testEnsureDialogRowExistsWithOneRow(isArchivedFixture):
     cursor = isArchivedFixture
@@ -283,15 +338,24 @@ def testEnsureDialogRowExistsWithOneRow(isArchivedFixture):
 
     assert (1, None) == cursor.fetchone()
 
+
 @pytest.mark.asyncio
 @patch("helpers.info.ensureDialogRowExists")
 @patch("helpers.info.getFullRequest", new_callable=AsyncMock)
 @patch("helpers.info.pushInfoIntoAppropriateTable")
-@patch("helpers.info.getLatestPhotoDate") 
+@patch("helpers.info.getLatestPhotoDate")
 @patch("helpers.info.getPhotoInfo", new_callable=AsyncMock)
 @patch("helpers.info.pushPhotosInfo")
 @patch("helpers.info.addUsersToSet", new_callable=AsyncMock)
-async def testGetDialogInfo(mockAddUsers, mockPushPhoto, mockGetPhoto, mockGetLatest, mockPushInto, mockFullRequest, mockEnsure):
+async def testGetDialogInfo(
+    mockAddUsers,
+    mockPushPhoto,
+    mockGetPhoto,
+    mockGetLatest,
+    mockPushInto,
+    mockFullRequest,
+    mockEnsure,
+):
     client = MagicMock()
     dialog = MagicMock()
     dialog.entity = MagicMock()
@@ -310,12 +374,15 @@ async def testGetDialogInfo(mockAddUsers, mockPushPhoto, mockGetPhoto, mockGetLa
 
     mockAddUsers.assert_awaited_once_with(client, dialog.entity, users, errorHandler)
     mockPushPhoto.assert_called_once_with(cursor, photoInfo)
-    mockGetPhoto.assert_awaited_once_with(client, dialog.entity, errorHandler, latestPhotoDate)
+    mockGetPhoto.assert_awaited_once_with(
+        client, dialog.entity, errorHandler, latestPhotoDate
+    )
     mockGetLatest.assert_called_once_with(cursor, 1)
     mockPushInto.assert_called_once_with(cursor, 1, fullRequest)
     mockFullRequest.assert_awaited_once_with(client, dialog.entity, errorHandler)
     mockEnsure.assert_called_once_with(cursor, 1)
     errorHandler.handle.assert_not_awaited()
+
 
 @pytest.mark.asyncio
 @patch("telethon.functions.channels.GetFullChannelRequest")
@@ -331,11 +398,12 @@ async def testGetFullRequestForChannel(mockChannel):
 
     result.stringify.return_value = "Chickens"
     client.return_value = result
-    
+
     assert await info.getFullRequest(client, dialog, errorHandler) == "Chickens"
     mockChannel.assert_called_once_with(dialog)
     client.assert_awaited_once_with("Test")
     errorHandler.handle.assert_not_awaited()
+
 
 @pytest.mark.asyncio
 @patch("telethon.functions.users.GetFullUserRequest")
@@ -351,11 +419,12 @@ async def testGetFullRequestForUser(mockUser):
 
     result.stringify.return_value = "Chickens"
     client.return_value = result
-    
+
     assert await info.getFullRequest(client, dialog, errorHandler) == "Chickens"
     mockUser.assert_called_once_with(dialog)
     client.assert_awaited_once_with("Test")
     errorHandler.handle.assert_not_awaited()
+
 
 @pytest.mark.asyncio
 @patch("telethon.functions.messages.GetFullChatRequest")
@@ -371,11 +440,12 @@ async def testGetFullRequestForChat(mockChat):
 
     result.stringify.return_value = "Chickens"
     client.return_value = result
-    
+
     assert await info.getFullRequest(client, dialog, errorHandler) == "Chickens"
     mockChat.assert_called_once_with(dialog)
     client.assert_awaited_once_with("Test")
     errorHandler.handle.assert_not_awaited()
+
 
 @pytest.mark.asyncio
 @patch("telethon.functions.messages.GetFullChatRequest")
@@ -384,12 +454,15 @@ async def testGetFullRequestForError(chatMock):
     dialog = MagicMock(spec=types.Chat)
     errorHandler = MagicMock()
     errorHandler.handle = AsyncMock()
-    
+
     await info.getFullRequest(client, dialog, errorHandler)
 
     client.assert_awaited_once()
     chatMock.assert_called_once_with(dialog)
-    errorHandler.handle.assert_awaited_once_with(client.side_effect, info.getFullRequest)
+    errorHandler.handle.assert_awaited_once_with(
+        client.side_effect, info.getFullRequest
+    )
+
 
 @pytest.mark.asyncio
 async def testGetPhotoInfoForEmptyInput():
@@ -407,6 +480,7 @@ async def testGetPhotoInfoForEmptyInput():
     assert await info.getPhotoInfo(client, dialog, errorHandler, None) == []
     client.iter_profile_photos.assert_called_once_with(dialog)
     errorHandler.handle.assert_not_awaited()
+
 
 @pytest.mark.asyncio
 async def testGetPhotoInfoForOneInput():
@@ -432,10 +506,13 @@ async def testGetPhotoInfoForOneInput():
 
     errorHandler.handle = AsyncMock()
 
-    assert await info.getPhotoInfo(client, dialog, errorHandler, DATES[1]) == [[1, 5, "Noice", "2026-05-10T10:10:10+00:00"]]
+    assert await info.getPhotoInfo(client, dialog, errorHandler, DATES[1]) == [
+        [1, 5, "Noice", "2026-05-10T10:10:10+00:00"]
+    ]
     client.iter_profile_photos.assert_called_once_with(dialog)
     client.download_media.assert_awaited_once_with(photo, file="Media/")
     errorHandler.handle.assert_not_awaited()
+
 
 @pytest.mark.asyncio
 async def testGetPhotoInfoForError():
@@ -452,6 +529,7 @@ async def testGetPhotoInfoForError():
     assert await info.getPhotoInfo(client, dialog, errorHandler, None) == []
     client.iter_profile_photos.assert_called_once_with(dialog)
     errorHandler.handle.assert_awaited_once_with(error, info.getPhotoInfo)
+
 
 @pytest.mark.asyncio
 async def testAddUsersToSetWithEmptyInput():
@@ -472,6 +550,7 @@ async def testAddUsersToSetWithEmptyInput():
     client.iter_participants.assert_called_once_with(dialog)
     errorHandler.handle.assert_not_awaited()
     assert users == set()
+
 
 @pytest.mark.asyncio
 async def testAddUsersToSetWithOneInput():
@@ -495,6 +574,7 @@ async def testAddUsersToSetWithOneInput():
     client.iter_participants.assert_called_once_with(dialog)
     errorHandler.handle.assert_not_awaited()
     assert users == {1}
+
 
 @pytest.mark.asyncio
 async def testAddUsersToSetWithManyInputs():
@@ -528,6 +608,7 @@ async def testAddUsersToSetWithManyInputs():
     errorHandler.handle.assert_not_awaited()
     assert users == {1, 2, 3, 4, 5}
 
+
 @pytest.mark.asyncio
 async def testAddUsersToSetForError():
     client = MagicMock()
@@ -545,6 +626,7 @@ async def testAddUsersToSetForError():
     client.iter_participants.assert_called_once_with(dialog)
     errorHandler.handle.assert_awaited_once_with(error, info.addUsersToSet)
 
+
 def testInsertUsersWithNoEntry(insertUsersFixture):
     cursor = insertUsersFixture
 
@@ -556,6 +638,7 @@ def testInsertUsersWithNoEntry(insertUsersFixture):
 
     assert None == cursor.fetchone()
 
+
 def testInsertUsersWithOneEntry(insertUsersFixture):
     cursor = insertUsersFixture
 
@@ -564,6 +647,7 @@ def testInsertUsersWithOneEntry(insertUsersFixture):
     cursor.execute("SELECT * FROM users")
 
     assert [(1, 12)] == cursor.fetchall()
+
 
 def testInsertUsersWithManyEntreis(insertUsersFixture):
     cursor = insertUsersFixture
@@ -576,6 +660,7 @@ def testInsertUsersWithManyEntreis(insertUsersFixture):
 
     assert [(1, 12), (1, 11), (2, 12)] == cursor.fetchall()
 
+
 def testInsertUsersDuplicate(insertUsersFixture):
     cursor = insertUsersFixture
 
@@ -587,7 +672,8 @@ def testInsertUsersDuplicate(insertUsersFixture):
 
     info.insertUsersIntoDB(cursor, 1, 12)
 
-    assert [[]] == [cursor.fetchall()] # It's empty because it the db just fetched
+    assert [[]] == [cursor.fetchall()]  # It's empty because it the db just fetched
+
 
 @pytest.mark.asyncio
 @patch("helpers.info.insertUsersIntoDB")
@@ -597,6 +683,7 @@ async def testUsersHandlerWithEmptySet(mockInfo, mockInsert):
 
     mockInfo.assert_not_awaited()
     mockInsert.assert_not_called()
+
 
 @pytest.mark.asyncio
 @patch("helpers.info.insertUsersIntoDB")
@@ -614,6 +701,7 @@ async def testUsersHandlerWithOneEntryAndSkip(mockInfo, mockInsert):
     mockInsert.assert_called_once_with(cursor, 5, 1)
     mockInfo.assert_not_awaited()
 
+
 @pytest.mark.asyncio
 @patch("helpers.info.insertUsersIntoDB")
 @patch("helpers.info.getDialogInfo", new_callable=AsyncMock)
@@ -629,4 +717,3 @@ async def testUsersHandlerWithOneEntryAndNoSkip(mockInfo, mockInsert):
 
     mockInsert.assert_called_once_with(cursor, 5, 1)
     mockInfo.assert_awaited_once_with(client, dialog, users, errorHandler, cursor)
-

@@ -20,6 +20,7 @@ def mockErr():
 
     return err
 
+
 def testErrorClassAttributes():
     id = 1
     conn = MagicMock()
@@ -37,13 +38,26 @@ def testErrorClassAttributes():
     assert err.fileClass is fileHanlder
     assert err.dialogObject is dialogObject
 
+
 @pytest.mark.asyncio
 @patch("builtins.open")
 @pytest.mark.parametrize(
     ("comesFrom, writeCallCount, writeArgList"),
-    [("Me", 2, [call("Error occured: at message 5:\nError\n"), call("This error was raised from Me function\n\n")]), (None, 1, [call("Error occured: at message 5:\nError\n")])],
+    [
+        (
+            "Me",
+            2,
+            [
+                call("Error occured: at message 5:\nError\n"),
+                call("This error was raised from Me function\n\n"),
+            ],
+        ),
+        (None, 1, [call("Error occured: at message 5:\nError\n")]),
+    ],
 )
-async def testErrorClassWithNormalError(mockOpen, writeCallCount, comesFrom, writeArgList, mockErr, capsys):
+async def testErrorClassWithNormalError(
+    mockOpen, writeCallCount, comesFrom, writeArgList, mockErr, capsys
+):
     err = MagicMock(spec=RuntimeError("Err"))
     err.__str__.return_value = "Error"
 
@@ -60,11 +74,14 @@ async def testErrorClassWithNormalError(mockOpen, writeCallCount, comesFrom, wri
     assert file.write.call_count == writeCallCount
     assert file.write.call_args_list == writeArgList
 
+
 @pytest.mark.asyncio
 @patch("builtins.open")
 @patch("asyncio.sleep", new_callable=AsyncMock)
 @patch("objects.errors.clearLastLine")
-async def testErrorClassWithNormalError(mockClearLine, mockSleep, mockOpen, mockErr, capsys):
+async def testErrorClassWithNormalError(
+    mockClearLine, mockSleep, mockOpen, mockErr, capsys
+):
     err = MagicMock(spec=FloodWaitError)
     err.__str__.return_value = "Error"
     err.seconds = 10
@@ -82,4 +99,3 @@ async def testErrorClassWithNormalError(mockClearLine, mockSleep, mockOpen, mock
     assert captured.out == "Progress\nYou've been rate limited for 10s\n"
     mockSleep.assert_awaited_once_with(10)
     mockClearLine.assert_called_once()
-
