@@ -28,7 +28,7 @@ def makeTables(cursor: sqlite3.Cursor):
             text TEXT,
             date DATETIME,
             filePath TEXT,
-            fileId TEXT UNIQUE,
+            fileId TEXT,
             fileRelativeId INTEGER,
             fileSize FLOAT NOT NULL DEFAULT 0.0,
             downloadedMedia INTEGER NOT NULL DEFAULT 0,
