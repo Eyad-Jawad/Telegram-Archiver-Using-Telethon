@@ -1,25 +1,8 @@
 # Telegram Archiver Using Telethon
 ## The things it archives
 
-It archives:
-
-```
-
-dialogs /
-    dialog type /
-        dialog id /
-            text messages
-            reactions
-            users' ids
-            state (checkpoint)
-            files /
-                photos, videos, documents, individual stickers, voice recordings, music, etc.
-            dialog info /
-                info file (telethon full request)
-                dialog photos
-                photo info (has the dates of the pfps)
-
-```
+It archives:    
+[An image of the SQLite database schema](./SQLiteSchema.png)
 
 ## How To Use It
 
@@ -48,7 +31,8 @@ You only need to install Telethon, and Pytest if you want to test:
 
 ```
 
-pip install telethon pytest pytest-asyncio
+pip install telethon rich # If you are a normal use
+pip install telethon pytest rich pytest-asyncio black # If you are a dev
 
 ```
 
@@ -69,80 +53,14 @@ After that, you just have to run the command:
 python main.py -t -r -f -s 10
 
 ```
-## Archiving Schemas
-### TextMessages.csv:
-
-``` 
-
-message_id, sender_id (or author_name in channels), forward_from_username, forward_from_user_id, replyed_to_message_id (or replyed_to_sender_id : replyed_to_messgage_id in case of replying something outside the dialog), message_text, message_date, file_id, file_relative_id, file_forwarded (if bigger than size-threshold)
-
-```
-
-### Reactions.csv
-
-This one is split into two genres, one for channels, and another one for chats where you can see the users who reacted.  
-Channels:
-
-```
-
-message_id, reaction, reaction_count
-
-```
-
-Chats:
-
-```
-
-message_id, reactor_id, date_of_reacting, reaction
-
-```
-
-### Users.csv
-this one is simple, it just has users ids
-
-```
-
-user_id
-
-```
-
-### CheckPoint.json
-
-```
-
-message_count, file_count, saved_dialog_info, elapsed_time
-
-```
-
-### BigFiles.csv
-
-```
-
-message_id
-
-```
-
-### PhotoInfo.csv
-
-```
-
-photo_date
-
-```
-
-For each one of those, if it doesn't exist (like a message not forwarded) it'll default to `0`
 
 ## Tests
 
-There's only one simple test that checks the consistncy of the program.  
-To do it you'd have:  
-1- To join the group `EyadTest1` on Telegram.  
-2- Have Pytest, and Pytest-asyncio installed on your system.  
-3- Then run this command:  
+There are tests covering all of the helper module, and some classe, the coverage as reported by `coverage` is `85%`, to run the tests run:  
 
 ```
 
-PYTHONPATH=. pytest
+python -m pytest
 
 ```
 
@@ -152,6 +70,7 @@ I learnt a lot about file managment, and how to parse things in general, but the
 This project did take a good chunk of time to finish, or at least get it to work, and I did it mainly because I love archiving things locally, it works pretty well in my opinion.  
 I also learnt a good amount of error handling, while it is not sublime, error handling is good here.  
 I'd like to add a way to reverse the process and get a GUI out of it, I've seen that on discord archivers, I'd also want to add a way to compress stuff, like files, or at least do something about them because they take A LOT of space.  
-All in all, I'm pretty much satisfied with this project, it took me about 50h? idk (probably 70h+ by now), but I do feel like I'm missing some features.  
+All in all, I'm pretty much satisfied with this project, it took me about 50h? idk (probably 70h+ by now (prolly 100h by now)), but I do feel like I'm missing some features.  
 I have listed a good list of todos and fixme in the code, I might do them one day...? idk, I hopne it'll be good, inshallah.  
+Update: I did get a good hand-on exp. on SQLite and pytest (:
 Thank you for reading -Eyad.
