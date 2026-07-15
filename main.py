@@ -98,10 +98,22 @@ async def main():
         config.dialogInfo = args.archive_dialog_info
         config.userInfo = args.archive_user_info
         config.files = args.archive_file
+
         if args.archive_big_files:
             config.files = True
             config.fileSizeThresholdInBytes = float("inf")
+
+        elif args.archive_file:
+            config.files = True
+            config.fileSizeThresholdInBytes = args.size_threshold * (1024**2)
+
+        elif args.archive_text:
+            # Save only file metadata, don't download files.
+            config.files = True
+            config.fileSizeThresholdInBytes = 0
+
         else:
+            config.files = False
             config.fileSizeThresholdInBytes = args.size_threshold * (1024**2)
 
     print("Started...")

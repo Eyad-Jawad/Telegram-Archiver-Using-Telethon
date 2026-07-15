@@ -83,7 +83,7 @@ class Dialog:
 
                     if (
                         self.progress.update(message.id)
-                        or time.monotonic() - lastRefreshOfProgress > 10
+                        or time.monotonic() - lastRefreshOfProgress > 5
                     ):
                         lastRefreshOfProgress = time.monotonic()
                         live.update(str(self.progress), refresh=True)
@@ -228,4 +228,4 @@ class Dialog:
 
         # helpers.utils.clearLastLine()
         print("\nDone!\n")
-        exit(0)
+        return
