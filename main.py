@@ -37,7 +37,7 @@ async def main():
 
     def handleKeyInterruption():
         mainTask.cancel()
-    
+
     try:
         loop.add_signal_handler(signal.SIGINT, handleKeyInterruption)
     except NotImplementedError:
@@ -141,7 +141,7 @@ async def main():
 
             if ans == "y":
                 dialogClass = objects.dialog.Dialog(client, config, dialog)
-                
+
                 try:
                     loop.add_signal_handler(signal.SIGINT, handleKeyInterruption)
                 except NotImplementedError:
@@ -150,7 +150,9 @@ async def main():
                 try:
                     await dialogClass.setUp()
 
-                    if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
+                    if isinstance(
+                        dialog.entity, (types.Chat, types.Channel, types.User)
+                    ):
                         print(f"Archiving {dialog.name}...\n\n")
                         await dialogClass.archive()
                     else:
@@ -160,12 +162,13 @@ async def main():
                         loop.remove_signal_handler(signal.SIGINT)
                     except NotImplementedError:
                         pass
-                        
+
     except asyncio.CancelledError:
         print("\nPlease wait a moment while the saving the checkpoint")
     except KeyboardInterrupt:
         print("\n\nHave a good day!")
         exit(0)
+
 
 if __name__ == "__main__":
     # Get the API keys

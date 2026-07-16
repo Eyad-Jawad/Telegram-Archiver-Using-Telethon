@@ -1,0 +1,5 @@
+-r requirments.txt
+
+pytest
+pytest-asyncio
+black

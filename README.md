@@ -12,7 +12,10 @@ Author: Eyad Jawad
 ### WARNING:
 
 DO NOT RUN THIS PROGRAM AGRESSIVELY!  
-I haven't tried running the program for extended periods of time, but if you run it for say, days, you might be rate limited multiple times, even though the program handles rate limit, too much rate limit might very well get your account banned, so I'd suggest you be careful when using it for large dialogs.
+I haven't tried running the program for extended periods of time, but if you run it for say, days, you might be rate limited multiple times, even though the program handles rate limit, too much rate limit might very well get your account banned, so I'd suggest you be careful when using it for large dialogs.  
+
+#### Update: 
+I have used it to archive ~1 Million messages in less than 4 hours, and didn't get banned or rate limited at all, but I aimed for text messages only, still, it is good to be careful and monitor the terminal when planning to use for an extened periods of time, and better yet use it in sessions, not all at once.  
 
 ### Setting The API keys
 
@@ -31,13 +34,12 @@ You only need to install Telethon, and Pytest if you want to test:
 
 ```
 
-pip install telethon rich # If you are a normal use
-pip install telethon pytest rich pytest-asyncio black # If you are a dev
+pip install -r requirements.txt # If you are a normal user
+pip install -r requirementsDev.txt # If you are a dev
 
 ```
 
 ### Arguments
-`-c`, `--check-size`: `check dialog size beforehand`  
 `-a`, `--archive-all`: `archive everything`  
 `-t`, `--archive-text`: `archive text messages (including forward, reply, edit, and sender_id)`  
 `-r`, `--archive-reactions`: `archive message reactions`  

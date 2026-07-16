@@ -209,7 +209,6 @@ class Dialog:
             ],
         )
 
-
     def handleKeyInterruption(self):
         # helpers.utils.clearLastLine(3)
         print("\nPlease wait a moment while the saving the checkpoint")
@@ -219,7 +218,6 @@ class Dialog:
         if self.config.userInfo:
             for user in self.users:
                 helpers.info.insertUsersIntoDB(self.cursor, user, self.dialog.id)
-
 
         self.conn.commit()
         self.conn.close()
