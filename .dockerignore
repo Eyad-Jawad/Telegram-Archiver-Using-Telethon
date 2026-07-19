@@ -1,0 +1,13 @@
+.gitignore
+.vs/
+__pycache__/
+.pytest_cache/
+venv/
+*.db
+Media/
+*.log
+*cache
+README.md
+LICENSE
+tests/
+*.png

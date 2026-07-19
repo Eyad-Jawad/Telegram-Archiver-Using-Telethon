@@ -30,14 +30,42 @@ TELEGRAM_API_HASH = "abcdefg"
 This is probably the safest way possible to ensure that your keys don't get leaked, I would never put mine straight into the program, you could read them from a file, but don't forget to add it to the gitignore.
 
 ### Requirements
-You only need to install Telethon, and Pytest if you want to test:  
+To run the program you should make a virtual enviroment first:  
+
+```
+
+python -m venv venv
+source ./venv/bin/activate
+
+```  
+
+Then you must download the dependincies:  
 
 ```
 
 pip install -r requirements.txt # If you are a normal user
 pip install -r requirementsDev.txt # If you are a dev
 
+```  
+
+Or if you have docker installed just run this command:  
+
 ```
+
+docker build -t telegram-archiver .
+
+```
+
+And then when you run it you must do this:
+
+```
+
+docker run -it --rm \
+-v "$(pwd):/usr/src/telegramArchiver" \
+telegram-archiver -t -d 
+
+```  
+The last two things `-t -d` are arugments for the program, read the next section to know them
 
 ### Arguments
 `-a`, `--archive-all`: `archive everything`  
