@@ -1,5 +1,7 @@
 from telethon import functions, types, custom
-import sqlite3
+import sqlite3, logging
+
+logger = logging.getLogger(__name__)
 
 
 async def getReactionList(
@@ -9,14 +11,19 @@ async def getReactionList(
     offset = None
     reactions = []
     while True:
-        request = await client(
-            functions.messages.GetMessageReactionsListRequest(
-                peer=dialog, id=id, reaction=None, limit=100, offset=offset
+        try:
+            request = await client(
+                functions.messages.GetMessageReactionsListRequest(
+                    peer=dialog, id=id, reaction=None, limit=100, offset=offset
+                )
             )
-        )
-        result = request.reactions
+            result = request.reactions
+        except Exception as e:
+            logger.exception(
+                f"Exception occurred while requesting a reaction list : {e}"
+            )
 
-        for react in result:
+        for react in result or []:
             reactions.append(
                 [
                     dialog.id,
@@ -27,7 +34,7 @@ async def getReactionList(
                 ]
             )
 
-        if not request.next_offset:
+        if not request or not request.next_offset:
             break
 
         offset = request.next_offset
@@ -86,21 +93,25 @@ def insertChatReaction(cursor: sqlite3.Cursor, result: list[str | int]) -> None:
 async def reactionHandler(
     client, dialog, message: custom.message.Message, cursor: sqlite3.Cursor
 ) -> None:
-    if not message or not message.reactions:
-        return
+    try:
+        if not message or not message.reactions:
+            return
 
-    reactions = message.reactions
+        reactions = message.reactions
 
-    # For channels
-    if not reactions.can_see_list:
-        for react in reactions.results or []:
-            insertChannelReaction(cursor, dialog.id, message.id, react)
+        # For channels
+        if not reactions.can_see_list:
+            for react in reactions.results or []:
+                insertChannelReaction(cursor, dialog.id, message.id, react)
 
-        return
+            return
 
-    # For groups or chats
-    result = await getReactionList(client, dialog, message)
+        # For groups or chats
+        result = await getReactionList(client, dialog, message)
 
-    for react in result:
-        if len(react) != 0:
-            insertChatReaction(cursor, react)
+        for react in result:
+            if len(react) != 0:
+                insertChatReaction(cursor, react)
+
+    except Exception as e:
+        logger.exception(f"Excepetion occurred : {e}")

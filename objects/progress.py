@@ -1,15 +1,18 @@
-import time
+import time, logging
 from helpers.utils import formatETA
+
+logger = logging.getLogger(__name__)
 
 
 class Progress:
     def __init__(self, totalMessages: int) -> None:
+        logger.info("Setting up the Progress class")
         self.MbToByte: int = 1024**2
         self.sizeInMb: int = 0
         self.timeStart: float = time.perf_counter()
         self.totalMessages: int = totalMessages
         self.totalMessagesPercent: int = max(totalMessages // 100, 1)
-        self.messageCounter: int = 1
+        self.messageCounter: int = 0
         self.lastMessageID: int = 1
 
     def useCheckpoint(self, checkpoint: list) -> None:

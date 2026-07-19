@@ -1,5 +1,8 @@
 from telethon import types, custom
 from telethon.utils import get_peer_id
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def replyHandler(message: custom.message.Message, users: set[int]) -> str | int:
@@ -9,40 +12,46 @@ def replyHandler(message: custom.message.Message, users: set[int]) -> str | int:
             return 0
 
         # check if it's from a user or a channel
-        replyedTo = message.reply_to
-        if not (replyedTo and replyedTo.reply_to_peer_id):
+        repliedTo = message.reply_to
+        if not (repliedTo and repliedTo.reply_to_peer_id):
             return message.reply_to_msg_id
 
         # if it's from a channel
-        replyedToID = get_peer_id(replyedTo.reply_to_peer_id)
+        repliedToID = get_peer_id(repliedTo.reply_to_peer_id)
 
-        if replyedToID not in users:
-            users.add(replyedToID)
+        if repliedToID not in users:
+            users.add(repliedToID)
 
-        return f"{replyedToID}:{message.reply_to_msg_id}"
+        return f"{repliedToID}:{message.reply_to_msg_id}"
 
     except Exception as e:
-        print(f"\nUnlogged error occurred: {e}\n")
-        return 0
+        logger.exception(f"Exception occurred : {e}")
+
+    return 0
 
 
 def forwardHandler(message: custom.message.Message, users: set[int]) -> list[str | int]:
-    if not message or not message.forward:
-        return [0, 0]
+    try:
+        if not message or not message.forward:
+            return [0, 0]
 
-    forward = message.forward
+        forward = message.forward
 
-    forwardFromName = f"{forward.from_name}"
-    if not forward.from_id:
-        return [forwardFromName, 0]
+        forwardFromName = f"{forward.from_name}"
+        if not forward.from_id:
+            return [forwardFromName, 0]
 
-    entity = forward.from_id
-    peerId = get_peer_id(entity)
+        entity = forward.from_id
+        peerId = get_peer_id(entity)
 
-    if peerId not in users:
-        users.add(peerId)
+        if peerId not in users:
+            users.add(peerId)
 
-    return [forwardFromName, peerId]
+        return [forwardFromName, peerId]
+    except Exception as e:
+        logger.exception(f"Exception occurred : {e}")
+
+    return [0, 0]
 
 
 def textHandler(message: custom.message.Message) -> str:

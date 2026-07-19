@@ -459,9 +459,7 @@ async def testGetFullRequestForError(chatMock):
 
     client.assert_awaited_once()
     chatMock.assert_called_once_with(dialog)
-    errorHandler.handle.assert_awaited_once_with(
-        client.side_effect, info.getFullRequest
-    )
+    errorHandler.handle.assert_awaited_once_with(client.side_effect)
 
 
 @pytest.mark.asyncio
@@ -528,7 +526,7 @@ async def testGetPhotoInfoForError():
 
     assert await info.getPhotoInfo(client, dialog, errorHandler, None) == []
     client.iter_profile_photos.assert_called_once_with(dialog)
-    errorHandler.handle.assert_awaited_once_with(error, info.getPhotoInfo)
+    errorHandler.handle.assert_awaited_once_with(error)
 
 
 @pytest.mark.asyncio
@@ -624,7 +622,7 @@ async def testAddUsersToSetForError():
     await info.addUsersToSet(client, dialog, None, errorHandler)
 
     client.iter_participants.assert_called_once_with(dialog)
-    errorHandler.handle.assert_awaited_once_with(error, info.addUsersToSet)
+    errorHandler.handle.assert_awaited_once_with(error)
 
 
 def testInsertUsersWithNoEntry(insertUsersFixture):

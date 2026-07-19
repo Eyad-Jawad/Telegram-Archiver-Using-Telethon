@@ -1,23 +1,31 @@
-import sqlite3
+import sqlite3, logging
 from telethon import functions, types, custom
 from telethon.errors import ChatAdminRequiredError, ChannelPrivateError
 from objects import errors
 from datetime import datetime, timezone
 
+logger = logging.getLogger(__name__)
+
 
 def userIdHandler(message: custom.message.Message, users: set[int]) -> list[str | int]:
-    # check for the id of the user to add to the message
-    if message.post_author:
-        return [message.post_author, 0]
+    try:
+        # check for the id of the user to add to the message
+        if message.post_author:
+            return [message.post_author, 0]
 
-    elif not message.sender_id:
-        return [0, 0]
+        elif not message.sender_id:
+            return [0, 0]
 
-    # check if the sender is not saved
-    if message.sender_id not in users:
-        users.add(message.sender_id)
+        # check if the sender is not saved
+        if message.sender_id not in users:
+            users.add(message.sender_id)
 
-    return [0, message.sender_id]
+        return [0, message.sender_id]
+
+    except Exception as e:
+        logging.exception(f"Exception occurred : {e}")
+
+    return [0, 0]
 
 
 def getLatestPhotoDate(cursor: sqlite3.Cursor, dialogId: int) -> datetime:
@@ -108,7 +116,8 @@ async def getFullRequest(client, dialog, errorHandler: errors.Errors) -> str:
 
         return fullRequest.stringify()
     except Exception as e:
-        await errorHandler.handle(e, getFullRequest)
+        logger.exception(f"Exception occurred : {e}")
+        await errorHandler.handle(e)
 
 
 async def getPhotoInfo(
@@ -128,7 +137,8 @@ async def getPhotoInfo(
             )
 
     except Exception as e:
-        await errorHandler.handle(e, getPhotoInfo)
+        logger.exception(f"Exception occurred : {e}")
+        await errorHandler.handle(e)
 
     return photoDataRow
 
@@ -142,7 +152,8 @@ async def addUsersToSet(
                 users.add(user.id)
 
     except (ChatAdminRequiredError, ChannelPrivateError, Exception) as e:
-        await errorHandler.handle(e, addUsersToSet)
+        logger.exception(f"Exception occurred : {e}")
+        await errorHandler.handle(e)
 
 
 def insertUsersIntoDB(cursor: sqlite3.Cursor, user: int, dialogId: int) -> None:

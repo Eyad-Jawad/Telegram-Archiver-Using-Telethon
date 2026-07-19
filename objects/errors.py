@@ -1,7 +1,9 @@
-import asyncio, sqlite3
+import asyncio, sqlite3, logging
 from . import file, progress, dialog
 from helpers.utils import clearLastLine
 from telethon.errors import FloodWaitError
+
+logger = logging.getLogger(__name__)
 
 
 class Errors:
@@ -14,7 +16,7 @@ class Errors:
         fileHanlder: file.File,
         dialogObject: dialog.Dialog,
     ) -> None:
-
+        logger.info("Setting up the Errors class")
         self.id = id
         self.conn = conn
         self.cursor = cursor
@@ -22,24 +24,14 @@ class Errors:
         self.fileClass = fileHanlder
         self.dialogObject = dialogObject
 
-    async def handle(self, error, comesFrom: str | None = None) -> None:
+    async def handle(self, error) -> None:
         self.dialogObject.saveCheckpoint()
-
-        print(f"Error occurred: {error}")
 
         self.conn.commit()
 
-        with open("errors.txt", "a") as f:
-            f.write(
-                f"Error occurred: "
-                f"at message {self.progressClass.lastMessageID}:\n"
-                f"{error}\n"
-            )
-
-            if comesFrom:
-                f.write(f"This error was raised from {comesFrom} function\n\n")
+        logger.error(f"Error occurred: {error}")
+        logger.error(f"Error occurred at message {self.progressClass.lastMessageID}:\n")
 
         if isinstance(error, FloodWaitError):
-            print(f"You've been rate limited for {error.seconds}s")
+            logger.warning(f"You have been rate limited for {error.seconds}")
             await asyncio.sleep(error.seconds)
-            clearLastLine()
