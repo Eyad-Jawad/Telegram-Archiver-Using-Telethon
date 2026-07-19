@@ -5,7 +5,6 @@ from datetime import datetime
 
 """
 FIXME:
-when replying to a story it says something about story idk what doesn't have a reply_to attribute
 softlock: when exiting before archiving anything
 
 TODO:
