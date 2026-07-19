@@ -15,6 +15,10 @@ def replyHandler(message: custom.message.Message, users: set[int]) -> str | int:
         # check if it's from a user or a channel
         repliedTo = message.reply_to
         if not (repliedTo and repliedTo.reply_to_peer_id):
+            # This case is for replies from private dialogs
+            if not message.reply_to_msg_id:
+                return f"{message.reply_to.reply_from.from_name}:{message.reply_to.quote_text}"
+            
             return message.reply_to_msg_id
 
         # if it's from a channel

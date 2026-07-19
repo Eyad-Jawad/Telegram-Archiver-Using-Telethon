@@ -29,7 +29,7 @@ def makeTables(cursor: sqlite3.Cursor):
             senderId INTEGER,
             forwardFromUsername INTEGER,
             forwardFromUserId INTEGER,
-            repliedToId INTEGER,
+            repliedToId TEXT,
             text TEXT,
             date DATETIME,
             editDate DATETIME,

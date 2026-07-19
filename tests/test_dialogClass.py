@@ -483,4 +483,3 @@ async def testDialogArchiveMessage(
         3.0,
         1,
     ) == archiveMessageFixture.fetchone()
-

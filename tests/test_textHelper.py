@@ -23,6 +23,17 @@ def testReplyHandlerWithReplyToUser():
     assert text.replyHandler(message, None) == 10
 
 
+def testReplyHandlerWithReplyToPrivateDialog():
+    message = MagicMock()
+    message.reply_to = MagicMock()
+    message.reply_to.reply_to_peer_id = None
+    message.reply_to_msg_id = None
+    message.reply_to.reply_from.from_name = "He"
+    message.reply_to.quote_text = "Hi"
+
+    assert text.replyHandler(message, None) == "He:Hi"
+
+
 @patch("helpers.text.get_peer_id")
 def testReplyHandlerWithReplyToChannel(mockGetId):
     message = MagicMock()
