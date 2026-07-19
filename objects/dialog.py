@@ -26,7 +26,6 @@ class Dialog:
         self.type: str = self.getDialogType()
 
         helpers.sqlTables.makeTables(self.cursor)
-        self.conn.commit()
 
         self.cursor.execute(
             "INSERT OR IGNORE INTO dialogs (dialogId, name, type) VALUES  (?, ?, ?)",
@@ -35,7 +34,7 @@ class Dialog:
 
         self.conn.commit()
 
-    async def setUp(self):
+    async def setUp(self) -> None:
         self.totalMessages: int = (
             await self.client.get_messages(self.dialog, limit=0)
         ).total
@@ -130,20 +129,17 @@ class Dialog:
 
     def saveCheckpoint(self) -> None:
         logger.info("Saving the checkpoint")
-        dialog = self.getCheckpoint()
+        checkpoint = self.getCheckpoint()
         args = [
             self.progress.lastMessageID,
             self.progress.messageCounter,
-            self.progress.timeStart,
+            time.perf_counter() - self.progress.timeStart,
         ]
-        for i, value in enumerate(args[:-1]):
+        for i, value in enumerate(args):
             if value:
-                dialog[i] = value
+                checkpoint[i] = value
 
-        if self.progress.timeStart:
-            dialog[-1] = time.perf_counter() - self.progress.timeStart
-
-        dialog.append(self.dialog.id)
+        checkpoint.append(self.dialog.id)
 
         self.cursor.execute(
             """
@@ -154,7 +150,7 @@ class Dialog:
                 archivingTime = ?
             WHERE dialogId = ?
         """,
-            dialog,
+            checkpoint,
         )
 
     def getCheckpoint(self) -> list:
@@ -164,7 +160,7 @@ class Dialog:
 
         return list(self.cursor.fetchone()[-3:])
 
-    async def archiveMessage(self, message: custom.message.Message):
+    async def archiveMessage(self, message: custom.message.Message) -> None:
         # for writing into the file at once
         dialogId = self.id
         messageId = message.id
@@ -173,7 +169,7 @@ class Dialog:
         senderId = 0
         forwardFromName = ""
         forwardFromId = 0
-        replyedToId = 0
+        repliedToId = 0
         text = ""
         date = message.date
         editDate = message.edit_date
@@ -187,7 +183,7 @@ class Dialog:
             [forwardFromName, forwardFromId] = helpers.text.forwardHandler(
                 message, self.users
             )
-            replyedToId = helpers.text.replyHandler(message, self.users)
+            repliedToId = helpers.text.replyHandler(message, self.users)
             text = helpers.text.textHandler(message)
 
         if self.config.files and message.file:
@@ -203,7 +199,7 @@ class Dialog:
             """
             INSERT OR IGNORE INTO messages 
             (dialogId, messageId, authorName, views, senderId, forwardFromUsername, 
-            forwardFromUserId, replyedToId, text, date, editDate,
+            forwardFromUserId, repliedToId, text, date, editDate,
             filePath, fileId, fileSize, downloadedMedia) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
@@ -215,7 +211,7 @@ class Dialog:
                 senderId,
                 forwardFromName,
                 forwardFromId,
-                replyedToId,
+                repliedToId,
                 text,
                 date,
                 editDate,
@@ -226,7 +222,7 @@ class Dialog:
             ],
         )
 
-    def handleKeyInterruption(self):
+    def handleKeyInterruption(self) -> None:
         print("\nPlease wait a moment while the saving the checkpoint")
         logger.info("Handling key interruption")
 

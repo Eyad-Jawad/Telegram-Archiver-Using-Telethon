@@ -29,15 +29,14 @@ def makeTables(cursor: sqlite3.Cursor):
             senderId INTEGER,
             forwardFromUsername INTEGER,
             forwardFromUserId INTEGER,
-            replyedToId INTEGER,
+            repliedToId INTEGER,
             text TEXT,
             date DATETIME,
             editDate DATETIME,
             filePath TEXT,
             fileId TEXT,
-            fileRelativeId INTEGER,
             fileSize FLOAT NOT NULL DEFAULT 0.0,
-            downloadedMedia INTEGER NOT NULL DEFAULT 0,
+            downloadedMedia BOOL NOT NULL DEFAULT FALSE,
             UNIQUE (dialogId, messageId)
         )
     """)

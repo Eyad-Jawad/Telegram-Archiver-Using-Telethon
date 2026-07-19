@@ -6,7 +6,6 @@ from datetime import datetime
 """
 FIXME:
 When replying to a message from a private chat the method fails:'TotalList' object has no attribute 'id'
-checkpoint takes messageId instead of messageCounter
 when replying to a story it says something about story idk what doesn't have a reply_to attribute
 softlock: when exiting before archiving anything
 
