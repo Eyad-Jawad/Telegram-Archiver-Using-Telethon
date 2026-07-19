@@ -14,6 +14,11 @@ def replyHandler(message: custom.message.Message, users: set[int]) -> str | int:
 
         # check if it's from a user or a channel
         repliedTo = message.reply_to
+
+        # temp solution unitl I make some stuff for stories
+        if isinstance(repliedTo, types.MessageReplyStoryHeader):
+            return "Replied to a story"
+        
         if not (repliedTo and repliedTo.reply_to_peer_id):
             # This case is for replies from private dialogs
             if not message.reply_to_msg_id:
