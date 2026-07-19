@@ -172,7 +172,11 @@ async def testDialogInit(mockDialogClass):
     assert mockDialogClass["obj"].id == 1
     assert mockDialogClass["obj"].type == "Something"
     assert mockDialogClass["obj"].totalMessages == 10
-    mockDialogClass["mockLogger"].assert_called_once_with("Initiating the dialog class")
+    assert mockDialogClass["mockLogger"].call_count == 2
+    assert mockDialogClass["mockLogger"].call_args_list == [
+        call("Initiating the dialog class (the synchronous part)..."),
+        call("Initiating the dialog class (the asynchronous part)..."),
+    ]
     mockDialogClass["mockConnect"].assert_called_once_with("telegram.db")
     mockDialogClass["mockGetId"].assert_called_once_with(
         mockDialogClass["mockDialog"].entity
