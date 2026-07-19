@@ -31,6 +31,7 @@ def makeTables(cursor: sqlite3.Cursor):
             replyedToId INTEGER,
             text TEXT,
             date DATETIME,
+            editDate DATETIME,
             filePath TEXT,
             fileId TEXT,
             fileRelativeId INTEGER,

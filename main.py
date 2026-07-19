@@ -8,6 +8,7 @@ FIXME:
 When replying to a message from a private chat the method fails:'TotalList' object has no attribute 'id'
 checkpoint takes messageId instead of messageCounter
 when replying to a story it says something about story idk what doesn't have a reply_to attribute
+softlock: when exiting before archiving anything
 
 TODO:
 Unit tests / pytest
@@ -17,7 +18,6 @@ Sticker packs handler
 forwarded from Pic
 stories
 special emoticon
-edit date
 reverse the process (GUI)
 add the method of only extracting one's messages
 On channel get views

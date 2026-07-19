@@ -126,7 +126,7 @@ class Dialog:
 
         except Exception as e:
             logger.exception(f"Exception occurred : {e}")
-            await self.error.handle(e, self.archive)
+            await self.error.handle(e)
 
     def saveCheckpoint(self) -> None:
         logger.info("Saving the checkpoint")
@@ -175,6 +175,7 @@ class Dialog:
         replyedToId = 0
         text = ""
         date = message.date
+        editDate = message.edit_date
         filePath = ""
         fileId = 0
         fileSize = 0.0
@@ -201,9 +202,9 @@ class Dialog:
             """
             INSERT OR IGNORE INTO messages 
             (dialogId, messageId, authorName, senderId, forwardFromUsername, 
-            forwardFromUserId, replyedToId, text, date, 
+            forwardFromUserId, replyedToId, text, date, editDate,
             filePath, fileId, fileSize, downloadedMedia) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             [
                 dialogId,
@@ -215,6 +216,7 @@ class Dialog:
                 replyedToId,
                 text,
                 date,
+                editDate,
                 filePath,
                 fileId,
                 fileSize,
