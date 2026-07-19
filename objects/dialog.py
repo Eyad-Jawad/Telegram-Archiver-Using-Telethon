@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Dialog:
     # client, config, dialog
     def __init__(self, client, config: con, dialog) -> None:
-        logger.info("Initiating the dialog class")
+        logger.info("Initiating the dialog class (the synchronous part)...")
         self.conn = sqlite3.connect("telegram.db")
         self.cursor = self.conn.cursor()
         self.dialog = dialog
@@ -35,6 +35,7 @@ class Dialog:
         self.conn.commit()
 
     async def setUp(self) -> None:
+        logger.info("Initiating the dialog class (the asynchronous part)...")
         self.totalMessages: int = (
             await self.client.get_messages(self.dialog, limit=0)
         ).total
@@ -73,7 +74,7 @@ class Dialog:
             return "Unknown"
 
     async def archive(self) -> None:
-        logger.info("Started the arciving loop")
+        logger.info("Started the arciving loop...")
         try:
             lastRefreshOfProgress = time.monotonic()
             with Live(str(self.progress), auto_refresh=False) as live:
@@ -93,16 +94,16 @@ class Dialog:
 
                 live.update(str(self.progress), refresh=True)
 
-            logger.info("Done archiving messages")
+            logger.info("Done archiving messages.")
 
             if self.config.dialogInfo:
-                logger.info("Parsing dialog info")
+                logger.info("Parsing dialog info...")
                 await helpers.info.getDialogInfo(
                     self.client, self.dialog, self.users, self.error, self.cursor
                 )
 
             if self.config.userInfo:
-                logger.info("Parsing users info")
+                logger.info("Parsing users info...")
                 await helpers.info.usersHandler(
                     self.client,
                     self.dialog,
@@ -116,11 +117,11 @@ class Dialog:
             self.conn.commit()
             self.conn.close()
             logger.info(
-                f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.timeStart} seconds"
+                f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.timeStart} seconds."
             )
 
         except (KeyboardInterrupt, asyncio.CancelledError) as e:
-            logger.info(f"Exiting mid-archiving the dialog {self.dialog.name}")
+            logger.info(f"Exiting mid-archiving the dialog {self.dialog.name}...")
             self.handleKeyInterruption()
 
         except Exception as e:
@@ -128,7 +129,7 @@ class Dialog:
             await self.error.handle(e)
 
     def saveCheckpoint(self) -> None:
-        logger.info("Saving the checkpoint")
+        logger.info("Saving the checkpoint...")
         checkpoint = self.getCheckpoint()
         args = [
             self.progress.lastMessageID,
@@ -224,7 +225,7 @@ class Dialog:
 
     def handleKeyInterruption(self) -> None:
         print("\nPlease wait a moment while the saving the checkpoint")
-        logger.info("Handling key interruption")
+        logger.info("Handling key interruption...")
 
         self.saveCheckpoint()
 
@@ -236,5 +237,5 @@ class Dialog:
         self.conn.close()
 
         # helpers.utils.clearLastLine()
-        logger.info("Done handling key interruption")
+        logger.info("Done handling key interruption.")
         return

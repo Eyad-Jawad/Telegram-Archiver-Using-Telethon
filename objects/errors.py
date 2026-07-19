@@ -16,7 +16,7 @@ class Errors:
         fileHanlder: file.File,
         dialogObject: dialog.Dialog,
     ) -> None:
-        logger.info("Setting up the Errors class")
+        logger.info("Setting up the Errors class...")
         self.id = id
         self.conn = conn
         self.cursor = cursor
@@ -29,9 +29,9 @@ class Errors:
 
         self.conn.commit()
 
-        logger.error(f"Error occurred: {error}")
-        logger.error(f"Error occurred at message {self.progressClass.lastMessageID}:\n")
+        logger.error(f"Error occurred: {error}.")
+        logger.error(f"Error occurred at message {self.progressClass.lastMessageID}.")
 
         if isinstance(error, FloodWaitError):
-            logger.warning(f"You have been rate limited for {error.seconds}")
+            logger.warning(f"You have been rate limited for {error.seconds}.")
             await asyncio.sleep(error.seconds)

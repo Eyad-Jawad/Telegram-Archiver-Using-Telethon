@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class File:
     def __init__(self, sizeThreshold: int) -> None:
-        logger.info("Setting up the File class")
+        logger.info("Setting up the File class...")
         self.sizeThreshold: int = sizeThreshold  # in bytes
         self.PATH: str = "Media/"
 

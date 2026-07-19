@@ -4,7 +4,7 @@ logger = logging.getLogger(__name__)
 
 
 def makeTables(cursor: sqlite3.Cursor):
-    logger.info("Creating the SQLite Database tables")
+    logger.info("Creating the SQLite Database tables...")
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS dialogs (

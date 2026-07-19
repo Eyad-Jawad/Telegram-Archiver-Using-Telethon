@@ -132,12 +132,12 @@ async def main():
                 ans = input(f"Do you want to archive {dialog.name}? (y) ")
                 helpers.utils.clearLastLine()
             except KeyboardInterrupt:
-                logger.info("Exited the program")
+                logger.info("Exited the program.")
                 exit(0)
 
             if ans == "y":
                 dialogClass = objects.dialog.Dialog(client, config, dialog)
-                logger.info(f"Archiving {dialog.name}")
+                logger.info(f"Archiving {dialog.name}...")
 
                 try:
                     loop.add_signal_handler(signal.SIGINT, handleKeyInterruption)
@@ -163,9 +163,9 @@ async def main():
 
     except asyncio.CancelledError:
         print("\nPlease wait a moment while the saving the checkpoint")
-        logger.info("Exited mid-archiving the dialog")
+        logger.info("Exited mid-archiving the dialog...")
     except KeyboardInterrupt:
-        logger.info("Exited the program")
+        logger.info("Exited the program.")
         print("\n\nHave a good day!")
         exit(0)
 

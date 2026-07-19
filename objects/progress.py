@@ -6,7 +6,7 @@ logger = logging.getLogger(__name__)
 
 class Progress:
     def __init__(self, totalMessages: int) -> None:
-        logger.info("Setting up the Progress class")
+        logger.info("Setting up the Progress class...")
         self.MbToByte: int = 1024**2
         self.sizeInMb: int = 0
         self.timeStart: float = time.perf_counter()
