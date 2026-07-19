@@ -25,6 +25,7 @@ def makeTables(cursor: sqlite3.Cursor):
             dialogId INTEGER,
             messageId INTEGER ,
             authorName TEXT,
+            views INTEGER,
             senderId INTEGER,
             forwardFromUsername INTEGER,
             forwardFromUserId INTEGER,

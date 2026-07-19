@@ -20,7 +20,6 @@ stories
 special emoticon
 reverse the process (GUI)
 add the method of only extracting one's messages
-On channel get views
 comments
 
 """

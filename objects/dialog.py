@@ -169,6 +169,7 @@ class Dialog:
         dialogId = self.id
         messageId = message.id
         authorName = ""
+        views = message.views
         senderId = 0
         forwardFromName = ""
         forwardFromId = 0
@@ -201,15 +202,16 @@ class Dialog:
         self.cursor.execute(
             """
             INSERT OR IGNORE INTO messages 
-            (dialogId, messageId, authorName, senderId, forwardFromUsername, 
+            (dialogId, messageId, authorName, views, senderId, forwardFromUsername, 
             forwardFromUserId, replyedToId, text, date, editDate,
             filePath, fileId, fileSize, downloadedMedia) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             [
                 dialogId,
                 messageId,
                 authorName,
+                views,
                 senderId,
                 forwardFromName,
                 forwardFromId,
