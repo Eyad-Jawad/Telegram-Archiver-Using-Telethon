@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 
 
 class Progress:
-    def __init__(self, totalMessages: int) -> None:
+    def __init__(self, totalMessages: int, dialogName: str) -> None:
         logger.info("Setting up the Progress class...")
         self.MbToByte: int = 1024**2
         self.sizeInMb: int = 0
@@ -14,6 +14,7 @@ class Progress:
         self.totalMessagesPercent: int = max(totalMessages // 100, 1)
         self.messageCounter: int = 0
         self.lastMessageID: int = 1
+        self.dialogName = dialogName
 
     def useCheckpoint(self, checkpoint: list) -> None:
         if not checkpoint:
@@ -53,6 +54,7 @@ class Progress:
         sizeInMBFormatted: str = f"{self.sizeInMb:.3f}MB"
 
         status = (
+            f"The Archiving of {self.dialogName}:\n"
             f"Message {self.messageCounter:^14} | "
             f"{ETAElapsed:^14} | "
             f"{sizeInMBFormatted:^8} | "

@@ -8,15 +8,14 @@ FIXME:
 softlock: when exiting before archiving anything
 
 TODO:
+invert how dialogInfoArchive work
 Unit tests / pytest
-Make it installable in pip or something idk
 Handle migration
 Sticker packs handler
 forwarded from Pic
 stories
 special emoticon
 reverse the process (GUI)
-add the method of only extracting one's messages
 comments
 
 """

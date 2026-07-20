@@ -45,7 +45,7 @@ class Dialog:
             [self.totalMessages, self.id],
         )
 
-        self.progress: prog = prog(self.totalMessages)
+        self.progress: prog = prog(self.totalMessages, self.dialog.name)
 
         self.file: file = file(self.config.fileSizeThresholdInBytes)
 

@@ -203,7 +203,7 @@ async def testDialogInit(mockDialogClass):
     mockDialogClass["mockClient"].get_messages.assert_awaited_once_with(
         mockDialogClass["mockDialog"], limit=0
     )
-    mockDialogClass["mockProgress"].assert_called_once_with(10)
+    mockDialogClass["mockProgress"].assert_called_once_with(10, "Me")
     mockDialogClass["mockFile"].assert_called_once_with(5)
     mockDialogClass["mockError"].assert_called_once_with(
         1,
