@@ -4,9 +4,6 @@ from telethon import TelegramClient, types
 from datetime import datetime
 
 """
-FIXME:
-softlock: when exiting before archiving anything
-
 TODO:
 invert how dialogInfoArchive work
 Unit tests / pytest
@@ -30,11 +27,7 @@ async def main():
 
     def handleKeyInterruption():
         mainTask.cancel()
-
-    try:
-        loop.add_signal_handler(signal.SIGINT, handleKeyInterruption)
-    except NotImplementedError:
-        pass
+        logger.info("Exited the program.")
 
     parser = argparse.ArgumentParser()
     parser.add_argument(
