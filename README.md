@@ -2,7 +2,7 @@
 ## The things it archives
 
 It archives:    
-![An image of the SQLite database schema](./SQLiteSchema.png)
+![An image of the SQLite database schema](./SQLite_schemas.png)
 
 ## How To Use It
 

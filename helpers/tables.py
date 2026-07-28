@@ -93,7 +93,7 @@ def make_tables(cursor: sqlite3.Cursor) -> None:
         CREATE TABLE IF NOT EXISTS dialog_photos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             dialog_id INTEGER,
-            photo_id INTEGER UNIQUE,
+            photo_id INTEGER,
             photo_path TEXT,
             photo_date DATETIME
         )
