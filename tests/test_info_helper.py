@@ -226,7 +226,8 @@ def test_is_archived_for_one_entry(is_archived_fixture, full_request, output):
     cursor = is_archived_fixture
 
     cursor.execute(
-        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)", [1, full_request]
+        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)",
+        [1, full_request],
     )
     assert is_archived(cursor, 1) == output
 
@@ -241,7 +242,8 @@ def test_is_archived_for_many_entries(is_archived_fixture):
         "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)", [2, None]
     )
     cursor.execute(
-        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)", [3, "Chickens"]
+        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)",
+        [3, "Chickens"],
     )
     cursor.execute(
         "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)",
@@ -269,7 +271,8 @@ def test_push_info_with_archived(mock_datetime, push_info_fixture):
     mock_datetime.now.return_value = "Just now"
 
     cursor.execute(
-        "INSERT INTO dialog_metadata (dialog_id, full_request, date_of_request) VALUES (?, ?, ?)", [1, "Chickens", "Today"]
+        "INSERT INTO dialog_metadata (dialog_id, full_request, date_of_request) VALUES (?, ?, ?)",
+        [1, "Chickens", "Today"],
     )
     insert_info_into_appropriate_table(cursor, 1, "Chicken wings")
 
@@ -379,7 +382,9 @@ async def test_get_dialog_info(
 
     await get_dialog_info(client, dialog, users, errors_handler, cursor)
 
-    mock_add_users.assert_awaited_once_with(client, dialog.entity, users, errors_handler)
+    mock_add_users.assert_awaited_once_with(
+        client, dialog.entity, users, errors_handler
+    )
     mock_push_photo.assert_called_once_with(cursor, photo_info)
     mock_get_photo.assert_awaited_once_with(
         client, dialog.entity, errors_handler, latest_photo_date

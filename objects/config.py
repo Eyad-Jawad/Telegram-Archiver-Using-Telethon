@@ -8,7 +8,9 @@ class Config:
     dialog_metadata: bool = True
     user_metadata: bool = True
     files: bool = True
-    size_threshold: int = (1024**2) * 100  # file size threshold in bytes (default: 100 MB)
+    size_threshold: int = (
+        1024**2
+    ) * 100  # file size threshold in bytes (default: 100 MB)
 
     def __str__(self):
         return f"""

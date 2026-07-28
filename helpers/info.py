@@ -8,20 +8,22 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 
-def user_id_handler(message: custom.message.Message, users: set[int]) -> tuple[str, int]:
+def user_id_handler(
+    message: custom.message.Message, users: set[int]
+) -> tuple[str, int]:
     """
-        A function that parses user id from messages, or post author name
-        in case of channels.
+    A function that parses user id from messages, or post author name
+    in case of channels.
 
-        Args:
-            message (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
+    Args:
+        message (telethon.custom.message.Message):
+            A telegram dialog's message provided by telethon.
 
-        Returns:
-            tuple (
-                str (Post author name in case of channels),
-                int (user id)
-            )
+    Returns:
+        tuple (
+            str (Post author name in case of channels),
+            int (user id)
+        )
     """
 
     try:
@@ -48,20 +50,20 @@ def user_id_handler(message: custom.message.Message, users: set[int]) -> tuple[s
 
 def get_latest_photo_date(cursor: sqlite3.Cursor, dialog_id: int) -> datetime:
     """
-        A function that gets the date of the latest profile photo
-        for entities, so that you only donwload photos that are newer 
-        than the last one saved.
+    A function that gets the date of the latest profile photo
+    for entities, so that you only donwload photos that are newer
+    than the last one saved.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
 
-            dialog_id (int):
-                The id of the entity.
-        
-        Returns:
-            Datetime:
-                The latest date of a pfp if it exists, else 1900 as a default.
+        dialog_id (int):
+            The id of the entity.
+
+    Returns:
+        Datetime:
+            The latest date of a pfp if it exists, else 1900 as a default.
     """
 
     # format: 2026-03-06 17:45:25+00:00
@@ -79,20 +81,22 @@ def get_latest_photo_date(cursor: sqlite3.Cursor, dialog_id: int) -> datetime:
 
 def is_archived(cursor: sqlite3.Cursor, dialog_id: int) -> bool:
     """
-        A function that checks if dialog metadata was archived before.
+    A function that checks if dialog metadata was archived before.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
 
-            dialog_id (int):
-                The id of the entity.
-        
-        Returns:
-            bool:
-                A boolean for if dialog metadata was archived before.
+        dialog_id (int):
+            The id of the entity.
+
+    Returns:
+        bool:
+            A boolean for if dialog metadata was archived before.
     """
-    cursor.execute("SELECT full_request FROM dialog_metadata WHERE dialog_id = ?", [dialog_id])
+    cursor.execute(
+        "SELECT full_request FROM dialog_metadata WHERE dialog_id = ?", [dialog_id]
+    )
 
     query = cursor.fetchone()
 
@@ -103,40 +107,46 @@ def insert_info_into_appropriate_table(
     cursor: sqlite3.Cursor, dialog_id: int, full_request: str
 ) -> None:
     """
-        A function that inserts dialog metadata into dialog_metadata
-        if it is the first time archiving this dialog's metadata
-        or updating dialog_metadata_archive if it is not the first time
-        while also inserting new metadata into dialog_metadata.
+    A function that inserts dialog metadata into dialog_metadata
+    if it is the first time archiving this dialog's metadata
+    or updating dialog_metadata_archive if it is not the first time
+    while also inserting new metadata into dialog_metadata.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
 
-            dialog_id (int):
-                The id of the entity.
+        dialog_id (int):
+            The id of the entity.
 
-            full_request (str):
-                A srting of the full request recieved from telegram of
-                the dilaog we are archiving its metadata.            
+        full_request (str):
+            A srting of the full request recieved from telegram of
+            the dilaog we are archiving its metadata.
     """
 
     # Check if the dialog's metadata was archived before
     if is_archived(cursor, dialog_id):
         # Get the past metadata
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT dialog_id, full_request, date_of_request
             FROM dialog_metadata
             WHERE dialog_id = ?
-        """, [dialog_id])
+        """,
+            [dialog_id],
+        )
 
         result = cursor.fetchone()
 
         # Insert it into the metadata archive
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR IGNORE INTO dialog_metadata_archive
             (dialog_id, full_request, date_of_request)
             VALUES (?, ?, ?)
-        """, result,)
+        """,
+            result,
+        )
 
     # Insert new metadata into dialog_metadata
     cursor.execute(
@@ -145,21 +155,23 @@ def insert_info_into_appropriate_table(
     )
 
 
-def insert_photo_info(cursor: sqlite3.Cursor, photo_info: list[tuple[int, int, str, str]]) -> None:
+def insert_photo_info(
+    cursor: sqlite3.Cursor, photo_info: list[tuple[int, int, str, str]]
+) -> None:
     """
-        A function that inserts photo data acquired from get_photo_info
-        into the database.
+    A function that inserts photo data acquired from get_photo_info
+    into the database.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
 
-            photo_info list[tuple(
-                int (dialog id), 
-                int (photo id),
-                str (the path where the photo was saved),
-                str (photo date in iso format),
-            )]
+        photo_info list[tuple(
+            int (dialog id),
+            int (photo id),
+            str (the path where the photo was saved),
+            str (photo date in iso format),
+        )]
     """
 
     # For safety
@@ -175,43 +187,49 @@ def insert_photo_info(cursor: sqlite3.Cursor, photo_info: list[tuple[int, int, s
 
 def ensure_dialog_row_exists(cursor: sqlite3.Cursor, dialog_id: int) -> None:
     """
-        A function that makes sure an entry of the dialog exists
-        in dialog_metadata so other functions can do their work safely.
+    A function that makes sure an entry of the dialog exists
+    in dialog_metadata so other functions can do their work safely.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
 
-            dialog_id (int):
-                The id of the entity.
+        dialog_id (int):
+            The id of the entity.
     """
 
     # For safety
     if not dialog_id:
         return
 
-    cursor.execute("INSERT OR IGNORE INTO dialog_metadata (dialog_id) VALUES (?)", [dialog_id])
+    cursor.execute(
+        "INSERT OR IGNORE INTO dialog_metadata (dialog_id) VALUES (?)", [dialog_id]
+    )
 
 
 async def get_dialog_info(
-    client: TelegramClient, dialog: tl.custom.dialog.Dialog, users: set[int], errors_handler: Errors, cursor: sqlite3.Cursor
+    client: TelegramClient,
+    dialog: tl.custom.dialog.Dialog,
+    users: set[int],
+    errors_handler: Errors,
+    cursor: sqlite3.Cursor,
 ) -> None:
     """
-        A function that handles all things having to do with info, uesr ids, or metadata
+    A function that handles all things having to do with info, uesr ids, or metadata
 
-        Args:
-            client (telethon.TelegramClinet): 
-                Your account's client.
+    Args:
+        client (telethon.TelegramClinet):
+            Your account's client.
 
-            dialog (telethon.tl.custom.dialog.Dialog): 
-                The object which you get from client.iter_dialogs.
-                
-            users (set[int]):
-                A set of user ids or any kind of entity where
-                entity ids accumulate over the time archiving.
-            
-            errors_handler (objects.errors.Errors):
-                An object that handles errors appropriately.
+        dialog (telethon.tl.custom.dialog.Dialog):
+            The object which you get from client.iter_dialogs.
+
+        users (set[int]):
+            A set of user ids or any kind of entity where
+            entity ids accumulate over the time archiving.
+
+        errors_handler (objects.errors.Errors):
+            An object that handles errors appropriately.
     """
 
     dialog = dialog.entity
@@ -228,32 +246,36 @@ async def get_dialog_info(
     await add_users_to_set(client, dialog, users, errors_handler)
 
 
-async def get_full_request(client: TelegramClient, dialog: tl.custom.dialog.Dialog, errors_handler: Errors) -> str:
+async def get_full_request(
+    client: TelegramClient, dialog: tl.custom.dialog.Dialog, errors_handler: Errors
+) -> str:
     """
-        A function that gets the full request from telegram for 
-        the different types of dialogs.
+    A function that gets the full request from telegram for
+    the different types of dialogs.
 
-        Args:
-            client (telethon.TelegramClinet): 
-                Your account's client.
+    Args:
+        client (telethon.TelegramClinet):
+            Your account's client.
 
-            dialog (telethon.tl.custom.dialog.Dialog): 
-                The object which you get from client.iter_dialogs.
+        dialog (telethon.tl.custom.dialog.Dialog):
+            The object which you get from client.iter_dialogs.
 
-            errors_handler (objects.errors.Errors):
-                An object that handles errors appropriately.
+        errors_handler (objects.errors.Errors):
+            An object that handles errors appropriately.
 
-        Retunrs:
-            str:
-                A srting of the full request recieved from telegram of
-                the dilaog we are archiving its metadata.            
+    Retunrs:
+        str:
+            A srting of the full request recieved from telegram of
+            the dilaog we are archiving its metadata.
     """
 
     try:
         full_request = None
 
         if isinstance(dialog, types.Channel):
-            full_request = await client(functions.channels.GetFullChannelRequest(dialog))
+            full_request = await client(
+                functions.channels.GetFullChannelRequest(dialog)
+            )
 
         elif isinstance(dialog, types.User):
             full_request = await client(functions.users.GetFullUserRequest(dialog))
@@ -268,34 +290,37 @@ async def get_full_request(client: TelegramClient, dialog: tl.custom.dialog.Dial
 
 
 async def get_photo_info(
-    client: TelegramClient, dialog: tl.custom.dialog.Dialog, errors_handler: Errors, latest_photo_date: datetime
+    client: TelegramClient,
+    dialog: tl.custom.dialog.Dialog,
+    errors_handler: Errors,
+    latest_photo_date: datetime,
 ) -> list[tuple[int, int, str, str]]:
     """
-        A function that downloads and gets the metadata of profile
-        photos of dialogs.
+    A function that downloads and gets the metadata of profile
+    photos of dialogs.
 
-        Args:
-            client (telethon.TelegramClinet): 
-                Your account's client.
+    Args:
+        client (telethon.TelegramClinet):
+            Your account's client.
 
-            dialog (telethon.tl.custom.dialog.Dialog): 
-                The object which you get from client.iter_dialogs.
-            
-            errors_handler (objects.errors.Errors):
-                An object that handles errors appropriately.
+        dialog (telethon.tl.custom.dialog.Dialog):
+            The object which you get from client.iter_dialogs.
 
-            latest_photo_date (datetime):
-                The date of the latest photo in the database
-                in case this dialog was archived before so we
-                don't donwload duplicate photos and metadata.
-        
-        Returns:
-            list[tuple(
-                int (dialog id), 
-                int (photo id),
-                str (the path where the photo was saved),
-                str (photo date in iso format),
-            )]
+        errors_handler (objects.errors.Errors):
+            An object that handles errors appropriately.
+
+        latest_photo_date (datetime):
+            The date of the latest photo in the database
+            in case this dialog was archived before so we
+            don't donwload duplicate photos and metadata.
+
+    Returns:
+        list[tuple(
+            int (dialog id),
+            int (photo id),
+            str (the path where the photo was saved),
+            str (photo date in iso format),
+        )]
     """
 
     # The directory where photos will be saved
@@ -321,25 +346,28 @@ async def get_photo_info(
 
 
 async def add_users_to_set(
-    client: TelegramClient, dialog: tl.custom.dialog.Dialog, users: set[int], errors_handler: Errors
+    client: TelegramClient,
+    dialog: tl.custom.dialog.Dialog,
+    users: set[int],
+    errors_handler: Errors,
 ) -> None:
     """
-        A function that parses users in chats, and adds 
-        them to the accumulative set of users we have.
+    A function that parses users in chats, and adds
+    them to the accumulative set of users we have.
 
-        Args:
-            client (telethon.TelegramClinet): 
-                Your account's client.
+    Args:
+        client (telethon.TelegramClinet):
+            Your account's client.
 
-            dialog (telethon.tl.custom.dialog.Dialog): 
-                The object which you get from client.iter_dialogs.
+        dialog (telethon.tl.custom.dialog.Dialog):
+            The object which you get from client.iter_dialogs.
 
-            users (set[int]):
-                A set of user ids or any kind of entity where
-                entity ids accumulate over the time archiving.
-            
-            errors_handler (objects.errors.Errors):
-                An object that handles errors appropriately.
+        users (set[int]):
+            A set of user ids or any kind of entity where
+            entity ids accumulate over the time archiving.
+
+        errors_handler (objects.errors.Errors):
+            An object that handles errors appropriately.
     """
 
     try:
@@ -356,18 +384,18 @@ async def add_users_to_set(
 
 def insert_users_ids(cursor: sqlite3.Cursor, user: int, dialog_id: int) -> None:
     """
-        A function that inserts a user's id into the database.
+    A function that inserts a user's id into the database.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
-            
-            user (int):
-                the id of the user we want to insert their id into the database.
-                Note that a user can be a channel or any other type of entity.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
 
-            dialog_id (int):
-                The id of the entity where this user was found.
+        user (int):
+            the id of the user we want to insert their id into the database.
+            Note that a user can be a channel or any other type of entity.
+
+        dialog_id (int):
+            The id of the entity where this user was found.
     """
 
     # For safety
@@ -375,7 +403,8 @@ def insert_users_ids(cursor: sqlite3.Cursor, user: int, dialog_id: int) -> None:
         return
 
     cursor.execute(
-        "INSERT OR IGNORE INTO users (user_id, dialog_id) VALUES (?, ?)", [user, dialog_id]
+        "INSERT OR IGNORE INTO users (user_id, dialog_id) VALUES (?, ?)",
+        [user, dialog_id],
     )
 
 
@@ -388,30 +417,30 @@ async def entity_handler(
     skip_details: bool = False,
 ) -> None:
     """
-        A function that handles the metadata of entities found in dialogs.
+    A function that handles the metadata of entities found in dialogs.
 
-        Args:
-            client (telethon.TelegramClinet): 
-                Your account's client.
+    Args:
+        client (telethon.TelegramClinet):
+            Your account's client.
 
-            dialog (telethon.tl.custom.dialog.Dialog): 
-                The object which you get from client.iter_dialogs.
+        dialog (telethon.tl.custom.dialog.Dialog):
+            The object which you get from client.iter_dialogs.
 
-            users (set[int]):
-                A set of user ids or any kind of entity where
-                entity ids accumulate over the time archiving.
-            
-            errors_handler (objects.errors.Errors):
-                An object that handles errors appropriately.
+        users (set[int]):
+            A set of user ids or any kind of entity where
+            entity ids accumulate over the time archiving.
 
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
-            
-            skip_details (bool):
-                A flag for skipping requesting metadata of users
-                in a dialog in case of key interruption where we 
-                would only insert their ids into the database 
-                without any other metadata.
+        errors_handler (objects.errors.Errors):
+            An object that handles errors appropriately.
+
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
+
+        skip_details (bool):
+            A flag for skipping requesting metadata of users
+            in a dialog in case of key interruption where we
+            would only insert their ids into the database
+            without any other metadata.
     """
 
     # For safety
@@ -424,7 +453,7 @@ async def entity_handler(
         insert_users_ids(cursor, user, dialog_id)
 
     # In case of a key interruption
-    if skip_details: 
+    if skip_details:
         return
 
     for user in users:

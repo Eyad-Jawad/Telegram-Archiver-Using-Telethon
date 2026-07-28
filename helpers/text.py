@@ -7,21 +7,21 @@ logger = logging.getLogger(__name__)
 
 def reply_handler(message: custom.message.Message, users: set[int]) -> str | int:
     """
-        A function that handles message replies. It has many edge cases:
-        reply to user, reply to private chat, reply to channel, and perhaps more.
+    A function that handles message replies. It has many edge cases:
+    reply to user, reply to private chat, reply to channel, and perhaps more.
 
-        Args:
-            message (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
+    Args:
+        message (telethon.custom.message.Message):
+            A telegram dialog's message provided by telethon.
 
-            users (set[int]):
-                A set of user ids or any kind of entity where
-                entity ids accumulate over the time archiving.
-            
-        Returns:
-            int | str:
-                int in case of normal user id, and str in
-                all the other cases.
+        users (set[int]):
+            A set of user ids or any kind of entity where
+            entity ids accumulate over the time archiving.
+
+    Returns:
+        int | str:
+            int in case of normal user id, and str in
+            all the other cases.
     """
 
     # check if this message is a reply to another
@@ -58,24 +58,26 @@ def reply_handler(message: custom.message.Message, users: set[int]) -> str | int
         return 0
 
 
-def forward_handler(message: custom.message.Message, users: set[int]) -> tuple[str, int]:
+def forward_handler(
+    message: custom.message.Message, users: set[int]
+) -> tuple[str, int]:
     """
-        A fucntion that handles forwarded messages from users with
-        hidden or shown profiles, and from other enitities like channels.
+    A fucntion that handles forwarded messages from users with
+    hidden or shown profiles, and from other enitities like channels.
 
-        Args:
-            message (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
+    Args:
+        message (telethon.custom.message.Message):
+            A telegram dialog's message provided by telethon.
 
-            users (set[int]):
-                A set of user ids or any kind of entity where
-                entity ids accumulate over the time archiving.
-            
-        Returns:
-            Tuple (
-                str (The name of the entity forwarded from.),
-                int (The id the entity forwarded from, if it exists.)
-            )
+        users (set[int]):
+            A set of user ids or any kind of entity where
+            entity ids accumulate over the time archiving.
+
+    Returns:
+        Tuple (
+            str (The name of the entity forwarded from.),
+            int (The id the entity forwarded from, if it exists.)
+        )
     """
 
     try:
@@ -86,7 +88,7 @@ def forward_handler(message: custom.message.Message, users: set[int]) -> tuple[s
         forward = message.forward
 
         forward_from_name = f"{forward.from_name}"
-        # Users who have their profile hidden, or 
+        # Users who have their profile hidden, or
         # private channels have their id also hidden.
         if not forward.from_id:
             return (forward_from_name, 0)
@@ -98,7 +100,7 @@ def forward_handler(message: custom.message.Message, users: set[int]) -> tuple[s
             users.add(peer_id)
 
         return (forward_from_name, peer_id)
-    
+
     except Exception as e:
         logger.exception(f"Exception occurred : {e}")
         return ("", 0)
@@ -106,19 +108,18 @@ def forward_handler(message: custom.message.Message, users: set[int]) -> tuple[s
 
 def text_handler(message: custom.message.Message) -> str:
     """
-        A function that handles text messages, as well as actions
-        if the message happens not to be a text message.
+    A function that handles text messages, as well as actions
+    if the message happens not to be a text message.
 
-        Args:
-            message (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
-            
-        Returns:
-            str:
-                a string of the text message, or a string
-                describing the action.
+    Args:
+        message (telethon.custom.message.Message):
+            A telegram dialog's message provided by telethon.
+
+    Returns:
+        str:
+            a string of the text message, or a string
+            describing the action.
     """
-
 
     action_handlers = {
         types.MessageActionPinMessage: lambda a: "A message was pinned.",
@@ -136,7 +137,7 @@ def text_handler(message: custom.message.Message) -> str:
         types.MessageActionTopicEdit: lambda a: f"Topic was editied: {a.title}, and emoji: {a.icon_emoji_id}.",
         types.MessageActionGroupCall: lambda a: f"A group call for {a.duration}.",
         types.MessageActionInviteToGroupCall: lambda a: f"A group call invite with the users: {a.users}",
-        types.MessageActionGroupCallScheduled: lambda a: f"A scheduled group call on {a.schedule_date}."
+        types.MessageActionGroupCallScheduled: lambda a: f"A scheduled group call on {a.schedule_date}.",
     }
 
     text = ""

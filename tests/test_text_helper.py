@@ -119,7 +119,10 @@ def test_text_handler_with_text_message():
         (types.MessageActionPhoneCall, "A video call for 10."),
         (types.MessageActionTopicEdit, "Topic was editied: Da Chat, and emoji: 12."),
         (types.MessageActionGroupCall, "A group call for 10."),
-        (types.MessageActionInviteToGroupCall, "A group call invite with the users: Me"), 
+        (
+            types.MessageActionInviteToGroupCall,
+            "A group call invite with the users: Me",
+        ),
         (types.MessageActionGroupCallScheduled, "A scheduled group call on Tomorrow."),
         (None, "MagicMock was done."),
     ],

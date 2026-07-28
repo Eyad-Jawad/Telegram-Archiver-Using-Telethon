@@ -10,16 +10,16 @@ logger = logging.getLogger(__name__)
 class Progress:
     def __init__(self, total_messages: int, dialog_name: str) -> None:
         """
-            Initialize the progress class which handles how progress 
-            is shown in the CLI while archiving a dialog.
+        Initialize the progress class which handles how progress
+        is shown in the CLI while archiving a dialog.
 
-            Args:
-                total_messages (int):
-                    The number of total messages of a dialog.
-                
-                dialog_name (str):
-                    The title of the dialog being archived, can be accessed
-                    through dialog.name.
+        Args:
+            total_messages (int):
+                The number of total messages of a dialog.
+
+            dialog_name (str):
+                The title of the dialog being archived, can be accessed
+                through dialog.name.
         """
 
         logger.info("Setting up the Progress class...")
@@ -35,12 +35,12 @@ class Progress:
 
     def use_checkpoint(self, checkpoint: tuple[int, int, float]) -> None:
         """
-            A method that takes archiving progress and updates
-            the attributes of the class.
+        A method that takes archiving progress and updates
+        the attributes of the class.
 
-            Args:
-                checkpoint (tuple [int, int, float]):
-                    A tuple of values taken from Dialog.get_checkpoint()
+        Args:
+            checkpoint (tuple [int, int, float]):
+                A tuple of values taken from Dialog.get_checkpoint()
         """
 
         # Just for safety
@@ -50,23 +50,24 @@ class Progress:
         # Update the attributes
         self.last_message_id = checkpoint[0]
         self.message_counter = checkpoint[1]
-        # time_start is different because it is a float of the 
-        # time it took to archive, that's why we offset the 
+        # time_start is different because it is a float of the
+        # time it took to archive, that's why we offset the
         # current time by its value.
         self.time_start -= checkpoint[2]
 
     def update(self, last_message_id: int) -> None:
         """
-            A method that updates internal attributes.
+        A method that updates internal attributes.
 
-            Args:
-                last_message_id (int):
-                    The id of the last message archived. It is not always an increment 
-                    of the last id, that's why it must be provided.
+        Args:
+            last_message_id (int):
+                The id of the last message archived. It is not always an increment
+                of the last id, that's why it must be provided.
         """
 
         # For safety
-        if not last_message_id: return
+        if not last_message_id:
+            return
 
         if last_message_id <= 0:
             logger.error("Recieved negative message id.")
@@ -77,15 +78,16 @@ class Progress:
 
     def updata_file_progress(self, file_size: int) -> None:
         """
-            A method that updates attributes having to do with files.
+        A method that updates attributes having to do with files.
 
-            Args:
-                file_size (int):
-                    The size of the last file downloaded in bytes.
+        Args:
+            file_size (int):
+                The size of the last file downloaded in bytes.
         """
 
         # For safety
-        if not file_size: return
+        if not file_size:
+            return
 
         if file_size < 0:
             logger.error("Recived negative file size.")
@@ -95,11 +97,11 @@ class Progress:
 
     def make_table(self) -> Table:
         """
-            A method that returns a table from 'rich' library.
+        A method that returns a table from 'rich' library.
 
-            Returns:
-                rich.table.Table:
-                    A table with the needed columns, and one row for progress.
+        Returns:
+            rich.table.Table:
+                A table with the needed columns, and one row for progress.
         """
 
         # Initilize the table.
@@ -133,18 +135,20 @@ class Progress:
             MB_per_sec = f"{self.used_space_in_MB / elapsed_time:.3f}MB/s"
             # For safety
             if msgs_per_sec > 0:
-                remaining_time = (self.total_messages - self.message_counter) / msgs_per_sec
+                remaining_time = (
+                    self.total_messages - self.message_counter
+                ) / msgs_per_sec
 
         # There were three safety checks so we don't divide by 0 by mistake
 
         table.add_row(
-            str(self.message_counter), 
+            str(self.message_counter),
             str(self.total_messages - self.message_counter),
-            format_ETA(elapsed_time), 
-            format_ETA(remaining_time), 
-            f"{msgs_per_sec:.3f}msg/s", 
-            f"{self.used_space_in_MB:.3f}MB", 
-            MB_per_sec
+            format_ETA(elapsed_time),
+            format_ETA(remaining_time),
+            f"{msgs_per_sec:.3f}msg/s",
+            f"{self.used_space_in_MB:.3f}MB",
+            MB_per_sec,
         )
 
         return table

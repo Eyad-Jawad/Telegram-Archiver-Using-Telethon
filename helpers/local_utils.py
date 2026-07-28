@@ -4,18 +4,18 @@ from objects.config import Config
 
 def format_ETA(seconds: float) -> str:
     """
-        A function that makes the estimated remaining time in a nice format.
+    A function that makes the estimated remaining time in a nice format.
 
-        Args:
-            seconds (float):
-                The amount of seconds that will be converted into a nicely formatted string.
+    Args:
+        seconds (float):
+            The amount of seconds that will be converted into a nicely formatted string.
 
-        Returns:
-            str: 
-                The ETA in a nice format, Ex:
-                    `1d 4h 40m 3s`
-                    `3h 0m 8s`
-                    `10s`
+    Returns:
+        str:
+            The ETA in a nice format, Ex:
+                `1d 4h 40m 3s`
+                `3h 0m 8s`
+                `10s`
     """
 
     # While the provided time is a float, which is usually the case for time
@@ -38,11 +38,11 @@ def format_ETA(seconds: float) -> str:
 
 def clear_last_line(number_of_lines: int = 1):
     """
-        Removes the last line in the command prompt.
+    Removes the last line in the command prompt.
 
-        Args:
-            number_of_lines (int):
-                The number of lines you want to remove from the command line, default=1.
+    Args:
+        number_of_lines (int):
+            The number of lines you want to remove from the command line, default=1.
     """
 
     for _ in range(number_of_lines):
@@ -51,13 +51,13 @@ def clear_last_line(number_of_lines: int = 1):
 
 def parse_args(config: Config) -> None:
     """
-        A helper function that parses the configuration of archiving
-        from user in CLI.
+    A helper function that parses the configuration of archiving
+    from user in CLI.
 
-        Args:
-            config (objects.config.Config):
-                The config object which has the settings the user 
-                has provided.
+    Args:
+        config (objects.config.Config):
+            The config object which has the settings the user
+            has provided.
     """
 
     parser = argparse.ArgumentParser()
@@ -148,9 +148,11 @@ def parse_args(config: Config) -> None:
             config.files = False
             config.size_threshold = args.size_threshold * (1024**2)
 
+
 def byte_to_MB(size: int) -> float:
     """A helper function that converts bytes to megabytes."""
     return (size / 1024) / 1024
+
 
 def MB_to_byte(size: float) -> int:
     """A helper function that converts megabytes to bytes."""

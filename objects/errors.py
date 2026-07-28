@@ -15,20 +15,20 @@ class Errors:
         dialog,
     ) -> None:
         """
-            Initialize the Errors class.
+        Initialize the Errors class.
 
-            Args:
-                conn (sqlite3.Connection): 
-                    The connection object to the sqlite3 database, 
-                    used to commit in caes of an error.
-                
-                progress (objects.progress.Progress):
-                    The progress object for the program, used to access
-                    updated last_message_id to log in caes of an error.
+        Args:
+            conn (sqlite3.Connection):
+                The connection object to the sqlite3 database,
+                used to commit in caes of an error.
 
-                dialog (objects.dialog.Dialog):
-                    The dialog object of the program, used to save
-                    a checkpoint in case of an error.
+            progress (objects.progress.Progress):
+                The progress object for the program, used to access
+                updated last_message_id to log in caes of an error.
+
+            dialog (objects.dialog.Dialog):
+                The dialog object of the program, used to save
+                a checkpoint in case of an error.
         """
         logger.info("Setting up the Errors class...")
         self.conn = conn
@@ -37,12 +37,12 @@ class Errors:
 
     async def handle(self, error) -> None:
         """
-            A method that saves the current progress, logs the error, and
-            solves it in case it is a FloodWaitError.
+        A method that saves the current progress, logs the error, and
+        solves it in case it is a FloodWaitError.
 
-            Args:
-                error:
-                    the error caught by the try except statement.
+        Args:
+            error:
+                the error caught by the try except statement.
         """
 
         # Save the progress

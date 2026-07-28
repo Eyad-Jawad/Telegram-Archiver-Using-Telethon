@@ -115,7 +115,9 @@ async def test_get_reaction_list_with_no_input(mock_get_List):
 @patch("helpers.reactions.get_peer_id")
 @patch("helpers.reactions.reaction_type")
 @patch("telethon.functions.messages.GetMessageReactionsListRequest")
-async def test_get_reaction_list_with_one_reaction(mock_get_List, mock_reaction_type, mock_get_id):
+async def test_get_reaction_list_with_one_reaction(
+    mock_get_List, mock_reaction_type, mock_get_id
+):
     client = AsyncMock()
     dialog = MagicMock()
     message = MagicMock()

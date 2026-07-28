@@ -5,8 +5,13 @@ import logging
 from telethon import TelegramClient, types, utils, custom
 from rich.console import Console
 
-from helpers.info import user_id_handler, entity_handler, get_dialog_info, insert_users_ids
-from helpers.text import * 
+from helpers.info import (
+    user_id_handler,
+    entity_handler,
+    get_dialog_info,
+    insert_users_ids,
+)
+from helpers.text import *
 from helpers.reactions import reaction_handler
 from helpers.tables import make_tables
 from .errors import Errors as err
@@ -20,17 +25,17 @@ logger = logging.getLogger(__name__)
 class Dialog:
     def __init__(self, client: TelegramClient, config: con, dialog) -> None:
         """
-            Initialize the sync part of the class.
+        Initialize the sync part of the class.
 
-            Args:
-                client (telethon.TelegramClinet): 
-                    Your account's client.
+        Args:
+            client (telethon.TelegramClinet):
+                Your account's client.
 
-                config (objects.config.Config): 
-                    The config object which is parsed from user in CLI.
+            config (objects.config.Config):
+                The config object which is parsed from user in CLI.
 
-                dialog (telethon.tl.custom.dialog.Dialog): 
-                    The object which you get from client.iter_dialogs.
+            dialog (telethon.tl.custom.dialog.Dialog):
+                The object which you get from client.iter_dialogs.
         """
 
         logger.info("Initiating the dialog class (the synchronous part)...")
@@ -79,11 +84,9 @@ class Dialog:
 
         self.file: file = file(self.config.size_threshold)
 
-        self.error: err = err(
-            self.conn, self.progress, self
-        )
+        self.error: err = err(self.conn, self.progress, self)
 
-        self.users = set() # A set that collects entities over archiving time.
+        self.users = set()  # A set that collects entities over archiving time.
 
         # Get the progress in case this dialog was archived before.
         checkpoint: tuple = self.get_checkpoint()
@@ -125,9 +128,7 @@ class Dialog:
 
                     # If 5 seconds have passed, or multipls of 10% messages were archived,
                     # update the progress panel in the CLI.
-                    if (
-                        time.monotonic() - last_progress_refresh > 5
-                    ):
+                    if time.monotonic() - last_progress_refresh > 5:
                         last_progress_refresh = time.monotonic()
                         screen.update(self.progress.make_table(), self.progress.bar)
 
@@ -205,32 +206,34 @@ class Dialog:
 
     def get_checkpoint(self) -> tuple[int, int, float]:
         """
-            Get the past checkpoint of progerss in archiving the dialog if it exists.
+        Get the past checkpoint of progerss in archiving the dialog if it exists.
 
-            Returns:
-                Tuple: [
-                    last_message_id: int, 
-                    message_counter: int, 
-                    archiving_time: float,
-                ]
+        Returns:
+            Tuple: [
+                last_message_id: int,
+                message_counter: int,
+                archiving_time: float,
+            ]
         """
 
-        self.cursor.execute("""
+        self.cursor.execute(
+            """
             SELECT last_message_id, message_counter, archiving_time
             FROM dialogs
             WHERE dialog_id = ?
-        """, 
-        [self.dialog.id])
+        """,
+            [self.dialog.id],
+        )
 
         return self.cursor.fetchone()
 
     async def archive_message(self, message: custom.message.Message) -> None:
         """
-            A method for archiving, and exctracting data from a telegram message.
+        A method for archiving, and exctracting data from a telegram message.
 
-            Args:
-                message (telethon.custom.message.Message):
-                    A telegram dialog's message provided by telethon.
+        Args:
+            message (telethon.custom.message.Message):
+                A telegram dialog's message provided by telethon.
         """
 
         # for writing into the file at once
@@ -252,29 +255,27 @@ class Dialog:
 
         # Check if the user wants to archive text data
         if self.config.texts:
-            (author_name, sender_id) = user_id_handler(message, self.users)
-            (forward_from_name, forward_from_id) = forward_handler(
-                message, self.users
-            )
+            author_name, sender_id = user_id_handler(message, self.users)
+            forward_from_name, forward_from_id = forward_handler(message, self.users)
             replied_to_id = reply_handler(message, self.users)
             text = text_handler(message)
 
         # Check if the user wants to archive files
         if self.config.files and message.file:
-            (file_path, file_id, file_size, downloaded_file) = await self.file.handle(message)
+            file_path, file_id, file_size, downloaded_file = await self.file.handle(
+                message
+            )
 
-            # If the user doesn't want to archive files, the 
+            # If the user doesn't want to archive files, the
             # program will save the files' metadata either way
-            # and self.config.files would be true, but the size 
+            # and self.config.files would be true, but the size
             # threshold is 0
             if self.config.size_threshold != 0:
                 self.progress.updata_file_progress(message.file.size)
 
         # Check if the user wants to archive reactions
         if self.config.reactions:
-            await reaction_handler(
-                self.client, self.dialog, message, self.cursor
-            )
+            await reaction_handler(self.client, self.dialog, message, self.cursor)
 
         self.cursor.execute(
             """

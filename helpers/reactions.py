@@ -7,29 +7,31 @@ logger = logging.getLogger(__name__)
 
 
 async def get_reaction_list(
-    client: TelegramClient, dialog: tl.custom.dialog.Dialog, message: custom.message.Message
+    client: TelegramClient,
+    dialog: tl.custom.dialog.Dialog,
+    message: custom.message.Message,
 ) -> list[tuple[int, int, int, datetime, str]]:
     """
-        A function that extracts reactions from a message.
+    A function that extracts reactions from a message.
 
-        Args:
-            client (telethon.TelegramClinet): 
-                Your account's client.
+    Args:
+        client (telethon.TelegramClinet):
+            Your account's client.
 
-            dialog (telethon.tl.custom.dialog.Dialog): 
-                The object which you get from client.iter_dialogs.
+        dialog (telethon.tl.custom.dialog.Dialog):
+            The object which you get from client.iter_dialogs.
 
-            message (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
+        message (telethon.custom.message.Message):
+            A telegram dialog's message provided by telethon.
 
-        Returns:
-            List[Tuple(
-                int (dialog id),
-                int (message id),
-                int (reactor's id),
-                datetime (date of reacting),
-                str (reaction),
-            )]
+    Returns:
+        List[Tuple(
+            int (dialog id),
+            int (message id),
+            int (reactor's id),
+            datetime (date of reacting),
+            str (reaction),
+        )]
     """
 
     id = message.id
@@ -69,16 +71,16 @@ async def get_reaction_list(
 
 def reaction_type(react) -> str:
     """
-        A function that returns the reaction, 
-        or its type if it is not a unicode reaction.
+    A function that returns the reaction,
+    or its type if it is not a unicode reaction.
 
-        Args:
-            react:
-                The returned value of telethon's get reaction functions.
+    Args:
+        react:
+            The returned value of telethon's get reaction functions.
 
-        Returns:
-            str:
-                The reaction, or its type if it is not a unicode reaction.
+    Returns:
+        str:
+            The reaction, or its type if it is not a unicode reaction.
     """
 
     # For safety
@@ -101,16 +103,16 @@ def reaction_type(react) -> str:
 
 def get_peer_id(react) -> int:
     """
-        A function that gets the id of the reactor with
-        minimal interaction with the api.
+    A function that gets the id of the reactor with
+    minimal interaction with the api.
 
-        Args:
-            react:
-                The returned value of telethon's get reaction functions.
-        
-        Returns:
-            int:
-                The id of the entity that made the reaction.
+    Args:
+        react:
+            The returned value of telethon's get reaction functions.
+
+    Returns:
+        int:
+            The id of the entity that made the reaction.
     """
 
     # For safety
@@ -135,22 +137,22 @@ def insert_channel_reaction(
     cursor: sqlite3.Cursor, dialog_id: int, message_id: int, react
 ) -> None:
     """
-        A function that interacts with the database to insert reaction data. 
-        It inserts the reaction data of a reaction in a channel, or where
-        you can't see who is reacting.
+    A function that interacts with the database to insert reaction data.
+    It inserts the reaction data of a reaction in a channel, or where
+    you can't see who is reacting.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
-            
-            dialog_id (int):
-                The id of the dialog where the message is reacted on.
-            
-            message_id (int):
-                The id of the message reacted on.
-            
-            react:
-                The returned value of telethon's get reaction functions.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
+
+        dialog_id (int):
+            The id of the dialog where the message is reacted on.
+
+        message_id (int):
+            The id of the message reacted on.
+
+        react:
+            The returned value of telethon's get reaction functions.
     """
     cursor.execute(
         "INSERT INTO reactions (dialog_id, message_id, reaction, count) VALUES (?, ?, ?, ?)",
@@ -158,24 +160,26 @@ def insert_channel_reaction(
     )
 
 
-def insert_chat_reaction(cursor: sqlite3.Cursor, result: tuple[int, int, int, datetime, str]) -> None:
+def insert_chat_reaction(
+    cursor: sqlite3.Cursor, result: tuple[int, int, int, datetime, str]
+) -> None:
     """
-        A function that interacts with the database to insert reaction data.
-        It inserts reaction data of a reaction where the reactor can be seen,
-        aka in a group, or a chat, or any other dialog type.
+    A function that interacts with the database to insert reaction data.
+    It inserts reaction data of a reaction where the reactor can be seen,
+    aka in a group, or a chat, or any other dialog type.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
 
-            result:
-                The reaction's data: tuple(
-                    int (dialog id), 
-                    int (message id), 
-                    int (reactor's id), 
-                    datetime (date of reacting),
-                    str (reaction),
-                )
+        result:
+            The reaction's data: tuple(
+                int (dialog id),
+                int (message id),
+                int (reactor's id),
+                datetime (date of reacting),
+                str (reaction),
+            )
     """
     cursor.execute(
         "INSERT INTO reactions (dialog_id, message_id, reactors_id, reacting_date, reaction) VALUES (?, ?, ?, ?, ?)",
@@ -184,24 +188,27 @@ def insert_chat_reaction(cursor: sqlite3.Cursor, result: tuple[int, int, int, da
 
 
 async def reaction_handler(
-    client: TelegramClient, dialog: tl.custom.dialog.Dialog, message: custom.message.Message, cursor: sqlite3.Cursor
+    client: TelegramClient,
+    dialog: tl.custom.dialog.Dialog,
+    message: custom.message.Message,
+    cursor: sqlite3.Cursor,
 ) -> None:
     """
-        A function that handles all things having to do with a message 
-        and its reactions.
+    A function that handles all things having to do with a message
+    and its reactions.
 
-        Args:
-            client (telethon.TelegramClinet): 
-                Your account's client.
+    Args:
+        client (telethon.TelegramClinet):
+            Your account's client.
 
-            dialog (telethon.tl.custom.dialog.Dialog): 
-                The object which you get from client.iter_dialogs.
+        dialog (telethon.tl.custom.dialog.Dialog):
+            The object which you get from client.iter_dialogs.
 
-            message (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
+        message (telethon.custom.message.Message):
+            A telegram dialog's message provided by telethon.
 
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
     """
 
     try:

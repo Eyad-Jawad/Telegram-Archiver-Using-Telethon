@@ -349,7 +349,9 @@ def test_dialog_key_interruption_with_no_user_info(
 
 @patch("objects.dialog.Dialog.save_checkpoint")
 @patch("objects.dialog.insert_users_ids")
-def test_dialog_key_interruption_with_one_user(mock_insert, mock_save, mock_dialog_class, capsys):
+def test_dialog_key_interruption_with_one_user(
+    mock_insert, mock_save, mock_dialog_class, capsys
+):
     obj = mock_dialog_class["obj"]
     obj.users = {1}
 
@@ -364,7 +366,9 @@ def test_dialog_key_interruption_with_one_user(mock_insert, mock_save, mock_dial
     assert capture.out == "\nPlease wait a moment while the saving the checkpoint\n"
 
     mock_save.assert_called_once()
-    mock_insert.assert_called_once_with(mock_dialog_class["mock_conn_and_cursor"][1], 1, 1)
+    mock_insert.assert_called_once_with(
+        mock_dialog_class["mock_conn_and_cursor"][1], 1, 1
+    )
 
     # two calls in setup
     assert conn.commit.call_count == 3
@@ -373,7 +377,9 @@ def test_dialog_key_interruption_with_one_user(mock_insert, mock_save, mock_dial
 
 @patch("objects.dialog.Dialog.save_checkpoint")
 @patch("objects.dialog.insert_users_ids")
-def test_dialog_key_interruption_with_many_users(mock_insert, mock_save, mock_dialog_class, capsys):
+def test_dialog_key_interruption_with_many_users(
+    mock_insert, mock_save, mock_dialog_class, capsys
+):
     obj = mock_dialog_class["obj"]
     obj.users = {1, 2}
 

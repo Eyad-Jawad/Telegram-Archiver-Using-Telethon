@@ -57,7 +57,8 @@ async def main():
                 logger.info("Exited the program.")
                 exit(0)
 
-            if ans.lower() != "y": continue
+            if ans.lower() != "y":
+                continue
 
             # Set up the dialog object
             dialog_obj = Dialog(client, config, dialog)
@@ -74,12 +75,10 @@ async def main():
                 # (Since you can't run async code in __init__)
                 await dialog_obj.set_up()
 
-                # This check is for safety, in the future I might add 
-                # a way to give the entity id an input, and the user 
+                # This check is for safety, in the future I might add
+                # a way to give the entity id an input, and the user
                 # might input an entity not supported by the code
-                if isinstance(
-                    dialog.entity, (types.Chat, types.Channel, types.User)
-                ):
+                if isinstance(dialog.entity, (types.Chat, types.Channel, types.User)):
                     # Do the archiving, this method handles everything
                     await dialog_obj.archive()
                 else:

@@ -40,7 +40,12 @@ async def test_file_handle_with_photo(file_class):
 
     message.download_media.return_value = "Somewhere"
 
-    assert await file_class.handle(message) == ("Somewhere", "xyz", 3.814697265625e-06, True)
+    assert await file_class.handle(message) == (
+        "Somewhere",
+        "xyz",
+        3.814697265625e-06,
+        True,
+    )
     message.download_media.assert_awaited_once_with(file="Media/")
 
 
@@ -56,7 +61,12 @@ async def test_file_handle_with_file(file_class):
 
     message.download_media.return_value = "There"
 
-    assert await file_class.handle(message) == ("There", "zyx", 1.9073486328125e-06, True)
+    assert await file_class.handle(message) == (
+        "There",
+        "zyx",
+        1.9073486328125e-06,
+        True,
+    )
     message.download_media.assert_awaited_once_with(file="Media/")
 
 

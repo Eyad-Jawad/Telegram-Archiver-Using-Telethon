@@ -6,11 +6,11 @@ logger = logging.getLogger(__name__)
 
 def make_tables(cursor: sqlite3.Cursor) -> None:
     """
-        A function that initilizes the tables for the database.
+    A function that initilizes the tables for the database.
 
-        Args:
-            cursor (sqlite3.Cursor):
-                The cursor of the database.
+    Args:
+        cursor (sqlite3.Cursor):
+            The cursor of the database.
     """
 
     logger.info("Creating the SQLite Database tables...")

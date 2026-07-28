@@ -8,35 +8,37 @@ logger = logging.getLogger(__name__)
 class File:
     def __init__(self, size_threshold: int) -> None:
         """
-            Initialize the File class object
+        Initialize the File class object
 
-            Args:
-                size_threshold (int):
-                    The maximum size of the files to download of which any larger
-                    will be ignored, parsed by the config class from user in CLI args.
+        Args:
+            size_threshold (int):
+                The maximum size of the files to download of which any larger
+                will be ignored, parsed by the config class from user in CLI args.
         """
 
         logger.info("Setting up the File class...")
 
         self.size_threshold = size_threshold  # in bytes
-        self.PATH= "Media/"
+        self.PATH = "Media/"
 
-    async def handle(self, message: custom.message.Message) -> tuple[str, str, float, bool]:
+    async def handle(
+        self, message: custom.message.Message
+    ) -> tuple[str, str, float, bool]:
         """
-            A method that handles downloading a file, and getting its metadata.
+        A method that handles downloading a file, and getting its metadata.
 
-            Args:
-                message (telethon.custom.message.Message):
-                    A telegram dialog's message provided by telethon.
+        Args:
+            message (telethon.custom.message.Message):
+                A telegram dialog's message provided by telethon.
 
-            Returns:
-                Tuple: [
-                    str (File path, if downloaded, else empty),
-                    str (File id, id there's any, else emtpy),
-                    float (File size in megabytes, if there's any, else 0.0),
-                    bool (Downloaded file, True for yes and False for no, which can
-                    be because the file exceeds the size_threshold, or because there's no file)
-                ]
+        Returns:
+            Tuple: [
+                str (File path, if downloaded, else empty),
+                str (File id, id there's any, else emtpy),
+                float (File size in megabytes, if there's any, else 0.0),
+                bool (Downloaded file, True for yes and False for no, which can
+                be because the file exceeds the size_threshold, or because there's no file)
+            ]
         """
         try:
             # If there's not message (safety), or the message
