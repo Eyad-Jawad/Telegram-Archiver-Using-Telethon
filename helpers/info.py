@@ -218,7 +218,7 @@ async def get_dialog_info(
     A function that handles all things having to do with info, uesr ids, or metadata
 
     Args:
-        client (telethon.TelegramClinet):
+        client (telethon.TelegramClient):
             Your account's client.
 
         dialog (telethon.tl.custom.dialog.Dialog):
@@ -254,7 +254,7 @@ async def get_full_request(
     the different types of dialogs.
 
     Args:
-        client (telethon.TelegramClinet):
+        client (telethon.TelegramClient):
             Your account's client.
 
         dialog (telethon.tl.custom.dialog.Dialog):
@@ -300,7 +300,7 @@ async def get_photo_info(
     photos of dialogs.
 
     Args:
-        client (telethon.TelegramClinet):
+        client (telethon.TelegramClient):
             Your account's client.
 
         dialog (telethon.tl.custom.dialog.Dialog):
@@ -356,7 +356,7 @@ async def add_users_to_set(
     them to the accumulative set of users we have.
 
     Args:
-        client (telethon.TelegramClinet):
+        client (telethon.TelegramClient):
             Your account's client.
 
         dialog (telethon.tl.custom.dialog.Dialog):
@@ -420,7 +420,7 @@ async def entity_handler(
     A function that handles the metadata of entities found in dialogs.
 
     Args:
-        client (telethon.TelegramClinet):
+        client (telethon.TelegramClient):
             Your account's client.
 
         dialog (telethon.tl.custom.dialog.Dialog):

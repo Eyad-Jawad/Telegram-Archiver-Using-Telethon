@@ -31,14 +31,14 @@ def reply_handler(message: custom.message.Message, users: set[int]) -> str | int
             return 0
 
         # check if it's from a user or a channel
-        repliedTo = message.reply_to
+        replied_to = message.reply_to
 
         # What to do with a reply to a story
         # temp solution unitl I make some stuff for stories
-        if isinstance(repliedTo, types.MessageReplyStoryHeader):
+        if isinstance(replied_to, types.MessageReplyStoryHeader):
             return "Replied to a story"
 
-        if not (repliedTo and repliedTo.reply_to_peer_id):
+        if not (replied_to and replied_to.reply_to_peer_id):
             # This case is for replies from private dialogs
             if not message.reply_to_msg_id:
                 return f"{message.reply_to.reply_from.from_name}:{message.reply_to.quote_text}"
@@ -46,7 +46,7 @@ def reply_handler(message: custom.message.Message, users: set[int]) -> str | int
             return message.reply_to_msg_id
 
         # if it's from a channel
-        replied_to_id = get_peer_id(repliedTo.reply_to_peer_id)
+        replied_to_id = get_peer_id(replied_to.reply_to_peer_id)
 
         if replied_to_id not in users:
             users.add(replied_to_id)
@@ -62,7 +62,7 @@ def forward_handler(
     message: custom.message.Message, users: set[int]
 ) -> tuple[str, int]:
     """
-    A fucntion that handles forwarded messages from users with
+    A function that handles forwarded messages from users with
     hidden or shown profiles, and from other enitities like channels.
 
     Args:

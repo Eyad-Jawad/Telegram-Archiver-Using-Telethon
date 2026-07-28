@@ -28,7 +28,7 @@ class Dialog:
         Initialize the sync part of the class.
 
         Args:
-            client (telethon.TelegramClinet):
+            client (telethon.TelegramClient):
                 Your account's client.
 
             config (objects.config.Config):
@@ -111,7 +111,7 @@ class Dialog:
     async def archive(self) -> None:
         """The main archiving loop for the dialog."""
 
-        logger.info("Started the arciving loop...")
+        logger.info("Started the archiving loop...")
 
         try:
             last_progress_refresh = time.monotonic() - 10
@@ -271,7 +271,7 @@ class Dialog:
             # and self.config.files would be true, but the size
             # threshold is 0
             if self.config.size_threshold != 0:
-                self.progress.updata_file_progress(message.file.size)
+                self.progress.update_file_progress(message.file.size)
 
         # Check if the user wants to archive reactions
         if self.config.reactions:

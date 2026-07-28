@@ -76,7 +76,7 @@ class Progress:
         self.last_message_id = last_message_id
         self.bar.update(self.message_counter)
 
-    def updata_file_progress(self, file_size: int) -> None:
+    def update_file_progress(self, file_size: int) -> None:
         """
         A method that updates attributes having to do with files.
 

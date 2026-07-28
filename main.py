@@ -29,12 +29,12 @@ logger = logging.getLogger(__name__)
 async def main():
     # Set up the main tasks so we can cancel them if interruptted mid-archiving
     loop = asyncio.get_running_loop()
-    mainTask = asyncio.current_task()
+    main_task = asyncio.current_task()
     logging.basicConfig(filename="archiving.log", level=logging.INFO)
 
     def handle_key_interruption():
         """Safely exists the program in case of key interruption mid an async code"""
-        mainTask.cancel()
+        main_task.cancel()
         logger.info("Exited the program.")
 
     # Parse the config provided from user in CLI
@@ -48,7 +48,7 @@ async def main():
 
     try:
         # Loop through the dialogs of the user.
-        # Anohter way to do this is to call get_dialogs and loop through them instead.
+        # Another way to do this is to call get_dialogs and loop through them instead.
         async for dialog in client.iter_dialogs():
             try:
                 ans = input(f"Do you want to archive {dialog.name}? (y) ")

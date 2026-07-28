@@ -15,7 +15,7 @@ async def get_reaction_list(
     A function that extracts reactions from a message.
 
     Args:
-        client (telethon.TelegramClinet):
+        client (telethon.TelegramClient):
             Your account's client.
 
         dialog (telethon.tl.custom.dialog.Dialog):
@@ -198,7 +198,7 @@ async def reaction_handler(
     and its reactions.
 
     Args:
-        client (telethon.TelegramClinet):
+        client (telethon.TelegramClient):
             Your account's client.
 
         dialog (telethon.tl.custom.dialog.Dialog):
