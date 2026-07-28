@@ -5,17 +5,17 @@ from dataclasses import dataclass
 class Config:
     texts: bool = True
     reactions: bool = True
-    dialogInfo: bool = True
-    userInfo: bool = True
+    dialog_metadata: bool = True
+    user_metadata: bool = True
     files: bool = True
-    fileSizeThresholdInBytes: int = (1024**2) * 100  # 100 MB
+    size_threshold: int = (1024**2) * 100  # file size threshold in bytes (default: 100 MB)
 
     def __str__(self):
         return f"""
             texts: {self.texts},
             reactions : {self.reactions}
-            dialogInfo : {self.dialogInfo}
-            userInfo : {self.userInfo}
+            dialog_metadata : {self.dialog_metadata}
+            user_metadata : {self.user_metadata}
             files : {self.files}
-            fileSizeThresholdInBytes : {self.fileSizeThresholdInBytes}
+            size_threshold : {self.size_threshold}
         """

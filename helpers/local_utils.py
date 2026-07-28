@@ -1,7 +1,25 @@
 import argparse
 from objects.config import Config
 
-def formatETA(seconds: float) -> str:
+
+def format_ETA(seconds: float) -> str:
+    """
+        A function that makes the estimated remaining time in a nice format.
+
+        Args:
+            seconds (float):
+                The amount of seconds that will be converted into a nicely formatted string.
+
+        Returns:
+            str: 
+                The ETA in a nice format, Ex:
+                    `1d 4h 40m 3s`
+                    `3h 0m 8s`
+                    `10s`
+    """
+
+    # While the provided time is a float, which is usually the case for time
+    # related values, we need it to be an int, because the math will not work otherwise.
     seconds = int(seconds)
 
     d: int = seconds // (3600 * 24)
@@ -18,13 +36,30 @@ def formatETA(seconds: float) -> str:
     return f"{s}s"
 
 
-def clearLastLine(numberOfLines=1):
-    # It literally removes the last line in the command prompt
-    for _ in range(numberOfLines):
+def clear_last_line(number_of_lines: int = 1):
+    """
+        Removes the last line in the command prompt.
+
+        Args:
+            number_of_lines (int):
+                The number of lines you want to remove from the command line, default=1.
+    """
+
+    for _ in range(number_of_lines):
         print("\033[F\033[K", end="")
 
 
-def parseArgs(config: Config) -> None:
+def parse_args(config: Config) -> None:
+    """
+        A helper function that parses the configuration of archiving
+        from user in CLI.
+
+        Args:
+            config (objects.config.Config):
+                The config object which has the settings the user 
+                has provided.
+    """
+
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-a", "--archive-all", action="store_true", help="archive everything"
@@ -76,33 +111,47 @@ def parseArgs(config: Config) -> None:
 
     args = parser.parse_args()
 
+    # If the user wants to archive everything
     if args.archive_all:
         config.texts = True
         config.reactions = True
-        config.dialogInfo = True
-        config.userInfo = True
+        config.dialog_metadata = True
+        config.user_metadata = True
         config.files = True
-        config.fileSizeThresholdInBytes = float("inf")
+        config.size_threshold = float("inf")
+
+    # If the user doesn't want to archive everything
     else:
         config.texts = args.archive_text
         config.reactions = args.archive_reactions
-        config.dialogInfo = args.archive_dialog_info
-        config.userInfo = args.archive_user_info
+        config.dialog_metadata = args.archive_dialog_info
+        config.user_metadata = args.archive_user_info
         config.files = args.archive_file
 
+        # If big files are toggled on means no size limit is needed
         if args.archive_big_files:
             config.files = True
-            config.fileSizeThresholdInBytes = float("inf")
+            config.size_threshold = float("inf")
 
+        # If files only are toggled we expect some size limit to be provided
+        # the default is 100MB, so it is not a must.
         elif args.archive_file:
             config.files = True
-            config.fileSizeThresholdInBytes = args.size_threshold * (1024**2)
+            config.size_threshold = args.size_threshold * (1024**2)
 
+        # Save only file metadata, don't download files.
         elif args.archive_text:
-            # Save only file metadata, don't download files.
             config.files = True
-            config.fileSizeThresholdInBytes = 0
+            config.size_threshold = 0
 
         else:
             config.files = False
-            config.fileSizeThresholdInBytes = args.size_threshold * (1024**2)
+            config.size_threshold = args.size_threshold * (1024**2)
+
+def byte_to_MB(size: int) -> float:
+    """A helper function that converts bytes to megabytes."""
+    return (size / 1024) / 1024
+
+def MB_to_byte(size: float) -> int:
+    """A helper function that converts megabytes to bytes."""
+    return size * 1024**2

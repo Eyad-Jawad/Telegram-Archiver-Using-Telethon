@@ -1,8 +1,14 @@
-import asyncio, sqlite3, time, logging
-from telethon import types, utils, custom
-from rich.live import Live
+import asyncio
+import sqlite3
+import time
+import logging
+from telethon import TelegramClient, types, utils, custom
+from rich.console import Console
 
-import helpers
+from helpers.info import user_id_handler, entity_handler, get_dialog_info, insert_users_ids
+from helpers.text import * 
+from helpers.reactions import reaction_handler
+from helpers.tables import make_tables
 from .errors import Errors as err
 from .file import File as file
 from .config import Config as con
@@ -12,55 +18,81 @@ logger = logging.getLogger(__name__)
 
 
 class Dialog:
-    # client, config, dialog
-    def __init__(self, client, config: con, dialog) -> None:
+    def __init__(self, client: TelegramClient, config: con, dialog) -> None:
+        """
+            Initialize the sync part of the class.
+
+            Args:
+                client (telethon.TelegramClinet): 
+                    Your account's client.
+
+                config (objects.config.Config): 
+                    The config object which is parsed from user in CLI.
+
+                dialog (telethon.tl.custom.dialog.Dialog): 
+                    The object which you get from client.iter_dialogs.
+        """
+
         logger.info("Initiating the dialog class (the synchronous part)...")
-        self.conn = sqlite3.connect("telegram.db")
-        self.cursor = self.conn.cursor()
+
+        # Telethon objects
+        self.client = client
         self.dialog = dialog
         self.entity = dialog.entity
-        self.config: con = config
-        self.client = client
 
+        # Useful metadata parsed from telethon objects
         self.id: int = utils.get_peer_id(dialog.entity)
-        self.type: str = self.getDialogType()
+        self.type: str = self.get_dialog_type()
 
-        helpers.sqlTables.makeTables(self.cursor)
+        self.config: con = config
 
+        # The database connection
+        self.conn = sqlite3.connect("telegram.db")
+        self.cursor = self.conn.cursor()
+
+        # Initialize the database by creating all the tables and inserting the dialog
+        make_tables(self.cursor)
         self.cursor.execute(
-            "INSERT OR IGNORE INTO dialogs (dialogId, name, type) VALUES  (?, ?, ?)",
+            "INSERT OR IGNORE INTO dialogs (dialog_id, name, type) VALUES  (?, ?, ?)",
             [self.id, self.dialog.name, self.type],
         )
 
         self.conn.commit()
 
-    async def setUp(self) -> None:
+    async def set_up(self) -> None:
+        """Initialize the async part of the class."""
+
         logger.info("Initiating the dialog class (the asynchronous part)...")
-        self.totalMessages: int = (
+
+        # Get the total number of actual messeages in the dialog.
+        self.total_messages: int = (
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
         self.cursor.execute(
-            "UPDATE dialogs SET totalNumberOfMessages = ? WHERE dialogId = ?",
-            [self.totalMessages, self.id],
+            "UPDATE dialogs SET total_number_of_messages = ? WHERE dialog_id = ?",
+            [self.total_messages, self.id],
         )
 
-        self.progress: prog = prog(self.totalMessages, self.dialog.name)
+        # Initialize the needed objects
+        self.progress: prog = prog(self.total_messages, self.dialog.name)
 
-        self.file: file = file(self.config.fileSizeThresholdInBytes)
+        self.file: file = file(self.config.size_threshold)
 
         self.error: err = err(
-            self.id, self.conn, self.cursor, self.progress, self.file, self
+            self.conn, self.progress, self
         )
 
-        self.users = set()
+        self.users = set() # A set that collects entities over archiving time.
 
-        checkpoint: list = self.getCheckpoint()
-        self.progress.useCheckpoint(checkpoint)
+        # Get the progress in case this dialog was archived before.
+        checkpoint: tuple = self.get_checkpoint()
+        self.progress.use_checkpoint(checkpoint)
 
         self.conn.commit()
 
-    def getDialogType(self) -> str:
+    def get_dialog_type(self) -> str:
+        """A method that returns the type of the dialog as a string."""
         if isinstance(self.entity, types.User):
             return "User"
         elif isinstance(self.entity, types.Chat):
@@ -74,37 +106,47 @@ class Dialog:
             return "Unknown"
 
     async def archive(self) -> None:
+        """The main archiving loop for the dialog."""
+
         logger.info("Started the arciving loop...")
+
         try:
-            lastRefreshOfProgress = time.monotonic()
-            with Live(str(self.progress), auto_refresh=False) as live:
+            last_progress_refresh = time.monotonic() - 10
+            progress_console = Console()
+            with progress_console.screen() as screen:
+                # The progress panel in the CLI.
                 async for message in self.client.iter_messages(
                     self.dialog.entity,
-                    reverse=True,
-                    offset_id=self.progress.lastMessageID,
+                    reverse=True,  # Start from the oldest message.
+                    offset_id=self.progress.last_message_id,  # Skip already archived messages.
                 ):
-                    await self.archiveMessage(message)
+                    # Archive the message, this method handles it all
+                    await self.archive_message(message)
 
+                    # If 5 seconds have passed, or multipls of 10% messages were archived,
+                    # update the progress panel in the CLI.
                     if (
-                        self.progress.update(message.id)
-                        or time.monotonic() - lastRefreshOfProgress > 5
+                        time.monotonic() - last_progress_refresh > 5
                     ):
-                        lastRefreshOfProgress = time.monotonic()
-                        live.update(str(self.progress), refresh=True)
+                        last_progress_refresh = time.monotonic()
+                        screen.update(self.progress.make_table(), self.progress.bar)
 
-                live.update(str(self.progress), refresh=True)
+                # Ensure the progress panel is showed at 100% at the end.
+                screen.update(self.progress.make_table(), self.progress.bar)
 
             logger.info("Done archiving messages.")
 
-            if self.config.dialogInfo:
-                logger.info("Parsing dialog info...")
-                await helpers.info.getDialogInfo(
+            # Check if the user wants to archive dialog's metadata
+            if self.config.dialog_metadata:
+                logger.info("Parsing dialog metadata...")
+                await get_dialog_info(
                     self.client, self.dialog, self.users, self.error, self.cursor
                 )
 
-            if self.config.userInfo:
-                logger.info("Parsing users info...")
-                await helpers.info.usersHandler(
+            # Check if the user wants to archive users' metadata
+            if self.config.user_metadata:
+                logger.info("Parsing users metadata...")
+                await entity_handler(
                     self.client,
                     self.dialog,
                     self.users,
@@ -112,30 +154,37 @@ class Dialog:
                     self.cursor,
                 )
 
-            self.saveCheckpoint()
+            self.save_checkpoint()
 
             self.conn.commit()
             self.conn.close()
             logger.info(
-                f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.timeStart} seconds."
+                f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.time_start} seconds."
             )
 
+        # Handle key interruption
         except (KeyboardInterrupt, asyncio.CancelledError) as e:
             logger.info(f"Exiting mid-archiving the dialog {self.dialog.name}...")
-            self.handleKeyInterruption()
+            self.handle_key_interruption()
 
+        # Handle other unknown errors
         except Exception as e:
             logger.exception(f"Exception occurred : {e}")
             await self.error.handle(e)
 
-    def saveCheckpoint(self) -> None:
+    def save_checkpoint(self) -> None:
+        """A method that saves the progress of archiving in the database for future archiving."""
+
         logger.info("Saving the checkpoint...")
-        checkpoint = self.getCheckpoint()
+
+        # Get the past checkpoint in case some data was not initialized
+        checkpoint = list(self.get_checkpoint())
         args = [
-            self.progress.lastMessageID,
-            self.progress.messageCounter,
-            time.perf_counter() - self.progress.timeStart,
+            self.progress.last_message_id,
+            self.progress.message_counter,
+            time.perf_counter() - self.progress.time_start,
         ]
+        # If however the data was initialized, then assign it
         for i, value in enumerate(args):
             if value:
                 checkpoint[i] = value
@@ -146,96 +195,140 @@ class Dialog:
             """
             UPDATE dialogs 
             SET 
-                lastMessageId = ?,
-                messageCounter = ?, 
-                archivingTime = ?
-            WHERE dialogId = ?
+                last_message_id = ?,
+                message_counter = ?, 
+                archiving_time = ?
+            WHERE dialog_id = ?
         """,
             checkpoint,
         )
 
-    def getCheckpoint(self) -> list:
-        self.cursor.execute(
-            "SELECT * FROM dialogs WHERE dialogId = ?", [self.dialog.id]
-        )
+    def get_checkpoint(self) -> tuple[int, int, float]:
+        """
+            Get the past checkpoint of progerss in archiving the dialog if it exists.
 
-        return list(self.cursor.fetchone()[-3:])
+            Returns:
+                Tuple: [
+                    last_message_id: int, 
+                    message_counter: int, 
+                    archiving_time: float,
+                ]
+        """
 
-    async def archiveMessage(self, message: custom.message.Message) -> None:
+        self.cursor.execute("""
+            SELECT last_message_id, message_counter, archiving_time
+            FROM dialogs
+            WHERE dialog_id = ?
+        """, 
+        [self.dialog.id])
+
+        return self.cursor.fetchone()
+
+    async def archive_message(self, message: custom.message.Message) -> None:
+        """
+            A method for archiving, and exctracting data from a telegram message.
+
+            Args:
+                message (telethon.custom.message.Message):
+                    A telegram dialog's message provided by telethon.
+        """
+
         # for writing into the file at once
-        dialogId = self.id
-        messageId = message.id
-        authorName = ""
+        dialog_id = self.id
+        message_id = message.id
+        author_name = ""
         views = message.views
-        senderId = 0
-        forwardFromName = ""
-        forwardFromId = 0
-        repliedToId = 0
+        sender_id = 0
+        forward_from_name = ""
+        forward_from_id = 0
+        replied_to_id = 0
         text = ""
         date = message.date
-        editDate = message.edit_date
-        filePath = ""
-        fileId = 0
-        fileSize = 0.0
-        bigFileFlag = 0
+        edit_date = message.edit_date
+        file_path = ""
+        file_id = ""
+        file_size = 0.0
+        downloaded_file = False
 
+        # Check if the user wants to archive text data
         if self.config.texts:
-            [authorName, senderId] = helpers.info.userIdHandler(message, self.users)
-            [forwardFromName, forwardFromId] = helpers.text.forwardHandler(
+            (author_name, sender_id) = user_id_handler(message, self.users)
+            (forward_from_name, forward_from_id) = forward_handler(
                 message, self.users
             )
-            repliedToId = helpers.text.replyHandler(message, self.users)
-            text = helpers.text.textHandler(message)
+            replied_to_id = reply_handler(message, self.users)
+            text = text_handler(message)
 
+        # Check if the user wants to archive files
         if self.config.files and message.file:
-            [filePath, fileId, fileSize, bigFileFlag] = await self.file.handle(message)
-            self.progress.sizeInMb += message.file.size / self.progress.MbToByte
+            (file_path, file_id, file_size, downloaded_file) = await self.file.handle(message)
 
+            # If the user doesn't want to archive files, the 
+            # program will save the files' metadata either way
+            # and self.config.files would be true, but the size 
+            # threshold is 0
+            if self.config.size_threshold != 0:
+                self.progress.updata_file_progress(message.file.size)
+
+        # Check if the user wants to archive reactions
         if self.config.reactions:
-            await helpers.reactions.reactionHandler(
+            await reaction_handler(
                 self.client, self.dialog, message, self.cursor
             )
 
         self.cursor.execute(
             """
             INSERT OR IGNORE INTO messages 
-            (dialogId, messageId, authorName, views, senderId, forwardFromUsername, 
-            forwardFromUserId, repliedToId, text, date, editDate,
-            filePath, fileId, fileSize, downloadedMedia) 
+            (dialog_id, message_id, author_name, views, sender_id, forward_from_username, 
+            forward_from_user_id, replied_to_id, text, date, edit_date,
+            file_path, file_id, file_size, downloaded_file) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             [
-                dialogId,
-                messageId,
-                authorName,
+                dialog_id,
+                message_id,
+                author_name,
                 views,
-                senderId,
-                forwardFromName,
-                forwardFromId,
-                repliedToId,
+                sender_id,
+                forward_from_name,
+                forward_from_id,
+                replied_to_id,
                 text,
                 date,
-                editDate,
-                filePath,
-                fileId,
-                fileSize,
-                bigFileFlag,
+                edit_date,
+                file_path,
+                file_id,
+                file_size,
+                downloaded_file,
             ],
         )
+        self.progress.update(message_id)
 
-    def handleKeyInterruption(self) -> None:
+    def handle_key_interruption(self) -> None:
+        """A method for existing safely when interrupted mid archiving."""
+
         print("\nPlease wait a moment while the saving the checkpoint")
         logger.info("Handling key interruption...")
 
-        self.saveCheckpoint()
+        # Save checkpoint, most important thing in this method
+        self.save_checkpoint()
 
-        if self.config.userInfo:
+        """
+        Check if the user wants to save user data.
+
+        In this situation, a user might be saved
+        when archiving a dialog, but now if we 
+        resume archiving, that user's id will be lost,
+        so it's good to save it in the database at least 
+        as an id only.
+        """
+        if self.config.user_metadata:
             for user in self.users:
-                helpers.info.insertUsersIntoDB(self.cursor, user, self.dialog.id)
+                insert_users_ids(self.cursor, user, self.dialog.id)
 
         self.conn.commit()
         self.conn.close()
 
-        # helpers.utils.clearLastLine()
+        # utils.clearLastLine()
         logger.info("Done handling key interruption.")
         return

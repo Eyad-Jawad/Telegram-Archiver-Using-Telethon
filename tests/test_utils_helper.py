@@ -1,5 +1,5 @@
-from helpers import utils
 import pytest
+from helpers.local_utils import *
 
 
 @pytest.mark.parametrize(
@@ -14,5 +14,5 @@ import pytest
         [500_000.0, "5d 18h 53m 20s"],
     ],
 )
-def testFormatETA(seconds, output):
-    assert utils.formatETA(seconds) == output
+def test_format_ETA(seconds, output):
+    assert format_ETA(seconds) == output

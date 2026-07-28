@@ -44,7 +44,7 @@ Then you must download the dependincies:
 ```
 
 pip install -r requirements.txt # If you are a normal user
-pip install -r requirementsDev.txt # If you are a dev
+pip install -r requirements_dev.txt # If you are a dev
 
 ```  
 
