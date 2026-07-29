@@ -1,7 +1,8 @@
 import sqlite3
 import logging
+from types import SimpleNamespace
 from telethon import TelegramClient, functions, types, custom, tl
-from telethon.errors import ChatAdminRequiredError, ChannelPrivateError
+from telethon.errors import ChatAdminRequiredError, ChannelPrivateError, BadRequestError
 from objects.errors import Errors
 from datetime import datetime, timezone
 
@@ -274,14 +275,20 @@ async def get_full_request(
 
         if isinstance(dialog, types.Channel):
             full_request = await client(
-                functions.channels.GetFullChannelRequest(dialog)
+                functions.channels.GetFullChannelRequest(dialog.id)
             )
 
         elif isinstance(dialog, types.User):
-            full_request = await client(functions.users.GetFullUserRequest(dialog))
+            full_request = await client(functions.users.GetFullUserRequest(dialog.id))
+
+        elif isinstance(dialog, types.Chat):
+            full_request = await client(
+                functions.messages.GetFullChatRequest(dialog.id)
+            )
 
         else:
-            full_request = await client(functions.messages.GetFullChatRequest(dialog))
+            logger.warning(f"Unknown dialog type: {dialog}")
+            return ""
 
         return full_request.stringify()
     except Exception as e:
@@ -375,9 +382,21 @@ async def add_users_to_set(
             if user.id not in users:
                 users.add(user.id)
 
-    # For now these exceptions are quite useless, but it's good to
-    # know what can go wrong to do something about it in the future.
-    except (ChatAdminRequiredError, ChannelPrivateError, Exception) as e:
+    except ChatAdminRequiredError as e:
+        logger.info(f"You can't parse users in this chat, it's a private chat: {e}")
+        return
+
+    except ChannelPrivateError as e:
+        logger.info(
+            f"You can't parse users from this channel, you are not an admin: {e}"
+        )
+        return
+
+    except BadRequestError as e:
+        logger.warning(f"Something went wrong, due to that we can't parse users: {e}")
+        return
+
+    except Exception as e:
         logger.exception(f"Exception occurred : {e}")
         await errors_handler.handle(e)
 
@@ -456,5 +475,15 @@ async def entity_handler(
     if skip_details:
         return
 
+    # Get the metadata of users from the original dialog
     for user in users:
-        await get_dialog_info(client, dialog, users, errors_handler, cursor)
+        entity = await client.get_entity(user)
+
+        # Right now the function get_dialog_info uses
+        # dialog.entity, and since there's not way to get
+        # a dialog class, just do this trick
+        fake_dialog = SimpleNamespace(entity=entity)
+
+        # We pass an empty set because we don't want
+        # it to function as a crawler, for now at least
+        await get_dialog_info(client, fake_dialog, set(), errors_handler, cursor)

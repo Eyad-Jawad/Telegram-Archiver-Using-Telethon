@@ -1,6 +1,6 @@
 import time
 import logging
-from helpers.local_utils import format_ETA, byte_to_MB
+from helpers.local_utils import format_eta, byte_to_mb
 from rich.table import Table
 from rich.progress_bar import ProgressBar
 
@@ -93,7 +93,7 @@ class Progress:
             logger.error("Recived negative file size.")
             return
 
-        self.used_space_in_MB += byte_to_MB(file_size)
+        self.used_space_in_MB += byte_to_mb(file_size)
 
     def make_table(self) -> Table:
         """
@@ -123,8 +123,6 @@ class Progress:
             return table
 
         elapsed_time: float = time.perf_counter() - self.time_start
-        logger.info(f"Elapsed time: {elapsed_time}")
-        logger.info(f"Message counter: {self.message_counter}")
         msgs_per_sec: float = 0.0
         MB_per_sec: float = 0.0
         remaining_time: float = 0.0
@@ -144,8 +142,8 @@ class Progress:
         table.add_row(
             str(self.message_counter),
             str(self.total_messages - self.message_counter),
-            format_ETA(elapsed_time),
-            format_ETA(remaining_time),
+            format_eta(elapsed_time),
+            format_eta(remaining_time),
             f"{msgs_per_sec:.3f}msg/s",
             f"{self.used_space_in_MB:.3f}MB",
             MB_per_sec,

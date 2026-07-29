@@ -14,5 +14,5 @@ from helpers.local_utils import *
         [500_000.0, "5d 18h 53m 20s"],
     ],
 )
-def test_format_ETA(seconds, output):
-    assert format_ETA(seconds) == output
+def test_format_eta(seconds, output):
+    assert format_eta(seconds) == output

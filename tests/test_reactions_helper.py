@@ -240,13 +240,13 @@ def test_insert_chat_reaction(insert_react_fixture):
 @patch("helpers.reactions.insert_channel_reaction")
 @patch("helpers.reactions.insert_chat_reaction")
 async def test_reaction_handler_with_no_message(
-    mock_insert_Chat, mock_insert_Channel, mock_get_Reaction
+    mock_insert_Chat, mock_insert_Channel, mock_get_reaction
 ):
     await reaction_handler(None, None, None, None)
 
     mock_insert_Chat.assert_not_called()
     mock_insert_Channel.assert_not_called()
-    mock_get_Reaction.assert_not_awaited()
+    mock_get_reaction.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -254,7 +254,7 @@ async def test_reaction_handler_with_no_message(
 @patch("helpers.reactions.insert_channel_reaction")
 @patch("helpers.reactions.insert_chat_reaction")
 async def test_reaction_handler_with_empty_reactions(
-    mock_insert_Chat, mock_insert_Channel, mock_get_Reaction
+    mock_insert_Chat, mock_insert_Channel, mock_get_reaction
 ):
     message = MagicMock()
     message.reactions = None
@@ -262,7 +262,7 @@ async def test_reaction_handler_with_empty_reactions(
 
     mock_insert_Chat.assert_not_called()
     mock_insert_Channel.assert_not_called()
-    mock_get_Reaction.assert_not_awaited()
+    mock_get_reaction.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -270,7 +270,7 @@ async def test_reaction_handler_with_empty_reactions(
 @patch("helpers.reactions.insert_channel_reaction")
 @patch("helpers.reactions.insert_chat_reaction")
 async def test_reaction_handler_with_channel_reactions(
-    mock_insert_Chat, mock_insert_Channel, mock_get_Reaction
+    mock_insert_Chat, mock_insert_Channel, mock_get_reaction
 ):
     client = MagicMock()
     dialog = MagicMock()
@@ -293,7 +293,7 @@ async def test_reaction_handler_with_channel_reactions(
 
     mock_insert_Channel.assert_called_once_with(cursor, 1, 10, react)
     mock_insert_Chat.assert_not_called()
-    mock_get_Reaction.assert_not_awaited()
+    mock_get_reaction.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -301,7 +301,7 @@ async def test_reaction_handler_with_channel_reactions(
 @patch("helpers.reactions.insert_channel_reaction")
 @patch("helpers.reactions.insert_chat_reaction")
 async def test_reaction_handler_with_valid_chat_reactions(
-    mock_insert_Chat, mock_insert_Channel, mock_get_Reaction
+    mock_insert_Chat, mock_insert_Channel, mock_get_reaction
 ):
     client = MagicMock()
     dialog = MagicMock()
@@ -317,10 +317,10 @@ async def test_reaction_handler_with_valid_chat_reactions(
 
     message.reactions = result
 
-    mock_get_Reaction.return_value = [[1, 2, 3], []]
+    mock_get_reaction.return_value = [[1, 2, 3], []]
 
     await reaction_handler(client, dialog, message, cursor)
 
     mock_insert_Channel.assert_not_called()
     mock_insert_Chat.assert_called_once_with(cursor, [1, 2, 3])
-    mock_get_Reaction.assert_awaited_once_with(client, dialog, message)
+    mock_get_reaction.assert_awaited_once_with(client, dialog, message)

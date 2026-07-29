@@ -2,7 +2,7 @@ import argparse
 from objects.config import Config
 
 
-def format_ETA(seconds: float) -> str:
+def format_eta(seconds: float) -> str:
     """
     A function that makes the estimated remaining time in a nice format.
 
@@ -149,7 +149,7 @@ def parse_args(config: Config) -> None:
             config.size_threshold = args.size_threshold * (1024**2)
 
 
-def byte_to_MB(size: int) -> float:
+def byte_to_mb(size: int) -> float:
     """A helper function that converts bytes to megabytes."""
     return (size / 1024) / 1024
 

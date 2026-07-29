@@ -4,6 +4,7 @@ from helpers.info import *
 from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime, timezone
 from telethon import types
+from telethon.errors import BadRequestError, ChannelPrivateError, ChatAdminRequiredError
 
 
 @pytest.fixture
@@ -401,6 +402,7 @@ async def test_get_dialog_info(
 async def test_get_full_request_for_channel(mock_channel):
     client = AsyncMock()
     dialog = MagicMock(spec=types.Channel)
+    dialog.id = 1
     errors_handler = AsyncMock()
     result = MagicMock()
 
@@ -412,7 +414,7 @@ async def test_get_full_request_for_channel(mock_channel):
     client.return_value = result
 
     assert await get_full_request(client, dialog, errors_handler) == "Chickens"
-    mock_channel.assert_called_once_with(dialog)
+    mock_channel.assert_called_once_with(1)
     client.assert_awaited_once_with("Test")
     errors_handler.handle.assert_not_awaited()
 
@@ -422,6 +424,7 @@ async def test_get_full_request_for_channel(mock_channel):
 async def test_get_full_request_for_user(mock_user):
     client = AsyncMock()
     dialog = MagicMock(spec=types.User)
+    dialog.id = 1
     errors_handler = AsyncMock()
     result = MagicMock()
 
@@ -433,7 +436,7 @@ async def test_get_full_request_for_user(mock_user):
     client.return_value = result
 
     assert await get_full_request(client, dialog, errors_handler) == "Chickens"
-    mock_user.assert_called_once_with(dialog)
+    mock_user.assert_called_once_with(1)
     client.assert_awaited_once_with("Test")
     errors_handler.handle.assert_not_awaited()
 
@@ -443,6 +446,7 @@ async def test_get_full_request_for_user(mock_user):
 async def test_get_full_request_for_chat(mock_chat):
     client = AsyncMock()
     dialog = MagicMock(spec=types.Chat)
+    dialog.id = 1
     errors_handler = AsyncMock()
     result = MagicMock()
 
@@ -454,8 +458,20 @@ async def test_get_full_request_for_chat(mock_chat):
     client.return_value = result
 
     assert await get_full_request(client, dialog, errors_handler) == "Chickens"
-    mock_chat.assert_called_once_with(dialog)
+    mock_chat.assert_called_once_with(1)
     client.assert_awaited_once_with("Test")
+    errors_handler.handle.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@patch("logging.Logger.warning")
+async def test_get_full_request_for_unknown_type(mock_logger):
+    dialog = MagicMock()
+    errors_handler = AsyncMock()
+    errors_handler.handle = AsyncMock()
+
+    assert await get_full_request(None, dialog, errors_handler) == ""
+    mock_logger.assert_called_once_with(f"Unknown dialog type: {dialog}")
     errors_handler.handle.assert_not_awaited()
 
 
@@ -464,13 +480,14 @@ async def test_get_full_request_for_chat(mock_chat):
 async def test_get_full_request_for_error(chat_mock):
     client = AsyncMock(side_effect=RuntimeError("Idk what"))
     dialog = MagicMock(spec=types.Chat)
+    dialog.id = 1
     errors_handler = MagicMock()
     errors_handler.handle = AsyncMock()
 
     await get_full_request(client, dialog, errors_handler)
 
     client.assert_awaited_once()
-    chat_mock.assert_called_once_with(dialog)
+    chat_mock.assert_called_once_with(1)
     errors_handler.handle.assert_awaited_once_with(client.side_effect)
 
 
@@ -620,7 +637,7 @@ async def test_add_users_to_set_with_many_inputs():
 
 
 @pytest.mark.asyncio
-async def test_add_users_to_set_for_error():
+async def test_add_users_to_set_for_unknown_errors():
     client = MagicMock()
     dialog = MagicMock()
     errors_handler = MagicMock()
@@ -688,7 +705,7 @@ def test_insert_users_duplicate(insert_users_fixture):
 @pytest.mark.asyncio
 @patch("helpers.info.insert_users_ids")
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
-async def test_users_Handler_with_empty_set(mock_info, mock_insert):
+async def test_entity_handler_with_empty_set(mock_info, mock_insert):
     await entity_handler(None, None, set(), None, None, True)
 
     mock_info.assert_not_awaited()
@@ -698,7 +715,7 @@ async def test_users_Handler_with_empty_set(mock_info, mock_insert):
 @pytest.mark.asyncio
 @patch("helpers.info.insert_users_ids")
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
-async def test_users_Handler_with_one_entry_and_skip(mock_info, mock_insert):
+async def test_entity_handler_with_one_entry_and_skip(mock_info, mock_insert):
     client = MagicMock()
     dialog = MagicMock()
     errors_handler = MagicMock()
@@ -713,17 +730,24 @@ async def test_users_Handler_with_one_entry_and_skip(mock_info, mock_insert):
 
 
 @pytest.mark.asyncio
+@patch("helpers.info.SimpleNamespace")
 @patch("helpers.info.insert_users_ids")
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
-async def test_users_Handler_with_one_entry_and_no_skip(mock_info, mock_insert):
-    client = MagicMock()
+async def test_entity_handler_with_one_entry_and_no_skip(mock_info, mock_insert, mock_namespace):
+    client = AsyncMock()
+    entity = MagicMock()
+    fake_dialog = MagicMock()
     dialog = MagicMock()
     errors_handler = MagicMock()
     cursor = MagicMock()
     users = {5}
 
     dialog.entity.id = 1
+    client.get_entity.return_value = entity
+    mock_namespace.return_value = fake_dialog
     await entity_handler(client, dialog, users, errors_handler, cursor, False)
 
     mock_insert.assert_called_once_with(cursor, 5, 1)
-    mock_info.assert_awaited_once_with(client, dialog, users, errors_handler, cursor)
+    client.get_entity.assert_awaited_once_with(5)
+    mock_namespace.assert_called_once_with(entity=entity)
+    mock_info.assert_awaited_once_with(client, fake_dialog, set(), errors_handler, cursor)

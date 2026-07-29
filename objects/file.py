@@ -1,6 +1,6 @@
 import logging
 from telethon import custom
-from helpers.local_utils import byte_to_MB
+from helpers.local_utils import byte_to_mb
 
 logger = logging.getLogger(__name__)
 
@@ -66,10 +66,10 @@ class File:
             if file.size < self.size_threshold:
                 file_path = await message.download_media(file=self.PATH)
 
-                return (file_path, file_id, byte_to_MB(file.size), True)
+                return (file_path, file_id, byte_to_mb(file.size), True)
 
             # Did not download the file, return the metadata only
-            return ("", file_id, byte_to_MB(file.size), False)
+            return ("", file_id, byte_to_mb(file.size), False)
 
         except Exception as e:
             logger.exception(f"Exception occurred : {e}")

@@ -123,30 +123,33 @@ class Dialog:
                     reverse=True,  # Start from the oldest message.
                     offset_id=self.progress.last_message_id,  # Skip already archived messages.
                 ):
-                    # Archive the message, this method handles it all
-                    await self.archive_message(message)
-
                     # If 5 seconds have passed, or multipls of 10% messages were archived,
                     # update the progress panel in the CLI.
                     if time.monotonic() - last_progress_refresh > 5:
                         last_progress_refresh = time.monotonic()
                         screen.update(self.progress.make_table(), self.progress.bar)
 
-                # Ensure the progress panel is showed at 100% at the end.
-                screen.update(self.progress.make_table(), self.progress.bar)
+                    # Archive the message, this method handles it all
+                    await self.archive_message(message)
+
+            # Ensure the progress panel is showed at 100% at the end.
+            progress_console.print(self.progress.make_table(), self.progress.bar)
+            progress_console.print("\n")
 
             logger.info("Done archiving messages.")
 
             # Check if the user wants to archive dialog's metadata
             if self.config.dialog_metadata:
-                logger.info("Parsing dialog metadata...")
+                logger.info("Parsing dialog' metadata...")
+                progress_console.print("Parsing dialog' metadata...")
                 await get_dialog_info(
                     self.client, self.dialog, self.users, self.error, self.cursor
                 )
 
             # Check if the user wants to archive users' metadata
             if self.config.user_metadata:
-                logger.info("Parsing users metadata...")
+                logger.info("Parsing users' metadata...")
+                progress_console.print("Parsing users' metadata...")
                 await entity_handler(
                     self.client,
                     self.dialog,
@@ -162,6 +165,9 @@ class Dialog:
             logger.info(
                 f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.time_start} seconds."
             )
+
+            progress_console.clear()
+            print(f"Done archiving {self.dialog.name}!\n\n")
 
         # Handle key interruption
         except (KeyboardInterrupt, asyncio.CancelledError) as e:
