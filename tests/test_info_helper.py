@@ -4,7 +4,6 @@ from helpers.info import *
 from unittest.mock import MagicMock, AsyncMock, patch
 from datetime import datetime, timezone
 from telethon import types
-from telethon.errors import BadRequestError, ChannelPrivateError, ChatAdminRequiredError
 
 
 @pytest.fixture

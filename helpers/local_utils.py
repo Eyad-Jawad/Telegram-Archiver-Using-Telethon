@@ -1,5 +1,6 @@
 import argparse
 from objects.config import Config
+from rich.console import Console
 
 
 def format_eta(seconds: float) -> str:
@@ -154,6 +155,94 @@ def byte_to_mb(size: int) -> float:
     return (size / 1024) / 1024
 
 
-def MB_to_byte(size: float) -> int:
+def mb_to_byte(size: float) -> int:
     """A helper function that converts megabytes to bytes."""
     return size * 1024**2
+
+
+def print_three_dialogs(l: list, i: int, con: Console) -> None:
+    """
+    A function that takes the list of dialogs, and prints three or less dialogs
+    for the user as a UI to navigate through.
+
+    Args:
+        dialogs (list):
+            A list of the dialogs.
+
+        i (int):
+            The current dialog's index.
+        
+        console (rich.console.Console):
+            The object which we will use to print things.
+    """
+
+    first_line = "Do you want to archive the highlighted dialog? (y for yes, q to exit, and arrow keys to navigate)\n"
+
+    if len(l) == 0:
+        con.print("There's no dialog to work with.\n")
+        return
+
+    if len(l) == 1:
+        con.print(f"Do you want to archive: {l[0].name}? (y, q to exit)")
+        return
+
+    if len(l) == 2:
+        con.print(
+            first_line,
+            f"[red]1.{l[0].name}[/red]\n",
+            f"2.{l[1].name}\n"
+        )
+        return
+
+    to_print = []
+
+    if i == 0:
+        to_print = [f"{len(l)}.{l[-1].name}", f"1.{l[0].name}", f"2.{l[1].name}"]
+
+    elif i + 1 == len(l):
+        to_print = [f"{i}.{l[i - 1].name}", f"{i + 1}.{l[i].name}", f"1.{l[0].name}"]
+
+    else:
+        to_print = [f"{i}.{l[i - 1].name}", f"{i + 1}.{l[i].name}", f"{i + 2}.{l[i + 1].name}"]
+
+    con.print(
+            first_line,
+            f"{to_print[0]}\n",
+            f"[red]{to_print[1]}[/red]\n",
+            f"{to_print[2]}\n"
+        )
+    
+    return
+
+
+def handle_index(i: int, amount: int, list_length: int) -> int:
+    """
+    A function that handles incrementing, and decrementing 
+    an index so that it doesn't get out of boundary.
+
+    Args:
+        i (int):
+            The index one wants to increment.
+        
+        amount (int):
+            The amount you want to increment or decrement from
+            the index.
+
+        list_length (int):
+            The length of the list the index is on.
+
+    Returns:
+        int:
+            The new index.
+    """
+
+    if amount == 1:
+        if i + 1 == list_length:
+            return 0
+        
+        return i + 1
+    
+    if i - 1 == -1:
+        return list_length - 1
+    
+    return i - 1

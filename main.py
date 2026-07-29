@@ -2,13 +2,15 @@ import os
 import asyncio
 import signal
 import logging
+import readchar
 
 from dotenv import load_dotenv
 from telethon import TelegramClient, types
 from datetime import datetime
-from helpers.local_utils import parse_args, clear_last_line
+from helpers.local_utils import parse_args, clear_last_line, print_three_dialogs, handle_index
 from objects.config import Config
 from objects.dialog import Dialog
+from rich.console import Console
 
 """
 
@@ -46,19 +48,40 @@ async def main():
     # This is th directory where we'll save files/images or any of the sort
     os.makedirs("Media/", exist_ok=True)
 
+    console = Console()
+    console.print("Started...")
+
     try:
         # Loop through the dialogs of the user.
-        # Another way to do this is to call get_dialogs and loop through them instead.
-        async for dialog in client.iter_dialogs():
+        # Another way to do this is to call client.iter_dialogs() and iter through them instead.
+        dialogs = await client.get_dialogs()
+        logger.info(f"All dialogs: {dialogs}")
+        current_dialog = 0
+        while True:
             try:
-                ans = input(f"Do you want to archive {dialog.name}? (y) ")
-                clear_last_line()
+
+                print_three_dialogs(dialogs, current_dialog, console)
+
+                key = readchar.readkey()
+
+                console.clear()
             except KeyboardInterrupt:
-                logger.info("Exited the program.")
+                logger.info("Exited the program by key interruption.")
                 exit(0)
 
-            if ans.lower() != "y":
+            if key.lower() == "q":
+                logger.info("Exited the program by pressing q.")
+                exit(0)
+
+            if key == readchar.key.UP:
+                current_dialog = handle_index(current_dialog, -1, len(dialogs))
                 continue
+
+            if key.lower() != "y":
+                current_dialog = handle_index(current_dialog, 1, len(dialogs))
+                continue
+
+            dialog = dialogs[current_dialog]
 
             # Set up the dialog object
             dialog_obj = Dialog(client, config, dialog)
