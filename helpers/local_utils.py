@@ -178,14 +178,17 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
 
     first_line = "Do you want to archive the highlighted dialog? (y for yes, q to exit, and arrow keys to navigate)\n"
 
+    # If there's not dialog
     if len(l) == 0:
         con.print("There's no dialog to work with.\n")
         return
 
+    # If there's one dialog
     if len(l) == 1:
         con.print(f"Do you want to archive: {l[0].name}? (y, q to exit)")
         return
 
+    # If there are two dialogs
     if len(l) == 2:
         con.print(
             first_line,
@@ -196,12 +199,16 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
 
     to_print = []
 
+    # If we are at the first dialog of the dialogs list
     if i == 0:
         to_print = [f"{len(l)}.{l[-1].name}", f"1.{l[0].name}", f"2.{l[1].name}"]
 
+    # If we are at the last dialog of the dialogs list
     elif i + 1 == len(l):
         to_print = [f"{i}.{l[i - 1].name}", f"{i + 1}.{l[i].name}", f"1.{l[0].name}"]
 
+    # If we are not near any boundary of the list
+    # i.e. a normal situation
     else:
         to_print = [f"{i}.{l[i - 1].name}", f"{i + 1}.{l[i].name}", f"{i + 2}.{l[i + 1].name}"]
 
@@ -236,13 +243,17 @@ def handle_index(i: int, amount: int, list_length: int) -> int:
             The new index.
     """
 
+    # Case: Increment
     if amount == 1:
+        # If we are at the last element flip the index
         if i + 1 == list_length:
             return 0
         
         return i + 1
     
-    if i - 1 == -1:
+    # Case: Decrement
+    # If we are at the first element flip the index as well
+    if i == 0:
         return list_length - 1
     
     return i - 1

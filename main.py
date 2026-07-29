@@ -59,9 +59,10 @@ async def main():
         current_dialog = 0
         while True:
             try:
-
+                # Print the three surronding dialogs
                 print_three_dialogs(dialogs, current_dialog, console)
 
+                # Capture the key the user pressed
                 key = readchar.readkey()
 
                 console.clear()
@@ -69,14 +70,17 @@ async def main():
                 logger.info("Exited the program by key interruption.")
                 exit(0)
 
+            # If the user pressed q, exit
             if key.lower() == "q":
                 logger.info("Exited the program by pressing q.")
                 exit(0)
 
+            # If the user pressed arrow up, go back a dialog
             if key == readchar.key.UP:
                 current_dialog = handle_index(current_dialog, -1, len(dialogs))
                 continue
 
+            # If the user pressed anything other than y, go up a dialog
             if key.lower() != "y":
                 current_dialog = handle_index(current_dialog, 1, len(dialogs))
                 continue
