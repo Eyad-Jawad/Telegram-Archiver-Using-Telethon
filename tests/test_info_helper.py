@@ -733,7 +733,9 @@ async def test_entity_handler_with_one_entry_and_skip(mock_info, mock_insert):
 @patch("helpers.info.SimpleNamespace")
 @patch("helpers.info.insert_users_ids")
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
-async def test_entity_handler_with_one_entry_and_no_skip(mock_info, mock_insert, mock_namespace):
+async def test_entity_handler_with_one_entry_and_no_skip(
+    mock_info, mock_insert, mock_namespace
+):
     client = AsyncMock()
     entity = MagicMock()
     fake_dialog = MagicMock()
@@ -750,4 +752,6 @@ async def test_entity_handler_with_one_entry_and_no_skip(mock_info, mock_insert,
     mock_insert.assert_called_once_with(cursor, 5, 1)
     client.get_entity.assert_awaited_once_with(5)
     mock_namespace.assert_called_once_with(entity=entity)
-    mock_info.assert_awaited_once_with(client, fake_dialog, set(), errors_handler, cursor)
+    mock_info.assert_awaited_once_with(
+        client, fake_dialog, set(), errors_handler, cursor
+    )
