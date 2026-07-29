@@ -55,7 +55,6 @@ async def main():
         # Loop through the dialogs of the user.
         # Another way to do this is to call client.iter_dialogs() and iter through them instead.
         dialogs = await client.get_dialogs()
-        logger.info(f"All dialogs: {dialogs}")
         current_dialog = 0
         while True:
             try:
