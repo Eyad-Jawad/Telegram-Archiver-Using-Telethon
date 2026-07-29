@@ -192,7 +192,7 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
     if len(l) == 2:
         con.print(
             first_line,
-            f"[red]1.{l[0].name}[/red]\n",
+            f"[bold black on bright_yellow]1.{l[0].name}[/]\n",
             f"2.{l[1].name}\n"
         )
         return
@@ -215,7 +215,7 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
     con.print(
             first_line,
             f"{to_print[0]}\n",
-            f"[red]{to_print[1]}[/red]\n",
+            f"[bold black on bright_yellow]{to_print[1]}[/]\n",
             f"{to_print[2]}\n"
         )
     
