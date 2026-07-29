@@ -50,6 +50,7 @@ class Progress:
         # Update the attributes
         self.last_message_id = checkpoint[0]
         self.message_counter = checkpoint[1]
+        self.bar.update(self.message_counter)
         # time_start is different because it is a float of the
         # time it took to archive, that's why we offset the
         # current time by its value.

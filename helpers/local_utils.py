@@ -176,7 +176,9 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
             The object which we will use to print things.
     """
 
-    first_line = "Do you want to archive the highlighted dialog? (y for yes, q to exit, and arrow keys to navigate)\n"
+    FIRST_LINE = """
+        Do you want to archive the highlighted dialog?
+        ([green]y[/] or [green]Enter[/] for yes, [red]q[/] to exit, and [cyan]arrow keys[/] to navigate)\n"""
 
     # If there's not dialog
     if len(l) == 0:
@@ -191,7 +193,7 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
     # If there are two dialogs
     if len(l) == 2:
         con.print(
-            first_line,
+            FIRST_LINE,
             f"> [bold black on cyan]1.{l[0].name}[/]\n",
             f"  2.{l[1].name}\n"
         )
@@ -213,7 +215,7 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
         to_print = [f"{i}.{l[i - 1].name}", f"{i + 1}.{l[i].name}", f"{i + 2}.{l[i + 1].name}"]
 
     con.print(
-            first_line,
+            FIRST_LINE,
             f"  {to_print[0]}\n",
             f"> [bold black on cyan]{to_print[1]}[/]\n",
             f"  {to_print[2]}\n"

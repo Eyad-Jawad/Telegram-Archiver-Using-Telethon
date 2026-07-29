@@ -68,6 +68,7 @@ async def main():
                 console.clear()
             except KeyboardInterrupt:
                 logger.info("Exited the program by key interruption.")
+                console.clear()
                 exit(0)
 
             # If the user pressed q, exit
@@ -80,8 +81,8 @@ async def main():
                 current_dialog = handle_index(current_dialog, -1, len(dialogs))
                 continue
 
-            # If the user pressed anything other than y, go up a dialog
-            if key.lower() != "y":
+            # If the user pressed anything other than y or Enter, go up a dialog
+            if key.lower() != "y" or key != readchar.key.ENTER:
                 current_dialog = handle_index(current_dialog, 1, len(dialogs))
                 continue
 
