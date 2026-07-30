@@ -8,12 +8,12 @@ logger = logging.getLogger(__name__)
 
 
 class File:
-    def __init__(self, size_threshold: int) -> None:
+    def __init__(self, size_threshold: float) -> None:
         """
         Initialize the File class object
 
         Args:
-            size_threshold (int):
+            size_threshold (float):
                 The maximum size of the files to download of which any larger
                 will be ignored, parsed by the config class from user in CLI args.
         """

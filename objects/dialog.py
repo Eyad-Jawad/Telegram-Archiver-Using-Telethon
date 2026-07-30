@@ -84,7 +84,7 @@ class Dialog:
         # Initialize the needed objects
         self.progress: prog = prog(self.total_messages, self.dialog.name)
 
-        self.file: file = file(int(self.config.size_threshold))
+        self.file: file = file(self.config.size_threshold)
 
         self.error: err = err(self.conn, self.progress, self)
 
