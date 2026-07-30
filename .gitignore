@@ -6,7 +6,10 @@ dialogs/
 __pycache__/
 .pytest_cache/
 venv/
+.venv/
 *.db
 Media/
 *.log
 *cache
+.python-version
+.coverage

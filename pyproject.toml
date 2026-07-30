@@ -1,0 +1,42 @@
+[project]
+name = "telegram-archiving"
+version = "1.0.2"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "python-dotenv>=1.2.2",
+    "readchar>=4.2.2",
+    "rich>=15.0.0",
+    "telethon>=1.44.0",
+]
+
+[dependency-groups]
+dev = [
+    "black>=26.5.1",
+    "mypy>=2.3.0",
+    "pytest>=9.1.1",
+    "pytest-asyncio>=1.4.0",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.0",
+    "telethon>=1.44.0",
+]
+
+[tool.mypy]
+python_version = "3.14"
+
+[[tool.mypy.overrides]]
+module = ["telethon.*"]
+ignore_missing_imports = true
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--cov=."
+
+[tool.ruff]
+line-length = 80
+
+[tool.black]
+line-length = 80
+target-version = ["py314"]
