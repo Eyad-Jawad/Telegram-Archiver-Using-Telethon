@@ -119,7 +119,7 @@ class Dialog:
             with progress_console.screen() as screen:
                 # The progress panel in the CLI.
                 async for message in self.client.iter_messages(
-                    self.dialog.entity,
+                    self.entity,
                     reverse=True,  # Start from the oldest message.
                     offset_id=self.progress.last_message_id,  # Skip already archived messages.
                 ):
@@ -196,7 +196,7 @@ class Dialog:
             if value:
                 checkpoint[i] = value
 
-        checkpoint.append(self.dialog.id)
+        checkpoint.append(self.id)
 
         self.cursor.execute(
             """
@@ -228,7 +228,7 @@ class Dialog:
             FROM dialogs
             WHERE dialog_id = ?
         """,
-            [self.dialog.id],
+            [self.id],
         )
 
         return self.cursor.fetchone()
@@ -331,7 +331,7 @@ class Dialog:
         """
         if self.config.user_metadata:
             for user in self.users:
-                insert_users_ids(self.cursor, user, self.dialog.id)
+                insert_users_ids(self.cursor, user, self.id)
 
         self.conn.commit()
         self.conn.close()

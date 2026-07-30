@@ -7,7 +7,7 @@ import readchar
 from dotenv import load_dotenv
 from telethon import TelegramClient, types
 from datetime import datetime
-from helpers.local_utils import parse_args, clear_last_line, print_three_dialogs, handle_index
+from helpers.local_utils import parse_args, construct_fake_dialog, print_three_dialogs, handle_index
 from objects.config import Config
 from objects.dialog import Dialog
 from rich.console import Console
@@ -81,11 +81,35 @@ async def main():
                 continue
 
             # If the user pressed anything other than y or Enter, go up a dialog
-            if key.lower() != "y" or key != readchar.key.ENTER:
+            if key.lower() != "y" and key.lower() != "i" and key != readchar.key.ENTER:
                 current_dialog = handle_index(current_dialog, 1, len(dialogs))
                 continue
 
-            dialog = dialogs[current_dialog]
+            if key.lower() == "i":
+                console.print("""
+                    Please write down the dialog you want to archive, it can be:
+                    A username,
+                    An id,
+                    A link,
+                    A number, 
+                    Or anything to identify the dialog.
+                """)
+
+                try:
+                    entity_data = input()
+                    entity = await client.get_entity(entity_data)
+                except KeyboardInterrupt:
+                    logger.info("Exited the program by key interruption.")
+                    console.clear()
+                    exit(0)
+                except Exception as e:
+                    logger.exception(f"Exception occurred: {e}")
+                    console.clear()
+                    continue
+
+                dialog = construct_fake_dialog(entity)
+            else:
+                dialog = dialogs[current_dialog]
 
             # Set up the dialog object
             dialog_obj = Dialog(client, config, dialog)

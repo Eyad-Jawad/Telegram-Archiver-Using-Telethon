@@ -1,7 +1,12 @@
 import argparse
+import logging
 from objects.config import Config
 from rich.console import Console
+from types import SimpleNamespace
+from telethon.types import User, Chat, Channel
 
+
+logger = logging.getLogger(__name__)
 
 def format_eta(seconds: float) -> str:
     """
@@ -178,7 +183,10 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
 
     FIRST_LINE = """
         Do you want to archive the highlighted dialog?
-        ([green]y[/] or [green]Enter[/] for yes, [red]q[/] to exit, and [cyan]arrow keys[/] to navigate)\n"""
+        press [green]y[/] or [green]Enter[/] for yes, 
+        [red]q[/] to exit, 
+        [cyan]arrow keys[/] to navigate
+        and [yellow]i[/] to input a dialog yourself\n"""
 
     # If there's not dialog
     if len(l) == 0:
@@ -259,3 +267,32 @@ def handle_index(i: int, amount: int, list_length: int) -> int:
         return list_length - 1
     
     return i - 1
+
+
+def construct_fake_dialog(entity) -> SimpleNamespace:
+    """
+    A function that takes a telethon entity and returns an
+    object that simulates how dialog works, having the necessary
+    things that this program uses only, since you can't get a dialog
+    in telethon unless you have chatted with before.
+
+    Args:
+        entity:
+            The object that you get from client.get_entity().
+    
+    Returns:
+        SimpleNamespace:
+            An object that simulates a fake dialog.
+    """
+
+    if isinstance(entity, User):
+        name = f"{entity.first_name} {entity.last_name}"
+    elif isinstance(entity, (Chat, Channel)):
+        name = entity.title
+    else:
+        logger.error(f"Entity is not a known type: {entity}")
+        name = "UNKNOWN TYPE"
+
+    dialog = SimpleNamespace(id=entity.id, name=name, entity=entity)
+
+    return dialog
