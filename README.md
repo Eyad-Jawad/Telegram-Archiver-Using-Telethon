@@ -65,6 +65,17 @@ docker run -it --rm \
 telegram-archiver -t -d 
 
 ```  
+
+Or you could use uv:  
+
+```
+
+pip install uv
+uv sync
+uv run main.py -t -d
+
+```  
+
 The last two things `-t -d` are arugments for the program, read the next section to know them
 
 ### Arguments
@@ -98,6 +109,7 @@ Or you could use uv, you can also run:
 
 ```
 
+pip install uv
 uv sync
 uv run python -m pytest
 ruff check .
@@ -116,4 +128,4 @@ All in all, I'm pretty much satisfied with this project, it took me about 50h? i
 I have listed a good list of todos and fixme in the code, I might do them one day...? idk, I hopne it'll be good, inshallah.  
 Update: I did get a good hand-on exp. on SQLite and pytest (:  
 Thank you for reading   
--Eyad.
+- Eyad.
