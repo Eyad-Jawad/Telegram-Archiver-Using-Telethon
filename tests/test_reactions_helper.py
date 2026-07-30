@@ -1,8 +1,10 @@
-import pytest
 import sqlite3
-from helpers.reactions import *
-from unittest.mock import MagicMock, AsyncMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
+import pytest
 from telethon import types
+
+from helpers.reactions import *
 
 
 @pytest.fixture

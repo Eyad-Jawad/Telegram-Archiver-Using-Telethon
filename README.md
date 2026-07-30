@@ -34,8 +34,8 @@ To run the program you should make a virtual enviroment first:
 
 ```
 
-python -m venv venv
-source ./venv/bin/activate
+python -m venv .venv
+source ./.venv/bin/activate
 
 ```  
 
@@ -94,13 +94,26 @@ python -m pytest
 
 ```
 
+Or you could use uv, you can also run:  
+
+```
+
+uv sync
+uv run python -m pytest
+ruff check .
+black .
+mypy .
+
+```
+
 ### What Did I Learn
 
 I learnt a lot about file managment, and how to parse things in general, but the coolest thing if you ask me is the progress bar, that is cool.  
 This project did take a good chunk of time to finish, or at least get it to work, and I did it mainly because I love archiving things locally, it works pretty well in my opinion.  
 I also learnt a good amount of error handling, while it is not sublime, error handling is good here.  
 I'd like to add a way to reverse the process and get a GUI out of it, I've seen that on discord archivers, I'd also want to add a way to compress stuff, like files, or at least do something about them because they take A LOT of space.  
-All in all, I'm pretty much satisfied with this project, it took me about 50h? idk (probably 70h+ by now (prolly 100h by now)), but I do feel like I'm missing some features.  
+All in all, I'm pretty much satisfied with this project, it took me about 50h? idk (probably 70h+ by now (prolly 100h by now(even 150h by now))), but I do feel like I'm missing some features.  
 I have listed a good list of todos and fixme in the code, I might do them one day...? idk, I hopne it'll be good, inshallah.  
-Update: I did get a good hand-on exp. on SQLite and pytest (:
-Thank you for reading -Eyad.
+Update: I did get a good hand-on exp. on SQLite and pytest (:  
+Thank you for reading   
+-Eyad.

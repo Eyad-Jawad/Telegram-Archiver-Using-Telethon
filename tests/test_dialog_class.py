@@ -1,9 +1,11 @@
+import sqlite3
+from unittest.mock import AsyncMock, MagicMock, call, patch
+
 import pytest
 import pytest_asyncio
-import sqlite3
-from objects.dialog import Dialog
-from unittest.mock import MagicMock, AsyncMock, patch, call
 from telethon import types
+
+from objects.dialog import Dialog
 
 
 @pytest.fixture
@@ -85,6 +87,8 @@ def archive_message_fixture():
             forward_from_username INTEGER,
             forward_from_user_id INTEGER,
             replied_to_id INTEGER,
+            replied_to_entity_id INTEGER,
+            replied_to_text TEXT,
             text TEXT,
             date DATETIME,
             edit_date DATETIME,
@@ -161,7 +165,6 @@ async def mock_dialog_class(
         "file": file,
         "mock_error": mock_error,
         "mock_checkpoint": mock_checkpoint,
-        "progress": progress,
     }
 
 
@@ -169,7 +172,10 @@ async def mock_dialog_class(
 async def test_dialog_init(mock_dialog_class):
     assert mock_dialog_class["obj"].client is mock_dialog_class["mock_client"]
     assert mock_dialog_class["obj"].dialog is mock_dialog_class["mock_dialog"]
-    assert mock_dialog_class["obj"].entity is mock_dialog_class["mock_dialog"].entity
+    assert (
+        mock_dialog_class["obj"].entity
+        is mock_dialog_class["mock_dialog"].entity
+    )
     assert mock_dialog_class["obj"].config is mock_dialog_class["mock_config"]
     assert mock_dialog_class["obj"].id == 1
     assert mock_dialog_class["obj"].type == "Something"
@@ -189,7 +195,9 @@ async def test_dialog_init(mock_dialog_class):
     )
 
     assert mock_dialog_class["mock_conn_and_cursor"][1].execute.call_count == 2
-    assert mock_dialog_class["mock_conn_and_cursor"][1].execute.call_args_list == [
+    assert mock_dialog_class["mock_conn_and_cursor"][
+        1
+    ].execute.call_args_list == [
         call(
             "INSERT OR IGNORE INTO dialogs (dialog_id, name, type) VALUES  (?, ?, ?)",
             [1, "Me", "Something"],
@@ -283,14 +291,18 @@ def test_dialog_save_checkpoint(
     mock_counter.assert_called_once()
 
 
-def test_dialog_get_checkpoint_with_empty_entry(mock_dialog_class, checkpoint_fixture):
+def test_dialog_get_checkpoint_with_empty_entry(
+    mock_dialog_class, checkpoint_fixture
+):
     obj = mock_dialog_class["obj"]
     obj.cursor = checkpoint_fixture
 
     assert obj.get_checkpoint() == (None, None, 0.0)
 
 
-def test_dialog_get_checkpoint_with_one_entry(mock_dialog_class, checkpoint_fixture):
+def test_dialog_get_checkpoint_with_one_entry(
+    mock_dialog_class, checkpoint_fixture
+):
     obj = mock_dialog_class["obj"]
     obj.cursor = checkpoint_fixture
 
@@ -305,7 +317,9 @@ def test_dialog_get_checkpoint_with_one_entry(mock_dialog_class, checkpoint_fixt
     assert obj.get_checkpoint() == (33, 3, 3.3)
 
 
-def test_dialog_get_checkpoint_with_many_entries(mock_dialog_class, checkpoint_fixture):
+def test_dialog_get_checkpoint_with_many_entries(
+    mock_dialog_class, checkpoint_fixture
+):
     obj = mock_dialog_class["obj"]
     obj.cursor = checkpoint_fixture
 
@@ -337,7 +351,10 @@ def test_dialog_key_interruption_with_no_user_info(
     obj.handle_key_interruption()
 
     capture = capsys.readouterr()
-    assert capture.out == "\nPlease wait a moment while the saving the checkpoint\n"
+    assert (
+        capture.out
+        == "\nPlease wait a moment while the saving the checkpoint\n"
+    )
 
     mock_save.assert_called_once()
     mock_insert.assert_not_called()
@@ -363,7 +380,10 @@ def test_dialog_key_interruption_with_one_user(
     obj.handle_key_interruption()
 
     capture = capsys.readouterr()
-    assert capture.out == "\nPlease wait a moment while the saving the checkpoint\n"
+    assert (
+        capture.out
+        == "\nPlease wait a moment while the saving the checkpoint\n"
+    )
 
     mock_save.assert_called_once()
     mock_insert.assert_called_once_with(
@@ -391,7 +411,10 @@ def test_dialog_key_interruption_with_many_users(
     obj.handle_key_interruption()
 
     capture = capsys.readouterr()
-    assert capture.out == "\nPlease wait a moment while the saving the checkpoint\n"
+    assert (
+        capture.out
+        == "\nPlease wait a moment while the saving the checkpoint\n"
+    )
 
     mock_save.assert_called_once()
 
@@ -447,7 +470,7 @@ async def test_dialog_archive_message(
 
     mock_user.return_value = ["Me", 5]
     mock_forward.return_value = ["He", 17]
-    mock_reply.return_value = 32
+    mock_reply.return_value = (32, 0, "Noice")
     mock_text.return_value = "Noice day"
 
     await obj.archive_message(message)
@@ -479,6 +502,8 @@ async def test_dialog_archive_message(
         "He",
         17,
         32,
+        0,
+        "Noice",
         "Noice day",
         "Today",
         "Just now",

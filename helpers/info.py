@@ -1,10 +1,16 @@
-import sqlite3
 import logging
+import sqlite3
+from datetime import UTC, datetime
 from types import SimpleNamespace
-from telethon import TelegramClient, functions, types, custom, tl
-from telethon.errors import ChatAdminRequiredError, ChannelPrivateError, BadRequestError
+
+from telethon import TelegramClient, custom, functions, tl, types
+from telethon.errors import (
+    BadRequestError,
+    ChannelPrivateError,
+    ChatAdminRequiredError,
+)
+
 from objects.errors import Errors
-from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +41,9 @@ def user_id_handler(
         # If for some reason it's not a channel and there's
         # no sender id return empty things
         elif not message.sender_id:
-            logger.warning(f"A message where no name or id was recieved: {message}.")
+            logger.warning(
+                f"A message where no name or id was recieved: {message}."
+            )
             return ("", 0)
 
         # check if the sender is not saved
@@ -44,8 +52,8 @@ def user_id_handler(
 
         return ("", message.sender_id)
 
-    except Exception as e:
-        logging.exception(f"Exception occurred : {e}")
+    except Exception:
+        logger.exception(f"Exception occurred at message {message.id}")
         return ("", 0)
 
 
@@ -70,12 +78,13 @@ def get_latest_photo_date(cursor: sqlite3.Cursor, dialog_id: int) -> datetime:
     # format: 2026-03-06 17:45:25+00:00
 
     cursor.execute(
-        "SELECT MAX(photo_date) FROM dialog_photos WHERE dialog_id = ?", [dialog_id]
+        "SELECT MAX(photo_date) FROM dialog_photos WHERE dialog_id = ?",
+        [dialog_id],
     )
 
     query = cursor.fetchone()
     if not query or not query[0]:
-        return datetime(1900, 1, 1, tzinfo=timezone.utc)  # arbitrary date
+        return datetime(1900, 1, 1, tzinfo=UTC)  # arbitrary date
     else:
         return datetime.fromisoformat(query[0])
 
@@ -96,7 +105,8 @@ def is_archived(cursor: sqlite3.Cursor, dialog_id: int) -> bool:
             A boolean for if dialog metadata was archived before.
     """
     cursor.execute(
-        "SELECT full_request FROM dialog_metadata WHERE dialog_id = ?", [dialog_id]
+        "SELECT full_request FROM dialog_metadata WHERE dialog_id = ?",
+        [dialog_id],
     )
 
     query = cursor.fetchone()
@@ -152,7 +162,7 @@ def insert_info_into_appropriate_table(
     # Insert new metadata into dialog_metadata
     cursor.execute(
         "UPDATE dialog_metadata SET full_request = ?, date_of_request = ? WHERE dialog_id = ?",
-        [full_request, datetime.now(timezone.utc).isoformat(), dialog_id],
+        [full_request, datetime.now(UTC).isoformat(), dialog_id],
     )
 
 
@@ -176,7 +186,7 @@ def insert_photo_info(
     """
 
     # For safety
-    for row in photo_info or [()]:
+    for row in photo_info or []:
         if len(row) == 0:
             continue
 
@@ -204,7 +214,8 @@ def ensure_dialog_row_exists(cursor: sqlite3.Cursor, dialog_id: int) -> None:
         return
 
     cursor.execute(
-        "INSERT OR IGNORE INTO dialog_metadata (dialog_id) VALUES (?)", [dialog_id]
+        "INSERT OR IGNORE INTO dialog_metadata (dialog_id) VALUES (?)",
+        [dialog_id],
     )
 
 
@@ -241,14 +252,18 @@ async def get_dialog_info(
     insert_info_into_appropriate_table(cursor, dialog.id, full_request)
 
     latest_photo_date = get_latest_photo_date(cursor, dialog.id)
-    photo_info = await get_photo_info(client, dialog, errors_handler, latest_photo_date)
+    photo_info = await get_photo_info(
+        client, dialog, errors_handler, latest_photo_date
+    )
     insert_photo_info(cursor, photo_info)
 
     await add_users_to_set(client, dialog, users, errors_handler)
 
 
 async def get_full_request(
-    client: TelegramClient, dialog: tl.custom.dialog.Dialog, errors_handler: Errors
+    client: TelegramClient,
+    dialog: tl.custom.dialog.Dialog,
+    errors_handler: Errors,
 ) -> str:
     """
     A function that gets the full request from telegram for
@@ -279,7 +294,9 @@ async def get_full_request(
             )
 
         elif isinstance(dialog, types.User):
-            full_request = await client(functions.users.GetFullUserRequest(dialog.id))
+            full_request = await client(
+                functions.users.GetFullUserRequest(dialog.id)
+            )
 
         elif isinstance(dialog, types.Chat):
             full_request = await client(
@@ -292,8 +309,11 @@ async def get_full_request(
 
         return full_request.stringify()
     except Exception as e:
-        logger.exception(f"Exception occurred : {e}")
+        logger.exception(
+            f"Exception occurred with dialog {dialog.id} : {dialog.name}"
+        )
         await errors_handler.handle(e)
+        return ""
 
 
 async def get_photo_info(
@@ -342,11 +362,18 @@ async def get_photo_info(
 
             photo_path = await client.download_media(photo, file=PATH)
             photo_data.append(
-                (dialog.id, photo.id, photo_path, datetime.isoformat(photo.date))
+                (
+                    dialog.id,
+                    photo.id,
+                    photo_path,
+                    datetime.isoformat(photo.date),
+                )
             )
 
     except Exception as e:
-        logger.exception(f"Exception occurred : {e}")
+        logger.exception(
+            f"Exception occurred with dialog {dialog.id} : {dialog.name}"
+        )
         await errors_handler.handle(e)
 
     return photo_data
@@ -383,21 +410,25 @@ async def add_users_to_set(
                 users.add(user.id)
 
     except ChatAdminRequiredError as e:
-        logger.info(f"You can't parse users in this chat, it's a private chat: {e}")
-        return
-
-    except ChannelPrivateError as e:
         logger.info(
-            f"You can't parse users from this channel, you are not an admin: {e}"
+            f"You can't parse users in this chat, it's a private chat: {e}"
         )
         return
 
-    except BadRequestError as e:
-        logger.warning(f"Something went wrong, due to that we can't parse users: {e}")
+    except ChannelPrivateError:
+        logger.info(
+            "You can't parse users from this channel, you are not an admin"
+        )
+        return
+
+    except BadRequestError:
+        logger.warning("Something went wrong, due to that we can't parse users")
         return
 
     except Exception as e:
-        logger.exception(f"Exception occurred : {e}")
+        logger.exception(
+            f"Exception occurred with dialog {dialog.id} : {dialog.name}"
+        )
         await errors_handler.handle(e)
 
 
@@ -486,4 +517,6 @@ async def entity_handler(
 
         # We pass an empty set because we don't want
         # it to function as a crawler, for now at least
-        await get_dialog_info(client, fake_dialog, set(), errors_handler, cursor)
+        await get_dialog_info(
+            client, fake_dialog, set(), errors_handler, cursor
+        )

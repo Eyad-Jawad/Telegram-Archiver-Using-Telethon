@@ -1,9 +1,11 @@
-import pytest
 import sqlite3
-from helpers.info import *
-from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from telethon import types
+
+from helpers.info import *
 
 
 @pytest.fixture
@@ -142,10 +144,10 @@ def test_user_id_handler_for_users_set():
 
 def date_consts():
     return [
-        datetime(1900, 1, 1, tzinfo=timezone.utc),
-        datetime(2026, 1, 10, 10, 10, 10, tzinfo=timezone.utc),
-        datetime(2026, 5, 10, 10, 10, 10, tzinfo=timezone.utc),
-        datetime(2026, 10, 10, 10, 10, 10, tzinfo=timezone.utc),
+        datetime(1900, 1, 1, tzinfo=UTC),
+        datetime(2026, 1, 10, 10, 10, 10, tzinfo=UTC),
+        datetime(2026, 5, 10, 10, 10, 10, tzinfo=UTC),
+        datetime(2026, 10, 10, 10, 10, 10, tzinfo=UTC),
     ]
 
 
@@ -236,10 +238,12 @@ def test_is_archived_for_many_entries(is_archived_fixture):
     cursor = is_archived_fixture
 
     cursor.execute(
-        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)", [1, None]
+        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)",
+        [1, None],
     )
     cursor.execute(
-        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)", [2, None]
+        "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)",
+        [2, None],
     )
     cursor.execute(
         "INSERT INTO dialog_metadata (dialog_id, full_request) VALUES (?, ?)",
@@ -259,7 +263,9 @@ def test_push_info_for_not_archived(push_info_fixture):
     cursor.execute("INSERT INTO dialog_metadata (dialog_id) VALUES (?)", [1])
     insert_info_into_appropriate_table(cursor, 1, "Chickens")
 
-    cursor.execute("SELECT full_request FROM dialog_metadata WHERE dialog_id = 1")
+    cursor.execute(
+        "SELECT full_request FROM dialog_metadata WHERE dialog_id = 1"
+    )
 
     assert "Chickens" == cursor.fetchone()[0]
 
@@ -328,8 +334,12 @@ def test_push_photos_info_with_many_entries(push_photos_fixture):
     assert photo_info == (cursor.fetchall())
 
 
-@pytest.mark.parametrize("dialog_id, output", [(1, (1, None, None)), (None, None)])
-def test_ensure_dialog_row_exists_with_no_row(is_archived_fixture, dialog_id, output):
+@pytest.mark.parametrize(
+    "dialog_id, output", [(1, (1, None, None)), (None, None)]
+)
+def test_ensure_dialog_row_exists_with_no_row(
+    is_archived_fixture, dialog_id, output
+):
     cursor = is_archived_fixture
 
     ensure_dialog_row_exists(cursor, dialog_id)
@@ -393,7 +403,9 @@ async def test_get_dialog_info(
     )
     mock_get_latest.assert_called_once_with(cursor, 1)
     mock_push_into.assert_called_once_with(cursor, 1, full_request)
-    mock_full_request.assert_awaited_once_with(client, dialog.entity, errors_handler)
+    mock_full_request.assert_awaited_once_with(
+        client, dialog.entity, errors_handler
+    )
     mock_ensure.assert_called_once_with(cursor, 1)
     errors_handler.handle.assert_not_awaited()
 
@@ -482,6 +494,7 @@ async def test_get_full_request_for_error(chat_mock):
     client = AsyncMock(side_effect=RuntimeError("Idk what"))
     dialog = MagicMock(spec=types.Chat)
     dialog.id = 1
+    dialog.name = "Idk what"
     errors_handler = MagicMock()
     errors_handler.handle = AsyncMock()
 
@@ -700,7 +713,9 @@ def test_insert_users_duplicate(insert_users_fixture):
 
     insert_users_ids(cursor, 1, 12)
 
-    assert [[]] == [cursor.fetchall()]  # It's empty because it the db just fetched
+    assert [[]] == [
+        cursor.fetchall()
+    ]  # It's empty because it the db just fetched
 
 
 @pytest.mark.asyncio

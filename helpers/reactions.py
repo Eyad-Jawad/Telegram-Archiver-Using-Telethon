@@ -1,7 +1,8 @@
-import sqlite3
 import logging
-from telethon import TelegramClient, functions, types, custom, tl
+import sqlite3
 from datetime import datetime
+
+from telethon import TelegramClient, custom, functions, tl, types
 
 logger = logging.getLogger(__name__)
 
@@ -41,13 +42,17 @@ async def get_reaction_list(
         try:
             request = await client(
                 functions.messages.GetMessageReactionsListRequest(
-                    peer=dialog, id=id, reaction=None, limit=10000, offset=offset
+                    peer=dialog,
+                    id=id,
+                    reaction=None,
+                    limit=10000,
+                    offset=offset,
                 )
             )
             result = request.reactions
-        except Exception as e:
+        except Exception:
             logger.exception(
-                f"Exception occurred while requesting a reaction list : {e}"
+                f"Exception occurred while requesting a reaction list at message {message.id}"
             )
 
         for react in result or []:
@@ -232,5 +237,5 @@ async def reaction_handler(
             if len(react) != 0:
                 insert_chat_reaction(cursor, react)
 
-    except Exception as e:
-        logger.exception(f"Excepetion occurred : {e}")
+    except Exception:
+        logger.exception(f"Excepetion occurred at message {message.id}")

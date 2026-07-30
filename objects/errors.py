@@ -1,8 +1,10 @@
 import asyncio
-import sqlite3
 import logging
-from .progress import Progress
+import sqlite3
+
 from telethon.errors import FloodWaitError
+
+from .progress import Progress
 
 logger = logging.getLogger(__name__)
 
@@ -51,7 +53,9 @@ class Errors:
         self.conn.commit()
 
         logger.error(f"Error occurred: {error}.")
-        logger.error(f"Error occurred at message {self.progress.last_message_id}.")
+        logger.error(
+            f"Error occurred at message {self.progress.last_message_id}."
+        )
 
         # If the error is a FloodWaitError, simply wait.
         if isinstance(error, FloodWaitError):

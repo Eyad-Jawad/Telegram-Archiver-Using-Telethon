@@ -1,17 +1,19 @@
-import pytest
-from helpers.text import *
 from unittest.mock import MagicMock, patch
+
+import pytest
 from telethon import types
+
+from helpers.text import *
 
 
 def test_reply_handler_with_no_message():
-    assert reply_handler(None, None) == 0
+    assert reply_handler(None, None) == (0, 0, "")
 
 
 def test_reply_handler_with_empty_message():
     message = MagicMock()
     message.reply_to = None
-    assert reply_handler(message, None) == 0
+    assert reply_handler(message, None) == (0, 0, "")
 
 
 def test_reply_handler_with_reply_to_user():
@@ -19,8 +21,9 @@ def test_reply_handler_with_reply_to_user():
     message.reply_to = MagicMock()
     message.reply_to.reply_to_peer_id = None
     message.reply_to_msg_id = 10
+    message.reply_to.quote_text = "Noice"
 
-    assert reply_handler(message, None) == 10
+    assert reply_handler(message, None) == (10, 0, "Noice")
 
 
 def test_reply_handler_with_reply_to_private_dialog():
@@ -31,14 +34,14 @@ def test_reply_handler_with_reply_to_private_dialog():
     message.reply_to.reply_from.from_name = "He"
     message.reply_to.quote_text = "Hi"
 
-    assert reply_handler(message, None) == "He:Hi"
+    assert reply_handler(message, None) == (0, 0, "He:Hi")
 
 
 def test_reply_handler_with_reply_to_story():
     message = MagicMock()
     message.reply_to = MagicMock(spec=types.MessageReplyStoryHeader)
 
-    assert reply_handler(message, None) == "Replied to a story"
+    assert reply_handler(message, None) == (0, 0, "Replied to a story")
 
 
 @patch("helpers.text.get_peer_id")
@@ -48,10 +51,11 @@ def test_reply_handler_with_reply_to_channel(mock_get_id):
     message.reply_to = MagicMock()
     message.reply_to.reply_to_peer_id = 1
     message.reply_to_msg_id = 10
+    message.reply_to.quote_text = "Noice"
 
     mock_get_id.return_value = 1001
 
-    assert reply_handler(message, users) == "1001:10"
+    assert reply_handler(message, users) == (10, 1001, "Noice")
     assert users == {1001}
     mock_get_id.assert_called_once_with(1)
 
@@ -112,18 +116,27 @@ def test_text_handler_with_text_message():
         (types.MessageActionChatJoinedByLink, "1234 joined."),
         (types.MessageActionChatDeleteUser, "4321 was kicked/left."),
         (types.MessageActionChatEditPhoto, "Chat photo was changed."),
-        (types.MessageActionChatEditTitle, "Chat title was changed to Da Chat."),
+        (
+            types.MessageActionChatEditTitle,
+            "Chat title was changed to Da Chat.",
+        ),
         (types.MessageActionChatCreate, "Da Chat was created with users: Me."),
         (types.MessageActionChannelCreate, "Da Chat was created."),
         (types.MessageActionHistoryClear, "Message history was cleared."),
         (types.MessageActionPhoneCall, "A video call for 10."),
-        (types.MessageActionTopicEdit, "Topic was editied: Da Chat, and emoji: 12."),
+        (
+            types.MessageActionTopicEdit,
+            "Topic was editied: Da Chat, and emoji: 12.",
+        ),
         (types.MessageActionGroupCall, "A group call for 10."),
         (
             types.MessageActionInviteToGroupCall,
             "A group call invite with the users: Me",
         ),
-        (types.MessageActionGroupCallScheduled, "A scheduled group call on Tomorrow."),
+        (
+            types.MessageActionGroupCallScheduled,
+            "A scheduled group call on Tomorrow.",
+        ),
         (None, "MagicMock was done."),
     ],
 )

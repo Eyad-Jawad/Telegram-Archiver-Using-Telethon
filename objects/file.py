@@ -1,5 +1,7 @@
 import logging
+
 from telethon import custom
+
 from helpers.local_utils import byte_to_mb
 
 logger = logging.getLogger(__name__)
@@ -71,6 +73,6 @@ class File:
             # Did not download the file, return the metadata only
             return ("", file_id, byte_to_mb(file.size), False)
 
-        except Exception as e:
-            logger.exception(f"Exception occurred : {e}")
+        except Exception:
+            logger.exception(f"Exception occurred at message {message.id}")
             return ("", "", 0.0, False)

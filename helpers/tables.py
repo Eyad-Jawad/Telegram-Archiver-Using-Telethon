@@ -1,5 +1,5 @@
-import sqlite3
 import logging
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,8 @@ def make_tables(cursor: sqlite3.Cursor) -> None:
             forward_from_username INTEGER,
             forward_from_user_id INTEGER,
             replied_to_id TEXT,
+            replied_to_entity_id INTEGER,
+            replied_to_text TEXT,
             text TEXT,
             date DATETIME,
             edit_date DATETIME,

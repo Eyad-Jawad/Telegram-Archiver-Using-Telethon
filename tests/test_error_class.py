@@ -1,7 +1,9 @@
-from objects.errors import Errors
-from unittest.mock import MagicMock, AsyncMock, patch
-from telethon.errors import FloodWaitError
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
+from telethon.errors import FloodWaitError
+
+from objects.errors import Errors
 
 
 @pytest.fixture

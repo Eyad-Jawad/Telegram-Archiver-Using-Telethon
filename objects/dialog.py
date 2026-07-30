@@ -1,22 +1,24 @@
 import asyncio
+import logging
 import sqlite3
 import time
-import logging
-from telethon import TelegramClient, types, utils, custom
+
 from rich.console import Console
+from telethon import TelegramClient, custom, types, utils
 
 from helpers.info import (
-    user_id_handler,
     entity_handler,
     get_dialog_info,
     insert_users_ids,
+    user_id_handler,
 )
-from helpers.text import *
 from helpers.reactions import reaction_handler
 from helpers.tables import make_tables
+from helpers.text import *
+
+from .config import Config as con
 from .errors import Errors as err
 from .file import File as file
-from .config import Config as con
 from .progress import Progress as prog
 
 logger = logging.getLogger(__name__)
@@ -82,11 +84,13 @@ class Dialog:
         # Initialize the needed objects
         self.progress: prog = prog(self.total_messages, self.dialog.name)
 
-        self.file: file = file(self.config.size_threshold)
+        self.file: file = file(int(self.config.size_threshold))
 
         self.error: err = err(self.conn, self.progress, self)
 
-        self.users = set()  # A set that collects entities over archiving time.
+        self.users: set[int] = (
+            set()
+        )  # A set that collects entities over archiving time.
 
         # Get the progress in case this dialog was archived before.
         checkpoint: tuple = self.get_checkpoint()
@@ -127,13 +131,17 @@ class Dialog:
                     # update the progress panel in the CLI.
                     if time.monotonic() - last_progress_refresh > 5:
                         last_progress_refresh = time.monotonic()
-                        screen.update(self.progress.make_table(), self.progress.bar)
+                        screen.update(
+                            self.progress.make_table(), self.progress.bar
+                        )
 
                     # Archive the message, this method handles it all
                     await self.archive_message(message)
 
             # Ensure the progress panel is showed at 100% at the end.
-            progress_console.print(self.progress.make_table(), self.progress.bar)
+            progress_console.print(
+                self.progress.make_table(), self.progress.bar
+            )
             progress_console.print("\n")
 
             logger.info("Done archiving messages.")
@@ -143,7 +151,11 @@ class Dialog:
                 logger.info("Parsing dialog' metadata...")
                 progress_console.print("Parsing dialog' metadata...")
                 await get_dialog_info(
-                    self.client, self.dialog, self.users, self.error, self.cursor
+                    self.client,
+                    self.dialog,
+                    self.users,
+                    self.error,
+                    self.cursor,
                 )
 
             # Check if the user wants to archive users' metadata
@@ -170,13 +182,17 @@ class Dialog:
             print(f"Done archiving {self.dialog.name}!\n\n")
 
         # Handle key interruption
-        except (KeyboardInterrupt, asyncio.CancelledError) as e:
-            logger.info(f"Exiting mid-archiving the dialog {self.dialog.name}...")
+        except KeyboardInterrupt, asyncio.CancelledError:
+            logger.info(
+                f"Exiting mid-archiving the dialog {self.dialog.name}..."
+            )
             self.handle_key_interruption()
 
         # Handle other unknown errors
         except Exception as e:
-            logger.exception(f"Exception occurred : {e}")
+            logger.exception(
+                f"Exception occurred with dialog {self.dialog.id} : {self.dialog.name}"
+            )
             await self.error.handle(e)
 
     def save_checkpoint(self) -> None:
@@ -251,6 +267,8 @@ class Dialog:
         forward_from_name = ""
         forward_from_id = 0
         replied_to_id = 0
+        replied_to_entity_id = 0
+        replied_to_text = ""
         text = ""
         date = message.date
         edit_date = message.edit_date
@@ -262,14 +280,18 @@ class Dialog:
         # Check if the user wants to archive text data
         if self.config.texts:
             author_name, sender_id = user_id_handler(message, self.users)
-            forward_from_name, forward_from_id = forward_handler(message, self.users)
-            replied_to_id = reply_handler(message, self.users)
+            forward_from_name, forward_from_id = forward_handler(
+                message, self.users
+            )
+            replied_to_id, replied_to_entity_id, replied_to_text = (
+                reply_handler(message, self.users)
+            )
             text = text_handler(message)
 
         # Check if the user wants to archive files
         if self.config.files and message.file:
-            file_path, file_id, file_size, downloaded_file = await self.file.handle(
-                message
+            file_path, file_id, file_size, downloaded_file = (
+                await self.file.handle(message)
             )
 
             # If the user doesn't want to archive files, the
@@ -281,15 +303,17 @@ class Dialog:
 
         # Check if the user wants to archive reactions
         if self.config.reactions:
-            await reaction_handler(self.client, self.dialog, message, self.cursor)
+            await reaction_handler(
+                self.client, self.dialog, message, self.cursor
+            )
 
         self.cursor.execute(
             """
             INSERT OR IGNORE INTO messages 
             (dialog_id, message_id, author_name, views, sender_id, forward_from_username, 
-            forward_from_user_id, replied_to_id, text, date, edit_date,
-            file_path, file_id, file_size, downloaded_file) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            forward_from_user_id, replied_to_id, replied_to_entity_id, replied_to_text, 
+            text, date, edit_date, file_path, file_id, file_size, downloaded_file) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             [
                 dialog_id,
@@ -300,6 +324,8 @@ class Dialog:
                 forward_from_name,
                 forward_from_id,
                 replied_to_id,
+                replied_to_entity_id,
+                replied_to_text,
                 text,
                 date,
                 edit_date,
@@ -338,4 +364,3 @@ class Dialog:
 
         # utils.clearLastLine()
         logger.info("Done handling key interruption.")
-        return

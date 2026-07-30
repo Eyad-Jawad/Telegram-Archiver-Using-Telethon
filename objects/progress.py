@@ -1,8 +1,10 @@
-import time
 import logging
-from helpers.local_utils import format_eta, byte_to_mb
-from rich.table import Table
+import time
+
 from rich.progress_bar import ProgressBar
+from rich.table import Table
+
+from helpers.local_utils import byte_to_mb, format_eta
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +30,7 @@ class Progress:
         self.total_messages: int = total_messages
         self.message_counter: int = 0
         self.last_message_id: int = 1
-        self.used_space_in_MB: int = 0
+        self.used_space_in_MB: float = 0.0
         self.time_start: float = time.perf_counter()
 
         self.bar = ProgressBar(total_messages, 0, 40)
@@ -125,8 +127,8 @@ class Progress:
 
         elapsed_time: float = time.perf_counter() - self.time_start
         msgs_per_sec: float = 0.0
-        MB_per_sec: float = "0 MB/s"
-        remaining_time: float = "N/A"
+        MB_per_sec: str = "0 MB/s"
+        remaining_time: float = 0.0
 
         # For safety
         if elapsed_time > 0:

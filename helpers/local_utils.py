@@ -1,9 +1,11 @@
 import argparse
 import logging
-from objects.config import Config
-from rich.console import Console
 from types import SimpleNamespace
-from telethon.types import User, Chat, Channel
+
+from rich.console import Console
+from telethon.types import Channel, Chat, User
+
+from objects.config import Config
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ def clear_last_line(number_of_lines: int = 1):
         print("\033[F\033[K", end="")
 
 
-def parse_args(config: Config) -> None:
+def parse_args(config: Config, args=None) -> None:
     """
     A helper function that parses the configuration of archiving
     from user in CLI.
@@ -64,6 +66,9 @@ def parse_args(config: Config) -> None:
         config (objects.config.Config):
             The config object which has the settings the user
             has provided.
+
+        args:
+            This is for testing, don't pay it a mind.
     """
 
     parser = argparse.ArgumentParser()
@@ -115,7 +120,7 @@ def parse_args(config: Config) -> None:
         help="the size threshold for files (default: 100MB)",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(args)
 
     # If the user wants to archive everything
     if args.archive_all:
@@ -152,17 +157,17 @@ def parse_args(config: Config) -> None:
 
         else:
             config.files = False
-            config.size_threshold = args.size_threshold * (1024**2)
+            config.size_threshold = 0
 
 
 def byte_to_mb(size: int) -> float:
     """A helper function that converts bytes to megabytes."""
-    return (size / 1024) / 1024
+    return size / (1024**2)
 
 
-def mb_to_byte(size: float) -> int:
+def mb_to_byte(size: float) -> float:
     """A helper function that converts megabytes to bytes."""
-    return size * 1024**2
+    return size * (1024**2)
 
 
 def print_three_dialogs(l: list, i: int, con: Console) -> None:
@@ -190,12 +195,16 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
 
     # If there's not dialog
     if len(l) == 0:
-        con.print("There's no dialog to work with.\n")
+        con.print(
+            "There's no dialog to work with, do you want to input your own dialog? (i)\n"
+        )
         return
 
     # If there's one dialog
     if len(l) == 1:
-        con.print(f"Do you want to archive: {l[0].name}? (y, q to exit)")
+        con.print(
+            f"Do you want to archive: {l[0].name}? (y, q to exit, i to input your own dialog)"
+        )
         return
 
     # If there are two dialogs
@@ -211,11 +220,19 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
 
     # If we are at the first dialog of the dialogs list
     if i == 0:
-        to_print = [f"{len(l)}.{l[-1].name}", f"1.{l[0].name}", f"2.{l[1].name}"]
+        to_print = [
+            f"{len(l)}.{l[-1].name}",
+            f"1.{l[0].name}",
+            f"2.{l[1].name}",
+        ]
 
     # If we are at the last dialog of the dialogs list
     elif i + 1 == len(l):
-        to_print = [f"{i}.{l[i - 1].name}", f"{i + 1}.{l[i].name}", f"1.{l[0].name}"]
+        to_print = [
+            f"{i}.{l[i - 1].name}",
+            f"{i + 1}.{l[i].name}",
+            f"1.{l[0].name}",
+        ]
 
     # If we are not near any boundary of the list
     # i.e. a normal situation
@@ -257,6 +274,10 @@ def handle_index(i: int, amount: int, list_length: int) -> int:
             The new index.
     """
 
+    # Normalize in case the function recieves
+    # input higher than 1
+    amount = -1 if amount < 0 else 1
+
     # Case: Increment
     if amount == 1:
         # If we are at the last element flip the index
@@ -290,7 +311,8 @@ def construct_fake_dialog(entity) -> SimpleNamespace:
     """
 
     if isinstance(entity, User):
-        name = f"{entity.first_name} {entity.last_name}"
+        # Last name could be None
+        name = " ".join(filter(None, [entity.first_name, entity.last_name]))
     elif isinstance(entity, (Chat, Channel)):
         name = entity.title
     else:

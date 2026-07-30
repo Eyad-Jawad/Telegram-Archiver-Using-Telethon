@@ -1,6 +1,8 @@
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
+
 from objects.file import File
-from unittest.mock import MagicMock, AsyncMock
 
 
 @pytest.fixture()
@@ -80,4 +82,9 @@ async def test_file_handle_with_big_file(file_class):
     message.photo = None
     message.file = file
 
-    assert await file_class.handle(message) == ("", "ijk", 4.76837158203125e-05, False)
+    assert await file_class.handle(message) == (
+        "",
+        "ijk",
+        4.76837158203125e-05,
+        False,
+    )

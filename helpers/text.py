@@ -1,11 +1,14 @@
 import logging
-from telethon import types, custom
+
+from telethon import custom, types
 from telethon.utils import get_peer_id
 
 logger = logging.getLogger(__name__)
 
 
-def reply_handler(message: custom.message.Message, users: set[int]) -> str | int:
+def reply_handler(
+    message: custom.message.Message, users: set[int]
+) -> tuple[int, int, str]:
     """
     A function that handles message replies. It has many edge cases:
     reply to user, reply to private chat, reply to channel, and perhaps more.
@@ -19,16 +22,18 @@ def reply_handler(message: custom.message.Message, users: set[int]) -> str | int
             entity ids accumulate over the time archiving.
 
     Returns:
-        int | str:
-            int in case of normal user id, and str in
-            all the other cases.
+        tuple(
+            int (message id),
+            int (entity id, if it's not from this dialog),
+            str (entity name : replied to text, in case both
+                of the above fail, or a describtion of the thing),
     """
 
     # check if this message is a reply to another
     try:
         # for safety
         if not message or not message.reply_to:
-            return 0
+            return (0, 0, "")
 
         # check if it's from a user or a channel
         replied_to = message.reply_to
@@ -36,14 +41,18 @@ def reply_handler(message: custom.message.Message, users: set[int]) -> str | int
         # What to do with a reply to a story
         # temp solution unitl I make some stuff for stories
         if isinstance(replied_to, types.MessageReplyStoryHeader):
-            return "Replied to a story"
+            return (0, 0, "Replied to a story")
 
         if not (replied_to and replied_to.reply_to_peer_id):
             # This case is for replies from private dialogs
             if not message.reply_to_msg_id:
-                return f"{message.reply_to.reply_from.from_name}:{message.reply_to.quote_text}"
+                return (
+                    0,
+                    0,
+                    f"{message.reply_to.reply_from.from_name}:{message.reply_to.quote_text}",
+                )
 
-            return message.reply_to_msg_id
+            return (message.reply_to_msg_id, 0, message.reply_to.quote_text)
 
         # if it's from a channel
         replied_to_id = get_peer_id(replied_to.reply_to_peer_id)
@@ -51,11 +60,15 @@ def reply_handler(message: custom.message.Message, users: set[int]) -> str | int
         if replied_to_id not in users:
             users.add(replied_to_id)
 
-        return f"{replied_to_id}:{message.reply_to_msg_id}"
+        return (
+            message.reply_to_msg_id,
+            replied_to_id,
+            message.reply_to.quote_text,
+        )
 
-    except Exception as e:
-        logger.exception(f"Exception occurred : {e}")
-        return 0
+    except Exception:
+        logger.exception(f"Exception occurred at message {message.id}")
+        return (0, 0, "")
 
 
 def forward_handler(
@@ -101,8 +114,8 @@ def forward_handler(
 
         return (forward_from_name, peer_id)
 
-    except Exception as e:
-        logger.exception(f"Exception occurred : {e}")
+    except Exception:
+        logger.exception(f"Exception occurred at message {message.id}")
         return ("", 0)
 
 
@@ -122,22 +135,36 @@ def text_handler(message: custom.message.Message) -> str:
     """
 
     action_handlers = {
-        types.MessageActionPinMessage: lambda a: "A message was pinned.",
-        types.MessageActionChatAddUser: lambda a: f"{a.users} was added.",
-        types.MessageActionChatJoinedByLink: lambda a: f"{a.inviter_id} joined.",
+        types.MessageActionPinMessage: lambda a: ("A message was pinned."),
+        types.MessageActionChatAddUser: lambda a: (f"{a.users} was added."),
+        types.MessageActionChatJoinedByLink: lambda a: (
+            f"{a.inviter_id} joined."
+        ),
         types.MessageActionChatJoinedByRequest: lambda a: "A user joined by request.",
         types.MessageActionChatDeleteUser: lambda a: f"{a.user_id} was kicked/left.",
-        types.MessageActionChatEditPhoto: lambda a: f"Chat photo was changed.",
+        types.MessageActionChatEditPhoto: lambda a: "Chat photo was changed.",
         types.MessageActionChatDeletePhoto: lambda a: "Chat photo was deleted.",
-        types.MessageActionChatEditTitle: lambda a: f"Chat title was changed to {a.title}.",
-        types.MessageActionChatCreate: lambda a: f"{a.title} was created with users: {a.users}.",
+        types.MessageActionChatEditTitle: lambda a: (
+            f"Chat title was changed to {a.title}."
+        ),
+        types.MessageActionChatCreate: lambda a: (
+            f"{a.title} was created with users: {a.users}."
+        ),
         types.MessageActionChannelCreate: lambda a: f"{a.title} was created.",
         types.MessageActionHistoryClear: lambda a: "Message history was cleared.",
-        types.MessageActionPhoneCall: lambda a: f"A {"video" if a.video else ""} call for {a.duration}.",
-        types.MessageActionTopicEdit: lambda a: f"Topic was editied: {a.title}, and emoji: {a.icon_emoji_id}.",
+        types.MessageActionPhoneCall: lambda a: (
+            f"A {'video' if a.video else ''} call for {a.duration}."
+        ),
+        types.MessageActionTopicEdit: lambda a: (
+            f"Topic was editied: {a.title}, and emoji: {a.icon_emoji_id}."
+        ),
         types.MessageActionGroupCall: lambda a: f"A group call for {a.duration}.",
-        types.MessageActionInviteToGroupCall: lambda a: f"A group call invite with the users: {a.users}",
-        types.MessageActionGroupCallScheduled: lambda a: f"A scheduled group call on {a.schedule_date}.",
+        types.MessageActionInviteToGroupCall: lambda a: (
+            f"A group call invite with the users: {a.users}"
+        ),
+        types.MessageActionGroupCallScheduled: lambda a: (
+            f"A scheduled group call on {a.schedule_date}."
+        ),
     }
 
     text = ""

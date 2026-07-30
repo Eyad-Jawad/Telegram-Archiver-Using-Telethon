@@ -8,7 +8,7 @@ class Config:
     dialog_metadata: bool = True
     user_metadata: bool = True
     files: bool = True
-    size_threshold: int = (
+    size_threshold: float = (
         1024**2
     ) * 100  # file size threshold in bytes (default: 100 MB)
 
