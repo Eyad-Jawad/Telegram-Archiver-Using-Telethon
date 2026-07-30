@@ -182,7 +182,7 @@ class Dialog:
             print(f"Done archiving {self.dialog.name}!\n\n")
 
         # Handle key interruption
-        except KeyboardInterrupt, asyncio.CancelledError:
+        except (KeyboardInterrupt, asyncio.CancelledError):
             logger.info(
                 f"Exiting mid-archiving the dialog {self.dialog.name}..."
             )

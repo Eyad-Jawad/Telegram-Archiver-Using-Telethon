@@ -13,3 +13,5 @@ Media/
 *cache
 .python-version
 .coverage
+tox.ini
+.tox/
