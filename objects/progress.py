@@ -120,18 +120,18 @@ class Progress:
 
         # For safety
         if self.total_messages <= 0:
-            table.add_row(0, "0s", "N/A", 0, 0, 0)
+            table.add_row("0", "0", "0s", "N/A", "0 msg/s", "0 MB", "0 MB/s")
             return table
 
         elapsed_time: float = time.perf_counter() - self.time_start
         msgs_per_sec: float = 0.0
-        MB_per_sec: float = 0.0
-        remaining_time: float = 0.0
+        MB_per_sec: float = "0 MB/s"
+        remaining_time: float = "N/A"
 
         # For safety
         if elapsed_time > 0:
             msgs_per_sec = self.message_counter / elapsed_time
-            MB_per_sec = f"{self.used_space_in_MB / elapsed_time:.3f}MB/s"
+            MB_per_sec = f"{self.used_space_in_MB / elapsed_time:.3f} MB/s"
             # For safety
             if msgs_per_sec > 0:
                 remaining_time = (
@@ -145,8 +145,8 @@ class Progress:
             str(self.total_messages - self.message_counter),
             format_eta(elapsed_time),
             format_eta(remaining_time),
-            f"{msgs_per_sec:.3f}msg/s",
-            f"{self.used_space_in_MB:.3f}MB",
+            f"{msgs_per_sec:.3f} msg/s",
+            f"{self.used_space_in_MB:.3f} MB",
             MB_per_sec,
         )
 
