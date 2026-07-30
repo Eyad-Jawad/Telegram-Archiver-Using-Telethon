@@ -152,7 +152,7 @@ def insert_info_into_appropriate_table(
     # Insert new metadata into dialog_metadata
     cursor.execute(
         "UPDATE dialog_metadata SET full_request = ?, date_of_request = ? WHERE dialog_id = ?",
-        [full_request, datetime.now(), dialog_id],
+        [full_request, datetime.now(timezone.utc).isoformat(), dialog_id],
     )
 
 

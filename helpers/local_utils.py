@@ -5,8 +5,8 @@ from rich.console import Console
 from types import SimpleNamespace
 from telethon.types import User, Chat, Channel
 
-
 logger = logging.getLogger(__name__)
+
 
 def format_eta(seconds: float) -> str:
     """
@@ -176,7 +176,7 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
 
         i (int):
             The current dialog's index.
-        
+
         console (rich.console.Console):
             The object which we will use to print things.
     """
@@ -203,7 +203,7 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
         con.print(
             FIRST_LINE,
             f"> [bold black on cyan]1.{l[0].name}[/]\n",
-            f"  2.{l[1].name}\n"
+            f"  2.{l[1].name}\n",
         )
         return
 
@@ -220,27 +220,31 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
     # If we are not near any boundary of the list
     # i.e. a normal situation
     else:
-        to_print = [f"{i}.{l[i - 1].name}", f"{i + 1}.{l[i].name}", f"{i + 2}.{l[i + 1].name}"]
+        to_print = [
+            f"{i}.{l[i - 1].name}",
+            f"{i + 1}.{l[i].name}",
+            f"{i + 2}.{l[i + 1].name}",
+        ]
 
     con.print(
-            FIRST_LINE,
-            f"  {to_print[0]}\n",
-            f"> [bold black on cyan]{to_print[1]}[/]\n",
-            f"  {to_print[2]}\n"
-        )
-    
+        FIRST_LINE,
+        f"  {to_print[0]}\n",
+        f"> [bold black on cyan]{to_print[1]}[/]\n",
+        f"  {to_print[2]}\n",
+    )
+
     return
 
 
 def handle_index(i: int, amount: int, list_length: int) -> int:
     """
-    A function that handles incrementing, and decrementing 
+    A function that handles incrementing, and decrementing
     an index so that it doesn't get out of boundary.
 
     Args:
         i (int):
             The index one wants to increment.
-        
+
         amount (int):
             The amount you want to increment or decrement from
             the index.
@@ -258,14 +262,14 @@ def handle_index(i: int, amount: int, list_length: int) -> int:
         # If we are at the last element flip the index
         if i + 1 == list_length:
             return 0
-        
+
         return i + 1
-    
+
     # Case: Decrement
     # If we are at the first element flip the index as well
     if i == 0:
         return list_length - 1
-    
+
     return i - 1
 
 
@@ -279,7 +283,7 @@ def construct_fake_dialog(entity) -> SimpleNamespace:
     Args:
         entity:
             The object that you get from client.get_entity().
-    
+
     Returns:
         SimpleNamespace:
             An object that simulates a fake dialog.

@@ -7,7 +7,12 @@ import readchar
 from dotenv import load_dotenv
 from telethon import TelegramClient, types
 from datetime import datetime
-from helpers.local_utils import parse_args, construct_fake_dialog, print_three_dialogs, handle_index
+from helpers.local_utils import (
+    parse_args,
+    construct_fake_dialog,
+    print_three_dialogs,
+    handle_index,
+)
 from objects.config import Config
 from objects.dialog import Dialog
 from rich.console import Console
@@ -75,16 +80,17 @@ async def main():
                 logger.info("Exited the program by pressing q.")
                 exit(0)
 
-            # If the user pressed arrow up, go back a dialog
+            # If the user pressed arrow up, go up a dialog
             if key == readchar.key.UP:
                 current_dialog = handle_index(current_dialog, -1, len(dialogs))
                 continue
 
-            # If the user pressed anything other than y or Enter, go up a dialog
+            # If the user pressed anything other than y, i, Enter, go down a dialog
             if key.lower() != "y" and key.lower() != "i" and key != readchar.key.ENTER:
                 current_dialog = handle_index(current_dialog, 1, len(dialogs))
                 continue
 
+            # If the user pressed i, show the UI for archiving dialogs outside user's own
             if key.lower() == "i":
                 console.print("""
                     Please write down the dialog you want to archive, it can be:

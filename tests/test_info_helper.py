@@ -268,7 +268,9 @@ def test_push_info_for_not_archived(push_info_fixture):
 def test_push_info_with_archived(mock_datetime, push_info_fixture):
     cursor = push_info_fixture
 
-    mock_datetime.now.return_value = "Just now"
+    DATES = date_consts()
+
+    mock_datetime.now.return_value = DATES[2]
 
     cursor.execute(
         "INSERT INTO dialog_metadata (dialog_id, full_request, date_of_request) VALUES (?, ?, ?)",
@@ -278,7 +280,7 @@ def test_push_info_with_archived(mock_datetime, push_info_fixture):
 
     cursor.execute("SELECT * FROM dialog_metadata WHERE dialog_id = 1")
 
-    assert (1, "Chicken wings", "Just now") == cursor.fetchone()
+    assert (1, "Chicken wings", DATES[2].isoformat()) == cursor.fetchone()
 
     cursor.execute("SELECT * FROM dialog_metadata_archive WHERE dialog_id = 1")
 
