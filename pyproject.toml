@@ -34,6 +34,10 @@ ignore_missing_imports = true
 testpaths = ["tests"]
 addopts = "--cov=."
 
+[tool.coverage.run]
+source = ["."]
+omit = ["tests/*"]
+
 [tool.ruff]
 line-length = 80
 
