@@ -112,9 +112,9 @@ Or you could use uv, you can also run:
 pip install uv
 uv sync
 uv run python -m pytest
-ruff check .
-black .
-mypy .
+uv run ruff check .
+uv run black .
+uv run mypy .
 
 ```
 
