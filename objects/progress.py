@@ -73,7 +73,7 @@ class Progress:
             return
 
         if last_message_id <= 0:
-            logger.error("Recieved negative message id.")
+            logger.error("received negative message id.")
 
         self.message_counter += 1
         self.last_message_id = last_message_id

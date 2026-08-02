@@ -19,14 +19,14 @@ def test_file_class_attributes():
 
 @pytest.mark.asyncio
 async def test_file_handle_with_no_message(file_class):
-    assert await file_class.handle(None) == ("", "", 0.0, False)
+    assert await file_class.handle(None) == ("", "", "", 0.0, False)
 
 
 @pytest.mark.asyncio
 async def test_file_handle_with_no_file(file_class):
     message = AsyncMock()
     message.file = None
-    assert await file_class.handle(message) == ("", "", 0.0, False)
+    assert await file_class.handle(message) == ("", "", "", 0.0, False)
 
 
 @pytest.mark.asyncio
@@ -37,6 +37,7 @@ async def test_file_handle_with_photo(file_class):
 
     photo.id = "xyz"
     file.size = 4
+    file.name = "Photo"
     message.photo = photo
     message.file = file
 
@@ -44,6 +45,7 @@ async def test_file_handle_with_photo(file_class):
 
     assert await file_class.handle(message) == (
         "Somewhere",
+        "Photo",
         "xyz",
         3.814697265625e-06,
         True,
@@ -58,6 +60,7 @@ async def test_file_handle_with_file(file_class):
 
     file.size = 2
     file.id = "zyx"
+    file.name = "Big nose"
     message.photo = None
     message.file = file
 
@@ -65,6 +68,7 @@ async def test_file_handle_with_file(file_class):
 
     assert await file_class.handle(message) == (
         "There",
+        "Big nose",
         "zyx",
         1.9073486328125e-06,
         True,
@@ -79,11 +83,13 @@ async def test_file_handle_with_big_file(file_class):
 
     file.size = 50
     file.id = "ijk"
+    file.name = "Blueprint"
     message.photo = None
     message.file = file
 
     assert await file_class.handle(message) == (
         "",
+        "Blueprint",
         "ijk",
         4.76837158203125e-05,
         False,

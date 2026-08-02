@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 
 
 async def main():
-    # Set up the main tasks so we can cancel them if interruptted mid-archiving
+    # Set up the main tasks so we can cancel them if interrupted mid-archiving
     loop = asyncio.get_running_loop()
     main_task = asyncio.current_task()
     logging.basicConfig(filename="archiving.log", level=logging.INFO)

@@ -42,7 +42,7 @@ def user_id_handler(
         # no sender id return empty things
         elif not message.sender_id:
             logger.warning(
-                f"A message where no name or id was recieved: {message}."
+                f"A message where no name or id was received: {message}."
             )
             return ("", 0)
 
@@ -131,8 +131,8 @@ def insert_info_into_appropriate_table(
             The id of the entity.
 
         full_request (str):
-            A srting of the full request recieved from telegram of
-            the dilaog we are archiving its metadata.
+            A srting of the full request received from telegram of
+            the dialog we are archiving its metadata.
     """
 
     # Check if the dialog's metadata was archived before
@@ -227,7 +227,7 @@ async def get_dialog_info(
     cursor: sqlite3.Cursor,
 ) -> None:
     """
-    A function that handles all things having to do with info, uesr ids, or metadata
+    A function that handles all things having to do with info, user ids, or metadata
 
     Args:
         client (telethon.TelegramClient):
@@ -281,8 +281,8 @@ async def get_full_request(
 
     Retunrs:
         str:
-            A srting of the full request recieved from telegram of
-            the dilaog we are archiving its metadata.
+            A srting of the full request received from telegram of
+            the dialog we are archiving its metadata.
     """
 
     try:

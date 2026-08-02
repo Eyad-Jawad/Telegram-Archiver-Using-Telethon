@@ -273,6 +273,7 @@ class Dialog:
         date = message.date
         edit_date = message.edit_date
         file_path = ""
+        file_name = ""
         file_id = ""
         file_size = 0.0
         downloaded_file = False
@@ -290,7 +291,7 @@ class Dialog:
 
         # Check if the user wants to archive files
         if self.config.files and message.file:
-            file_path, file_id, file_size, downloaded_file = (
+            file_path, file_name, file_id, file_size, downloaded_file = (
                 await self.file.handle(message)
             )
 
@@ -312,8 +313,8 @@ class Dialog:
             INSERT OR IGNORE INTO messages 
             (dialog_id, message_id, author_name, views, sender_id, forward_from_username, 
             forward_from_user_id, replied_to_id, replied_to_entity_id, replied_to_text, 
-            text, date, edit_date, file_path, file_id, file_size, downloaded_file) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            text, date, edit_date, file_path, file_name, file_id, file_size, downloaded_file) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
             [
                 dialog_id,
@@ -330,6 +331,7 @@ class Dialog:
                 date,
                 edit_date,
                 file_path,
+                file_name,
                 file_id,
                 file_size,
                 downloaded_file,

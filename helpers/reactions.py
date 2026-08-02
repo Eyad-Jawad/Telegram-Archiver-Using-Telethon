@@ -238,4 +238,4 @@ async def reaction_handler(
                 insert_chat_reaction(cursor, react)
 
     except Exception:
-        logger.exception(f"Excepetion occurred at message {message.id}")
+        logger.exception(f"Exception occurred at message {message.id}")

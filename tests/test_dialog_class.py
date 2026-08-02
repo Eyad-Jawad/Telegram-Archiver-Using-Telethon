@@ -93,6 +93,7 @@ def archive_message_fixture():
             date DATETIME,
             edit_date DATETIME,
             file_path TEXT,
+            file_name TEXT,
             file_id TEXT,
             file_size FLOAT NOT NULL DEFAULT 0.0,
             downloaded_file BOOL NOT NULL DEFAULT FALSE,
@@ -462,7 +463,7 @@ async def test_dialog_archive_message(
     config.reactions = True
 
     file.handle = AsyncMock()
-    file.handle.return_value = ["There", "Secret", 3.0, 1]
+    file.handle.return_value = ["There", "Name", "Secret", 3.0, 1]
 
     progress.used_space_in_MB = 25
 
@@ -508,6 +509,7 @@ async def test_dialog_archive_message(
         "Today",
         "Just now",
         "There",
+        "Name",
         "Secret",
         3.0,
         1,

@@ -45,6 +45,7 @@ def make_tables(cursor: sqlite3.Cursor) -> None:
             date DATETIME,
             edit_date DATETIME,
             file_path TEXT,
+            file_name TEXT,
             file_id TEXT,
             file_size FLOAT NOT NULL DEFAULT 0.0,
             downloaded_file BOOL NOT NULL DEFAULT FALSE,

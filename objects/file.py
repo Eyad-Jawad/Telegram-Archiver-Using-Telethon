@@ -25,7 +25,7 @@ class File:
 
     async def handle(
         self, message: custom.message.Message
-    ) -> tuple[str, str, float, bool]:
+    ) -> tuple[str, str, str, float, bool]:
         """
         A method that handles downloading a file, and getting its metadata.
 
@@ -36,6 +36,7 @@ class File:
         Returns:
             Tuple: [
                 str (File path, if downloaded, else empty),
+                str (File name, if it has one, else empty)
                 str (File id, id there's any, else emtpy),
                 float (File size in megabytes, if there's any, else 0.0),
                 bool (Downloaded file, True for yes and False for no, which can
@@ -48,12 +49,14 @@ class File:
             if not message or not message.file:
                 return (
                     "",  # File path
+                    "",  # File name
                     "",  # File id
                     0.0,  # File size
                     False,  # Downloaded file (flag)
                 )
 
             file = message.file
+            file_name = file.name or ""
 
             file_id = None
 
@@ -68,11 +71,17 @@ class File:
             if file.size < self.size_threshold:
                 file_path = await message.download_media(file=self.PATH)
 
-                return (file_path, file_id, byte_to_mb(file.size), True)
+                return (
+                    file_path,
+                    file_name,
+                    file_id,
+                    byte_to_mb(file.size),
+                    True,
+                )
 
             # Did not download the file, return the metadata only
-            return ("", file_id, byte_to_mb(file.size), False)
+            return ("", file_name, file_id, byte_to_mb(file.size), False)
 
         except Exception:
             logger.exception(f"Exception occurred at message {message.id}")
-            return ("", "", 0.0, False)
+            return ("", "", "", 0.0, False)
