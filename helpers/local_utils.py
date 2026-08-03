@@ -100,6 +100,12 @@ def parse_args(config: Config, args=None) -> None:
         help="archive info of users in a dialog, like name, bio, pfps, and etc.",
     )
     parser.add_argument(
+        "-k",
+        "--archive-stickers-info",
+        action="store_true",
+        help="archive info of sticker sets like links and the sort.",
+    )
+    parser.add_argument(
         "-f",
         "--archive-file",
         action="store_true",
@@ -128,6 +134,7 @@ def parse_args(config: Config, args=None) -> None:
         config.reactions = True
         config.dialog_metadata = True
         config.user_metadata = True
+        config.stickers = True
         config.files = True
         config.size_threshold = float("inf")
 
@@ -137,6 +144,7 @@ def parse_args(config: Config, args=None) -> None:
         config.reactions = args.archive_reactions
         config.dialog_metadata = args.archive_dialog_info
         config.user_metadata = args.archive_user_info
+        config.stickers = args.archive_stickers_info
         config.files = args.archive_file
 
         # If big files are toggled on means no size limit is needed

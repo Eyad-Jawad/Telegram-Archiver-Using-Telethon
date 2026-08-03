@@ -24,7 +24,6 @@ from objects.dialog import Dialog
 TODO:
 Unit tests / pytest
 Handle migration
-Sticker packs handler
 forwarded from Pic
 stories
 special emoticon

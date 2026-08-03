@@ -25,24 +25,45 @@ def test_format_eta(seconds, output):
 
 @pytest.mark.parametrize(
     (
-        "args, texts, reactions, dialog_metadata, user_metadata, files, size_threshold"
+        "args, texts, reactions, dialog_metadata, user_metadata, stickers, files, size_threshold"
     ),
     [
-        [[], False, False, False, False, False, 0],
-        [["--archive-all"], True, True, True, True, True, float("inf")],
-        [["-a"], True, True, True, True, True, float("inf")],
-        [["--archive-text"], True, False, False, False, True, 0],
-        [["-t"], True, False, False, False, True, 0],
-        [["--archive-reactions"], False, True, False, False, False, 0],
-        [["-r"], False, True, False, False, False, 0],
-        [["--archive-dialog-info"], False, False, True, False, False, 0],
-        [["-d"], False, False, True, False, False, 0],
-        [["--archive-user-info"], False, False, False, True, False, 0],
-        [["-u"], False, False, False, True, False, 0],
-        [["--archive-file"], False, False, False, False, True, 104_857_600],
-        [["-f"], False, False, False, False, True, 104_857_600],
+        [[], False, False, False, False, False, False, 0],
+        [["--archive-all"], True, True, True, True, True, True, float("inf")],
+        [["-a"], True, True, True, True, True, True, float("inf")],
+        [["--archive-text"], True, False, False, False, False, True, 0],
+        [["-t"], True, False, False, False, False, True, 0],
+        [["--archive-reactions"], False, True, False, False, False, False, 0],
+        [["-r"], False, True, False, False, False, False, 0],
+        [["--archive-dialog-info"], False, False, True, False, False, False, 0],
+        [["-d"], False, False, True, False, False, False, 0],
+        [["--archive-user-info"], False, False, False, True, False, False, 0],
+        [["-u"], False, False, False, True, False, False, 0],
+        [
+            ["--archive-stickers-info"],
+            False,
+            False,
+            False,
+            False,
+            True,
+            False,
+            0,
+        ],
+        [["-k"], False, False, False, False, True, False, 0],
+        [
+            ["--archive-file"],
+            False,
+            False,
+            False,
+            False,
+            False,
+            True,
+            104_857_600,
+        ],
+        [["-f"], False, False, False, False, False, True, 104_857_600],
         [
             ["--archive-big-files"],
+            False,
             False,
             False,
             False,
@@ -50,9 +71,10 @@ def test_format_eta(seconds, output):
             True,
             float("inf"),
         ],
-        [["-b"], False, False, False, False, True, float("inf")],
+        [["-b"], False, False, False, False, False, True, float("inf")],
         [
             ["-f", "--size-threshold", "1"],
+            False,
             False,
             False,
             False,
@@ -60,9 +82,10 @@ def test_format_eta(seconds, output):
             True,
             1_048_576,
         ],
-        [["-f", "-s", "1"], False, False, False, False, True, 1_048_576],
+        [["-f", "-s", "1"], False, False, False, False, False, True, 1_048_576],
         [
             ["-f", "--size-threshold", "10"],
+            False,
             False,
             False,
             False,
@@ -70,9 +93,19 @@ def test_format_eta(seconds, output):
             True,
             10_485_760,
         ],
-        [["-f", "-s", "10"], False, False, False, False, True, 10_485_760],
+        [
+            ["-f", "-s", "10"],
+            False,
+            False,
+            False,
+            False,
+            False,
+            True,
+            10_485_760,
+        ],
         [
             ["-f", "--size-threshold", "1000"],
+            False,
             False,
             False,
             False,
@@ -80,17 +113,27 @@ def test_format_eta(seconds, output):
             True,
             1_048_576_000,
         ],
-        [["-f", "-s", "1000"], False, False, False, False, True, 1_048_576_000],
+        [
+            ["-f", "-s", "1000"],
+            False,
+            False,
+            False,
+            False,
+            False,
+            True,
+            1_048_576_000,
+        ],
         [
             ["-t", "--archive-dialog-info", "-f"],
             True,
             False,
             True,
             False,
+            False,
             True,
             104_857_600,
         ],
-        [["-u", "-r"], False, True, False, True, False, 0],
+        [["-u", "-r"], False, True, False, True, False, False, 0],
     ],
 )
 def test_parse_agrs(
@@ -99,6 +142,7 @@ def test_parse_agrs(
     reactions,
     dialog_metadata,
     user_metadata,
+    stickers,
     files,
     size_threshold,
 ):
@@ -109,6 +153,7 @@ def test_parse_agrs(
     assert config.reactions == reactions
     assert config.dialog_metadata == dialog_metadata
     assert config.user_metadata == user_metadata
+    assert config.stickers == stickers
     assert config.files == files
     assert config.size_threshold == size_threshold
 

@@ -436,7 +436,9 @@ def test_dialog_key_interruption_with_many_users(
 @patch("objects.dialog.reply_handler")
 @patch("objects.dialog.text_handler")
 @patch("objects.dialog.reaction_handler", new_callable=AsyncMock)
+@patch("objects.dialog.stickers_handler", new_callable=AsyncMock)
 async def test_dialog_archive_message(
+    mock_stickers,
     mock_reaction,
     mock_text,
     mock_reply,
@@ -455,6 +457,7 @@ async def test_dialog_archive_message(
     message.views = 600
     message.file = MagicMock()
     message.file.size = 100
+    message.file.sticker_set = "Just a str for testing, not important"
     message.date = "Today"
     message.edit_date = "Just now"
 
@@ -482,6 +485,12 @@ async def test_dialog_archive_message(
     mock_text.assert_called_once_with(message)
 
     file.handle.assert_awaited_once_with(message)
+    mock_stickers.assert_awaited_once_with(
+        mock_dialog_class["mock_client"],
+        message,
+        1,
+        archive_message_fixture,
+    )
     assert progress.used_space_in_MB == 25
 
     mock_reaction.assert_awaited_once_with(

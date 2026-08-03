@@ -7,6 +7,7 @@ class Config:
     reactions: bool = True
     dialog_metadata: bool = True
     user_metadata: bool = True
+    stickers: bool = True
     files: bool = True
     size_threshold: float = (
         1024**2
@@ -18,6 +19,7 @@ class Config:
             reactions : {self.reactions}
             dialog_metadata : {self.dialog_metadata}
             user_metadata : {self.user_metadata}
+            sticker : {self.stickers}
             files : {self.files}
             size_threshold : {self.size_threshold}
         """

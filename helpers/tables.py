@@ -101,3 +101,16 @@ def make_tables(cursor: sqlite3.Cursor) -> None:
             photo_date DATETIME
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS sticker_sets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dialog_id INTEGER,
+            message_id INTEGER,
+            pack_name TEXT,
+            pack_link TEXT,
+            sticker_set_id INTEGER,
+            access_hash INTEGER,
+            UNIQUE(dialog_id, message_id)
+        )
+    """)

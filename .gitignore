@@ -6,6 +6,7 @@ Media/
 
 # And a database where data is saved
 telegram.db
+telegram.db-journal
 *.db
 
 # The file where keys are saved

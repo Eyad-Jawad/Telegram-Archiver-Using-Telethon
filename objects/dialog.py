@@ -13,6 +13,7 @@ from helpers.info import (
     user_id_handler,
 )
 from helpers.reactions import reaction_handler
+from helpers.stickers import stickers_handler
 from helpers.tables import make_tables
 from helpers.text import *
 
@@ -290,17 +291,25 @@ class Dialog:
             text = text_handler(message)
 
         # Check if the user wants to archive files
-        if self.config.files and message.file:
-            file_path, file_name, file_id, file_size, downloaded_file = (
-                await self.file.handle(message)
-            )
+        if message.file:
+            if self.config.files:
+                file_path, file_name, file_id, file_size, downloaded_file = (
+                    await self.file.handle(message)
+                )
 
-            # If the user doesn't want to archive files, the
-            # program will save the files' metadata either way
-            # and self.config.files would be true, but the size
-            # threshold is 0
-            if self.config.size_threshold != 0:
-                self.progress.update_file_progress(message.file.size)
+                # If the user doesn't want to archive files, the
+                # program will save the files' metadata either way
+                # and self.config.files would be true, but the size
+                # threshold is 0
+                if self.config.size_threshold != 0:
+                    self.progress.update_file_progress(message.file.size)
+
+            # Check if the user wants to archive stickers, and if
+            # this message is a sticker
+            if self.config.stickers and message.file.sticker_set:
+                await stickers_handler(
+                    self.client, message, self.id, self.cursor
+                )
 
         # Check if the user wants to archive reactions
         if self.config.reactions:

@@ -33,7 +33,7 @@ class Progress:
         self.used_space_in_MB: float = 0.0
         self.time_start: float = time.perf_counter()
 
-        self.bar = ProgressBar(total_messages, 0, 40)
+        self.bar = ProgressBar(total_messages, 0)
 
     def use_checkpoint(self, checkpoint: tuple[int, int, float]) -> None:
         """
