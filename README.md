@@ -84,6 +84,7 @@ The last two things `-t -d` are arugments for the program, read the next section
 `-r`, `--archive-reactions`: `archive message reactions`  
 `-d`, `--archive-dialog-info`: `archive dialog info like title, bio, pfps, and etc.`  
 `-u`, `--archive-user-info`: `archive info of users in a dialog, like name, bio, pfps, and etc.`  
+`-k`, `--archive-stickers-info`: `archive info of sticker sets like links and the sort.`  
 `-f`, `--archive-file`: `archive files, like photos, videos, documents, and etc. with a size threshold (default: 100MB)`  
 `-b`, `--archive-big-files`: `archive all files ignoring the default of 100MB`  
 `-s`, `--size-threshold` : `the size threshold for files (default: 100MB)`    
