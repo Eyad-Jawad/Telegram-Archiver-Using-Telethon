@@ -77,6 +77,8 @@ async def get_sticker_set_info(
             )
         )
 
+        sticker_set = sticker_set.set
+
         return (
             sticker_set.title,
             "https://t.me/addstickers/" + sticker_set.short_name,
@@ -173,6 +175,10 @@ async def stickers_handler(
         return
 
     sticker_set = message.file.sticker_set
+
+    if isinstance(sticker_set, types.InputStickerSetEmpty):
+        return
+
     message_info = (dialog_id, message.id)
 
     # Check if the sticker set was archived before so we can

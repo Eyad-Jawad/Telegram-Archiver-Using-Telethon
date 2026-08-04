@@ -167,8 +167,8 @@ async def test_get_sticker_set_info_with_valid_sticker_set(
 ):
     client = AsyncMock()
     result = MagicMock()
-    result.title = "Pack"
-    result.short_name = "add"
+    result.set.title = "Pack"
+    result.set.short_name = "add"
     mock_requset.return_value = "called"
 
     client.return_value = result
