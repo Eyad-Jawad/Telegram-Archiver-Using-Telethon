@@ -95,6 +95,23 @@ async def test_stickers_handler_with_no_sticker_set(
 @patch("helpers.stickers.find_sticker_set_in_db")
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
+async def test_stickers_handler_with_empty_sticker_set(
+    mock_get_info, mock_insert, mock_find
+):
+    message = MagicMock()
+    message.file = MagicMock()
+    message.file.sticker_set = MagicMock(spec=types.InputStickerSetEmpty)
+    await stickers_handler(None, message, None, None)
+
+    mock_get_info.assert_not_awaited()
+    mock_insert.assert_not_called()
+    mock_find.assert_not_called()
+
+
+@pytest.mark.asyncio
+@patch("helpers.stickers.find_sticker_set_in_db")
+@patch("helpers.stickers.insert_sticker_set_info")
+@patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_existing_sticker_set(
     mock_get_info, mock_insert, mock_find, mock_message, mock_cursor
 ):
