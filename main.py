@@ -16,8 +16,8 @@ from helpers.local_utils import (
     parse_args,
     print_three_dialogs,
 )
+from objects.archiver import Archiver
 from objects.config import Config
-from objects.dialog import Dialog
 
 """
 
@@ -123,7 +123,7 @@ async def main():
                 dialog = dialogs[current_dialog]
 
             # Set up the dialog object
-            dialog_obj = Dialog(client, config, dialog)
+            archiver = Archiver(client, config, dialog)
             logger.info(f"Archiving {dialog.name}...")
 
             # Again, this is for key interruption
@@ -135,7 +135,7 @@ async def main():
             try:
                 # Set up the dialog object (async part)
                 # (Since you can't run async code in __init__)
-                await dialog_obj.set_up()
+                await archiver.set_up()
 
                 # This check is for safety, in the future I might add
                 # a way to give the entity id an input, and the user
@@ -144,7 +144,7 @@ async def main():
                     dialog.entity, (types.Chat, types.Channel, types.User)
                 ):
                     # Do the archiving, this method handles everything
-                    await dialog_obj.archive()
+                    await archiver.archive()
                 else:
                     logger.error(
                         f"Error, cannot archive this dialog, unknown dialog type: {dialog.entity}"

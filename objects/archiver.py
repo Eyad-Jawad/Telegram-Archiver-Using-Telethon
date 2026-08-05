@@ -25,7 +25,7 @@ from .progress import Progress as prog
 logger = logging.getLogger(__name__)
 
 
-class Dialog:
+class Archiver:
     def __init__(self, client: TelegramClient, config: con, dialog) -> None:
         """
         Initialize the sync part of the class.
@@ -192,7 +192,7 @@ class Dialog:
         # Handle other unknown errors
         except Exception as e:
             logger.exception(
-                f"Exception occurred with dialog {self.dialog.id} : {self.dialog.name}"
+                f"Exception occurred with dialog {self.id} : {self.dialog.name}"
             )
             await self.error.handle(e)
 

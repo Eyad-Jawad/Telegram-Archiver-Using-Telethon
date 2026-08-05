@@ -5,7 +5,7 @@ import pytest
 import pytest_asyncio
 from telethon import types
 
-from objects.dialog import Dialog
+from objects.archiver import Archiver
 
 
 @pytest.fixture
@@ -107,16 +107,16 @@ def archive_message_fixture():
 
 
 @pytest_asyncio.fixture
-@patch("objects.dialog.Dialog.get_checkpoint")
-@patch("objects.dialog.file")
-@patch("objects.dialog.prog")
-@patch("objects.dialog.err")
-@patch("objects.dialog.make_tables")
-@patch("objects.dialog.Dialog.get_dialog_type")
+@patch("objects.archiver.Archiver.get_checkpoint")
+@patch("objects.archiver.file")
+@patch("objects.archiver.prog")
+@patch("objects.archiver.err")
+@patch("objects.archiver.make_tables")
+@patch("objects.archiver.Archiver.get_dialog_type")
 @patch("telethon.utils.get_peer_id")
 @patch("sqlite3.connect")
 @patch("logging.Logger.info")
-async def mock_dialog_class(
+async def mock_archiver(
     mock_logger,
     mock_connect,
     mock_get_id,
@@ -146,7 +146,7 @@ async def mock_dialog_class(
 
     mock_checkpoint.return_value = [123]
 
-    obj = Dialog(mock_client, mock_config, mock_dialog)
+    obj = Archiver(mock_client, mock_config, mock_dialog)
     await obj.set_up()
 
     return {
@@ -170,35 +170,30 @@ async def mock_dialog_class(
 
 
 @pytest.mark.asyncio
-async def test_dialog_init(mock_dialog_class):
-    assert mock_dialog_class["obj"].client is mock_dialog_class["mock_client"]
-    assert mock_dialog_class["obj"].dialog is mock_dialog_class["mock_dialog"]
-    assert (
-        mock_dialog_class["obj"].entity
-        is mock_dialog_class["mock_dialog"].entity
-    )
-    assert mock_dialog_class["obj"].config is mock_dialog_class["mock_config"]
-    assert mock_dialog_class["obj"].id == 1
-    assert mock_dialog_class["obj"].type == "Something"
-    assert mock_dialog_class["obj"].total_messages == 10
-    assert mock_dialog_class["mock_logger"].call_count == 2
-    assert mock_dialog_class["mock_logger"].call_args_list == [
+async def test_dialog_init(mock_archiver):
+    assert mock_archiver["obj"].client is mock_archiver["mock_client"]
+    assert mock_archiver["obj"].dialog is mock_archiver["mock_dialog"]
+    assert mock_archiver["obj"].entity is mock_archiver["mock_dialog"].entity
+    assert mock_archiver["obj"].config is mock_archiver["mock_config"]
+    assert mock_archiver["obj"].id == 1
+    assert mock_archiver["obj"].type == "Something"
+    assert mock_archiver["obj"].total_messages == 10
+    assert mock_archiver["mock_logger"].call_count == 2
+    assert mock_archiver["mock_logger"].call_args_list == [
         call("Initiating the dialog class (the synchronous part)..."),
         call("Initiating the dialog class (the asynchronous part)..."),
     ]
-    mock_dialog_class["mock_connect"].assert_called_once_with("telegram.db")
-    mock_dialog_class["mock_get_id"].assert_called_once_with(
-        mock_dialog_class["mock_dialog"].entity
+    mock_archiver["mock_connect"].assert_called_once_with("telegram.db")
+    mock_archiver["mock_get_id"].assert_called_once_with(
+        mock_archiver["mock_dialog"].entity
     )
-    mock_dialog_class["mock_get_type"].assert_called_once()
-    mock_dialog_class["mock_make_tables"].assert_called_once_with(
-        mock_dialog_class["mock_conn_and_cursor"][1]
+    mock_archiver["mock_get_type"].assert_called_once()
+    mock_archiver["mock_make_tables"].assert_called_once_with(
+        mock_archiver["mock_conn_and_cursor"][1]
     )
 
-    assert mock_dialog_class["mock_conn_and_cursor"][1].execute.call_count == 2
-    assert mock_dialog_class["mock_conn_and_cursor"][
-        1
-    ].execute.call_args_list == [
+    assert mock_archiver["mock_conn_and_cursor"][1].execute.call_count == 2
+    assert mock_archiver["mock_conn_and_cursor"][1].execute.call_args_list == [
         call(
             "INSERT OR IGNORE INTO dialogs (dialog_id, name, type) VALUES  (?, ?, ?)",
             [1, "Me", "Something"],
@@ -209,68 +204,68 @@ async def test_dialog_init(mock_dialog_class):
         ),
     ]
 
-    assert mock_dialog_class["mock_conn_and_cursor"][0].commit.call_count == 2
+    assert mock_archiver["mock_conn_and_cursor"][0].commit.call_count == 2
 
-    mock_dialog_class["mock_client"].get_messages.assert_awaited_once_with(
-        mock_dialog_class["mock_dialog"], limit=0
+    mock_archiver["mock_client"].get_messages.assert_awaited_once_with(
+        mock_archiver["mock_dialog"], limit=0
     )
-    mock_dialog_class["mock_progress"].assert_called_once_with(10, "Me")
-    mock_dialog_class["mock_file"].assert_called_once_with(5)
-    mock_dialog_class["mock_error"].assert_called_once_with(
-        mock_dialog_class["mock_conn_and_cursor"][0],
-        mock_dialog_class["progress"],
-        mock_dialog_class["obj"],
+    mock_archiver["mock_progress"].assert_called_once_with(10, "Me")
+    mock_archiver["mock_file"].assert_called_once_with(5)
+    mock_archiver["mock_error"].assert_called_once_with(
+        mock_archiver["mock_conn_and_cursor"][0],
+        mock_archiver["progress"],
+        mock_archiver["obj"],
     )
-    mock_dialog_class["mock_checkpoint"].assert_called_once()
-    mock_dialog_class["progress"].use_checkpoint.assert_called_once_with([123])
-    mock_dialog_class["obj"].users = set()
+    mock_archiver["mock_checkpoint"].assert_called_once()
+    mock_archiver["progress"].use_checkpoint.assert_called_once_with([123])
+    mock_archiver["obj"].users = set()
 
 
-def test_dialog_get_type_with_user(mock_dialog_class):
-    obj = mock_dialog_class["obj"]
+def test_dialog_get_type_with_user(mock_archiver):
+    obj = mock_archiver["obj"]
     entity = MagicMock(spec=types.User)
     obj.entity = entity
     assert obj.get_dialog_type() == "User"
 
 
-def test_dialog_get_type_with_chat(mock_dialog_class):
-    obj = mock_dialog_class["obj"]
+def test_dialog_get_type_with_chat(mock_archiver):
+    obj = mock_archiver["obj"]
     entity = MagicMock(spec=types.Chat)
     obj.entity = entity
     assert obj.get_dialog_type() == "Chat"
 
 
-def test_dialog_get_type_with_channel(mock_dialog_class):
-    obj = mock_dialog_class["obj"]
+def test_dialog_get_type_with_channel(mock_archiver):
+    obj = mock_archiver["obj"]
     entity = MagicMock(spec=types.Channel)
     entity.broadcast = True
     obj.entity = entity
     assert obj.get_dialog_type() == "Channel"
 
 
-def test_dialog_get_type_with_supergroup(mock_dialog_class):
+def test_dialog_get_type_with_supergroup(mock_archiver):
     # .megagroup
-    obj = mock_dialog_class["obj"]
+    obj = mock_archiver["obj"]
     entity = MagicMock(spec=types.Channel)
     entity.broadcast = False
     obj.entity = entity
     assert obj.get_dialog_type() == "Supergroup"
 
 
-def test_dialog_get_type_with_unknown(mock_dialog_class):
-    obj = mock_dialog_class["obj"]
+def test_dialog_get_type_with_unknown(mock_archiver):
+    obj = mock_archiver["obj"]
     entity = MagicMock()
     obj.entity = entity
     assert obj.get_dialog_type() == "Unknown"
 
 
-@patch("objects.dialog.Dialog.get_checkpoint")
+@patch("objects.archiver.Archiver.get_checkpoint")
 @patch("time.perf_counter")
 def test_dialog_save_checkpoint(
-    mock_counter, mock_get_checkpoint, mock_dialog_class, checkpoint_fixture
+    mock_counter, mock_get_checkpoint, mock_archiver, checkpoint_fixture
 ):
-    obj = mock_dialog_class["obj"]
-    progress = mock_dialog_class["progress"]
+    obj = mock_archiver["obj"]
+    progress = mock_archiver["progress"]
 
     progress.last_message_id = 33
     progress.message_counter = 3
@@ -293,18 +288,18 @@ def test_dialog_save_checkpoint(
 
 
 def test_dialog_get_checkpoint_with_empty_entry(
-    mock_dialog_class, checkpoint_fixture
+    mock_archiver, checkpoint_fixture
 ):
-    obj = mock_dialog_class["obj"]
+    obj = mock_archiver["obj"]
     obj.cursor = checkpoint_fixture
 
     assert obj.get_checkpoint() == (None, None, 0.0)
 
 
 def test_dialog_get_checkpoint_with_one_entry(
-    mock_dialog_class, checkpoint_fixture
+    mock_archiver, checkpoint_fixture
 ):
-    obj = mock_dialog_class["obj"]
+    obj = mock_archiver["obj"]
     obj.cursor = checkpoint_fixture
 
     checkpoint_fixture.execute("""
@@ -319,9 +314,9 @@ def test_dialog_get_checkpoint_with_one_entry(
 
 
 def test_dialog_get_checkpoint_with_many_entries(
-    mock_dialog_class, checkpoint_fixture
+    mock_archiver, checkpoint_fixture
 ):
-    obj = mock_dialog_class["obj"]
+    obj = mock_archiver["obj"]
     obj.cursor = checkpoint_fixture
 
     checkpoint_fixture.execute("""
@@ -337,16 +332,16 @@ def test_dialog_get_checkpoint_with_many_entries(
     assert obj.get_checkpoint() == (33, 3, 3.3)
 
 
-@patch("objects.dialog.Dialog.save_checkpoint")
-@patch("objects.dialog.insert_users_ids")
+@patch("objects.archiver.Archiver.save_checkpoint")
+@patch("objects.archiver.insert_users_ids")
 def test_dialog_key_interruption_with_no_user_info(
-    mock_insert, mock_save, mock_dialog_class, capsys
+    mock_insert, mock_save, mock_archiver, capsys
 ):
-    obj = mock_dialog_class["obj"]
+    obj = mock_archiver["obj"]
 
-    conn = mock_dialog_class["mock_conn_and_cursor"][0]
+    conn = mock_archiver["mock_conn_and_cursor"][0]
 
-    config = mock_dialog_class["mock_config"]
+    config = mock_archiver["mock_config"]
     config.user_info = False
 
     obj.handle_key_interruption()
@@ -365,17 +360,17 @@ def test_dialog_key_interruption_with_no_user_info(
     conn.close.assert_called_once()
 
 
-@patch("objects.dialog.Dialog.save_checkpoint")
-@patch("objects.dialog.insert_users_ids")
+@patch("objects.archiver.Archiver.save_checkpoint")
+@patch("objects.archiver.insert_users_ids")
 def test_dialog_key_interruption_with_one_user(
-    mock_insert, mock_save, mock_dialog_class, capsys
+    mock_insert, mock_save, mock_archiver, capsys
 ):
-    obj = mock_dialog_class["obj"]
+    obj = mock_archiver["obj"]
     obj.users = {1}
 
-    conn = mock_dialog_class["mock_conn_and_cursor"][0]
+    conn = mock_archiver["mock_conn_and_cursor"][0]
 
-    config = mock_dialog_class["mock_config"]
+    config = mock_archiver["mock_config"]
     config.user_info = True
 
     obj.handle_key_interruption()
@@ -388,7 +383,7 @@ def test_dialog_key_interruption_with_one_user(
 
     mock_save.assert_called_once()
     mock_insert.assert_called_once_with(
-        mock_dialog_class["mock_conn_and_cursor"][1], 1, 1
+        mock_archiver["mock_conn_and_cursor"][1], 1, 1
     )
 
     # two calls in setup
@@ -396,17 +391,17 @@ def test_dialog_key_interruption_with_one_user(
     conn.close.assert_called_once()
 
 
-@patch("objects.dialog.Dialog.save_checkpoint")
-@patch("objects.dialog.insert_users_ids")
+@patch("objects.archiver.Archiver.save_checkpoint")
+@patch("objects.archiver.insert_users_ids")
 def test_dialog_key_interruption_with_many_users(
-    mock_insert, mock_save, mock_dialog_class, capsys
+    mock_insert, mock_save, mock_archiver, capsys
 ):
-    obj = mock_dialog_class["obj"]
+    obj = mock_archiver["obj"]
     obj.users = {1, 2}
 
-    conn = mock_dialog_class["mock_conn_and_cursor"][0]
+    conn = mock_archiver["mock_conn_and_cursor"][0]
 
-    config = mock_dialog_class["mock_config"]
+    config = mock_archiver["mock_config"]
     config.user_info = True
 
     obj.handle_key_interruption()
@@ -421,8 +416,8 @@ def test_dialog_key_interruption_with_many_users(
 
     assert mock_insert.call_count == 2
     assert mock_insert.call_args_list == [
-        call(mock_dialog_class["mock_conn_and_cursor"][1], 1, 1),
-        call(mock_dialog_class["mock_conn_and_cursor"][1], 2, 1),
+        call(mock_archiver["mock_conn_and_cursor"][1], 1, 1),
+        call(mock_archiver["mock_conn_and_cursor"][1], 2, 1),
     ]
 
     # two calls in setup
@@ -431,12 +426,12 @@ def test_dialog_key_interruption_with_many_users(
 
 
 @pytest.mark.asyncio
-@patch("objects.dialog.user_id_handler")
-@patch("objects.dialog.forward_handler")
-@patch("objects.dialog.reply_handler")
-@patch("objects.dialog.text_handler")
-@patch("objects.dialog.reaction_handler", new_callable=AsyncMock)
-@patch("objects.dialog.stickers_handler", new_callable=AsyncMock)
+@patch("objects.archiver.user_id_handler")
+@patch("objects.archiver.forward_handler")
+@patch("objects.archiver.reply_handler")
+@patch("objects.archiver.text_handler")
+@patch("objects.archiver.reaction_handler", new_callable=AsyncMock)
+@patch("objects.archiver.stickers_handler", new_callable=AsyncMock)
 async def test_dialog_archive_message(
     mock_stickers,
     mock_reaction,
@@ -444,13 +439,13 @@ async def test_dialog_archive_message(
     mock_reply,
     mock_forward,
     mock_user,
-    mock_dialog_class,
+    mock_archiver,
     archive_message_fixture,
 ):
-    obj = mock_dialog_class["obj"]
-    config = mock_dialog_class["mock_config"]
-    file = mock_dialog_class["file"]
-    progress = mock_dialog_class["progress"]
+    obj = mock_archiver["obj"]
+    config = mock_archiver["mock_config"]
+    file = mock_archiver["file"]
+    progress = mock_archiver["progress"]
 
     message = MagicMock()
     message.id = 33
@@ -486,7 +481,7 @@ async def test_dialog_archive_message(
 
     file.handle.assert_awaited_once_with(message)
     mock_stickers.assert_awaited_once_with(
-        mock_dialog_class["mock_client"],
+        mock_archiver["mock_client"],
         message,
         1,
         archive_message_fixture,
@@ -494,8 +489,8 @@ async def test_dialog_archive_message(
     assert progress.used_space_in_MB == 25
 
     mock_reaction.assert_awaited_once_with(
-        mock_dialog_class["mock_client"],
-        mock_dialog_class["mock_dialog"],
+        mock_archiver["mock_client"],
+        mock_archiver["mock_dialog"],
         message,
         archive_message_fixture,
     )

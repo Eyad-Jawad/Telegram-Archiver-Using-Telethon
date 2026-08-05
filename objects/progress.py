@@ -42,7 +42,7 @@ class Progress:
 
         Args:
             checkpoint (tuple [int, int, float]):
-                A tuple of values taken from Dialog.get_checkpoint()
+                A tuple of values taken from Archiver.get_checkpoint()
         """
 
         # Just for safety

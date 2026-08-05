@@ -14,7 +14,7 @@ class Errors:
         self,
         conn: sqlite3.Connection,
         progress: Progress,
-        dialog,
+        archiver,
     ) -> None:
         """
         Initialize the Errors class.
@@ -28,14 +28,14 @@ class Errors:
                 The progress object for the program, used to access
                 updated last_message_id to log in caes of an error.
 
-            dialog (objects.dialog.Dialog):
-                The dialog object of the program, used to save
+            archiver (objects.archiver.Archiver):
+                The archiver object of the program, used to save
                 a checkpoint in case of an error.
         """
         logger.info("Setting up the Errors class...")
         self.conn = conn
         self.progress = progress
-        self.dialog = dialog
+        self.archiver = archiver
 
     async def handle(self, error) -> None:
         """
@@ -48,7 +48,7 @@ class Errors:
         """
 
         # Save the progress
-        self.dialog.save_checkpoint()
+        self.archiver.save_checkpoint()
 
         self.conn.commit()
 

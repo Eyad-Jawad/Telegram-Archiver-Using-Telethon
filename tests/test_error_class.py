@@ -10,11 +10,11 @@ from objects.errors import Errors
 def mock_error():
     conn = MagicMock()
     progress = MagicMock()
-    dialog = MagicMock()
+    archiver = MagicMock()
 
     progress.last_message_id = 5
 
-    err = Errors(conn, progress, dialog)
+    err = Errors(conn, progress, archiver)
 
     return err
 
@@ -22,13 +22,13 @@ def mock_error():
 def test_error_class_attributes():
     conn = MagicMock()
     progress = MagicMock()
-    dialog = MagicMock()
+    archiver = MagicMock()
 
-    err = Errors(conn, progress, dialog)
+    err = Errors(conn, progress, archiver)
 
     assert err.conn is conn
     assert err.progress is progress
-    assert err.dialog is dialog
+    assert err.archiver is archiver
 
 
 @pytest.mark.asyncio
@@ -38,7 +38,7 @@ async def test_error_class_with_normal_error(mock_error):
 
     await mock_error.handle(err)
 
-    mock_error.dialog.save_checkpoint.assert_called_once()
+    mock_error.archiver.save_checkpoint.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -50,6 +50,6 @@ async def test_error_class_with_FloodWaitError_error(mock_sleep, mock_error):
 
     await mock_error.handle(err)
 
-    mock_error.dialog.save_checkpoint.assert_called_once()
+    mock_error.archiver.save_checkpoint.assert_called_once()
 
     mock_sleep.assert_awaited_once_with(10)
