@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from telethon import types
-from db.models import DialogPhoto, DialogMetadata, User
 
+from db.models import DialogMetadata, DialogPhoto, User
 from helpers.info import *
 
 

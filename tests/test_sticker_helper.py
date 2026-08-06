@@ -1,11 +1,11 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy import select
 from telethon import errors
 
-from helpers.stickers import *
 from db.models import StickerSet
-from sqlalchemy import select
+from helpers.stickers import *
 
 
 @pytest.fixture

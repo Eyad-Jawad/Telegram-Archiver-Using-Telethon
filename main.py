@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from rich.console import Console
 from telethon import TelegramClient, types
 
+from db import engine, init_db
 from helpers.local_utils import (
     construct_fake_dialog,
     handle_index,
@@ -18,7 +19,6 @@ from helpers.local_utils import (
 )
 from objects.archiver import Archiver
 from objects.config import Config
-from db import init_db, engine
 
 """
 

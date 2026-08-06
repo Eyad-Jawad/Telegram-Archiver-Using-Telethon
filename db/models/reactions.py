@@ -1,7 +1,10 @@
+from datetime import datetime
+
 from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
-from datetime import datetime
+
 from .. import Base, TimezoneAware
+
 
 class Reaction(Base):
     __tablename__ = "reactions"

@@ -4,8 +4,8 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 import pytest
 from telethon import types
 
-from helpers.reactions import *
 from db.models import Reaction
+from helpers.reactions import *
 
 
 def date_consts():

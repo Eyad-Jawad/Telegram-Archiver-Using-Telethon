@@ -2,6 +2,8 @@ import logging
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
+from sqlalchemy import func
+from sqlalchemy.orm import Session
 from telethon import TelegramClient, custom, functions, tl, types
 from telethon.errors import (
     BadRequestError,
@@ -9,10 +11,8 @@ from telethon.errors import (
     ChatAdminRequiredError,
 )
 
-from objects.errors import Errors
-from sqlalchemy import func
-from sqlalchemy.orm import Session
 from db.models import DialogMetadata, DialogPhoto, User
+from objects.errors import Errors
 
 logger = logging.getLogger(__name__)
 

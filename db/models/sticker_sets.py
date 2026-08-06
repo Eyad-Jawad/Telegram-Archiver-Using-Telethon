@@ -1,6 +1,8 @@
-from sqlalchemy import UniqueConstraint, ForeignKey
+from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
+
 from .. import Base
+
 
 class StickerSet(Base):
     __tablename__ = "sticker_sets"

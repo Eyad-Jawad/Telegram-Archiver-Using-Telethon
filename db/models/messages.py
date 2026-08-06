@@ -1,7 +1,10 @@
-from sqlalchemy import UniqueConstraint, ForeignKey
-from sqlalchemy.orm import Mapped, mapped_column
 from datetime import datetime
+
+from sqlalchemy import ForeignKey, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column
+
 from .. import Base, TimezoneAware
+
 
 class Message(Base):
     __tablename__ = "messages"

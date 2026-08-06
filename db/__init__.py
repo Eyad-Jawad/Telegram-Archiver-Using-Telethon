@@ -1,7 +1,8 @@
+from datetime import datetime
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
-from sqlalchemy.types import TypeDecorator, String
-from datetime import datetime
+from sqlalchemy.types import String, TypeDecorator
 
 engine = create_engine("sqlite:///telegram.db", connect_args={"autocommit": False})
 
@@ -24,11 +25,10 @@ class TimezoneAware(TypeDecorator):
 
 
 
-import db.models
-
 SessionLocal = sessionmaker(bind=engine)
 
 def init_db(engine):
+    from . import models as models
     Base.metadata.create_all(engine)
 
 def get_session() -> Session:

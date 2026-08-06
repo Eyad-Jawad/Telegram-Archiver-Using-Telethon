@@ -1,12 +1,12 @@
 import asyncio
 import logging
 import time
-from db import get_session
-from db.models import Dialog, Message
 
 from rich.console import Console
 from telethon import TelegramClient, custom, types, utils
 
+from db import get_session
+from db.models import Dialog, Message
 from helpers.info import (
     entity_handler,
     get_dialog_info,

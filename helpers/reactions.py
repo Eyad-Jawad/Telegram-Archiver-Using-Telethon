@@ -1,8 +1,9 @@
 import logging
 from datetime import datetime
 
-from telethon import TelegramClient, custom, functions, tl, types
 from sqlalchemy.orm import Session
+from telethon import TelegramClient, custom, functions, tl, types
+
 from db.models import Reaction
 
 logger = logging.getLogger(__name__)

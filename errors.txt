@@ -1,0 +1,88 @@
+F401 `db.models` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+  --> db/__init__.py:28:8
+   |
+28 | import db.models
+   |        ^^^^^^^^^
+29 |
+30 | SessionLocal = sessionmaker(bind=engine)
+   |
+help: Use an explicit re-export: `import db as db; import db.models`
+
+F401 `.dialog_photos.DialogPhoto` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+ --> db/models/__init__.py:1:28
+  |
+1 | from .dialog_photos import DialogPhoto
+  |                            ^^^^^^^^^^^
+2 | from .dialogs import Dialog
+3 | from .dialogs_metadata import DialogMetadata
+  |
+help: Use an explicit re-export: `DialogPhoto as DialogPhoto`
+
+F401 `.dialogs.Dialog` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+ --> db/models/__init__.py:2:22
+  |
+1 | from .dialog_photos import DialogPhoto
+2 | from .dialogs import Dialog
+  |                      ^^^^^^
+3 | from .dialogs_metadata import DialogMetadata
+4 | from .messages import Message
+  |
+help: Use an explicit re-export: `Dialog as Dialog`
+
+F401 `.dialogs_metadata.DialogMetadata` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+ --> db/models/__init__.py:3:31
+  |
+1 | from .dialog_photos import DialogPhoto
+2 | from .dialogs import Dialog
+3 | from .dialogs_metadata import DialogMetadata
+  |                               ^^^^^^^^^^^^^^
+4 | from .messages import Message
+5 | from .reactions import Reaction
+  |
+help: Use an explicit re-export: `DialogMetadata as DialogMetadata`
+
+F401 `.messages.Message` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+ --> db/models/__init__.py:4:23
+  |
+2 | from .dialogs import Dialog
+3 | from .dialogs_metadata import DialogMetadata
+4 | from .messages import Message
+  |                       ^^^^^^^
+5 | from .reactions import Reaction
+6 | from .sticker_sets import StickerSet
+  |
+help: Use an explicit re-export: `Message as Message`
+
+F401 `.reactions.Reaction` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+ --> db/models/__init__.py:5:24
+  |
+3 | from .dialogs_metadata import DialogMetadata
+4 | from .messages import Message
+5 | from .reactions import Reaction
+  |                        ^^^^^^^^
+6 | from .sticker_sets import StickerSet
+7 | from .users import User
+  |
+help: Use an explicit re-export: `Reaction as Reaction`
+
+F401 `.sticker_sets.StickerSet` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+ --> db/models/__init__.py:6:27
+  |
+4 | from .messages import Message
+5 | from .reactions import Reaction
+6 | from .sticker_sets import StickerSet
+  |                           ^^^^^^^^^^
+7 | from .users import User
+  |
+help: Use an explicit re-export: `StickerSet as StickerSet`
+
+F401 `.users.User` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+ --> db/models/__init__.py:7:20
+  |
+5 | from .reactions import Reaction
+6 | from .sticker_sets import StickerSet
+7 | from .users import User
+  |                    ^^^^
+help: Use an explicit re-export: `User as User`
+
+Found 8 errors.

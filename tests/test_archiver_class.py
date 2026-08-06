@@ -5,8 +5,8 @@ import pytest
 import pytest_asyncio
 from telethon import types
 
-from objects.archiver import Archiver
 from db.models import Dialog, Message
+from objects.archiver import Archiver
 
 
 def date_consts():

@@ -1,7 +1,8 @@
 import logging
 
-from telethon import TelegramClient, custom, errors, functions, types
 from sqlalchemy.orm import Session
+from telethon import TelegramClient, custom, errors, functions, types
+
 from db.models import StickerSet
 
 logger = logging.getLogger(__name__)
