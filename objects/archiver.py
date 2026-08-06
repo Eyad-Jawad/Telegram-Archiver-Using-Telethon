@@ -58,7 +58,9 @@ class Archiver:
         self.session = get_session()
 
         # Initialize the database by creating all the tables and inserting the dialog
-        new_dialog = Dialog(dialog_id=self.id, name=self.dialog.name, type=self.type)
+        new_dialog = Dialog(
+            dialog_id=self.id, name=self.dialog.name, type=self.type
+        )
         self.session.add(new_dialog)
         self.session.flush()
 
@@ -72,7 +74,9 @@ class Archiver:
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
-        self.session.query(Dialog).filter(Dialog.dialog_id == self.id).update({"total_number_of_messages": self.total_messages})
+        self.session.query(Dialog).filter(Dialog.dialog_id == self.id).update(
+            {"total_number_of_messages": self.total_messages}
+        )
         self.session.commit()
 
         # Initialize the needed objects
@@ -224,9 +228,17 @@ class Archiver:
                 message_counter: int,
                 archiving_time: float,
             ]
-        """ 
+        """
 
-        checkpoint = self.session.query(Dialog.last_message_id, Dialog.message_counter, Dialog.archiving_time).filter(Dialog.dialog_id == self.id).one()
+        checkpoint = (
+            self.session.query(
+                Dialog.last_message_id,
+                Dialog.message_counter,
+                Dialog.archiving_time,
+            )
+            .filter(Dialog.dialog_id == self.id)
+            .one()
+        )
 
         return checkpoint._t
 

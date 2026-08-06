@@ -79,13 +79,16 @@ def get_latest_photo_date(session: Session, dialog_id: int) -> datetime:
 
     # format: 2026-03-06 17:45:25+00:00
 
-    query = session.query(func.max(DialogPhoto.photo_date)).filter(DialogPhoto.dialog_id == dialog_id).scalar()
+    query = (
+        session.query(func.max(DialogPhoto.photo_date))
+        .filter(DialogPhoto.dialog_id == dialog_id)
+        .scalar()
+    )
 
     if not query:
         return datetime(1900, 1, 1, tzinfo=UTC)  # arbitrary date
     else:
         return query
-
 
 
 def insert_info_into_appropriate_table(
@@ -110,8 +113,11 @@ def insert_info_into_appropriate_table(
     """
 
     # Check if the dialog's metadata was archived before
-    new_dialog_metadata = DialogMetadata(dialog_id=dialog_id, full_request=full_request)
+    new_dialog_metadata = DialogMetadata(
+        dialog_id=dialog_id, full_request=full_request
+    )
     session.add(new_dialog_metadata)
+
 
 def insert_photo_info(
     session: Session, photo_info: list[tuple[int, int, str, str]]
@@ -137,7 +143,12 @@ def insert_photo_info(
         if len(row) == 0:
             continue
 
-        new_dialog_photo = DialogPhoto(dialog_id=row[0], photo_id=row[1], photo_path=row[2], photo_date=row[3])
+        new_dialog_photo = DialogPhoto(
+            dialog_id=row[0],
+            photo_id=row[1],
+            photo_path=row[2],
+            photo_date=row[3],
+        )
 
         session.add(new_dialog_photo)
 
@@ -359,7 +370,7 @@ def insert_users_ids(session: Session, user: int, dialog_id: int) -> None:
     """
     A function that inserts a user's id into the database.
 
-    Args:            
+    Args:
         session (sqlalchemy.Session):
             The session of the database.
 

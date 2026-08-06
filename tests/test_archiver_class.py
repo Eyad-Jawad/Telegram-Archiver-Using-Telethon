@@ -50,6 +50,7 @@ def mock_config():
 
     return config
 
+
 @pytest_asyncio.fixture
 @patch("objects.archiver.Archiver.get_checkpoint")
 @patch("objects.archiver.file")
@@ -130,16 +131,20 @@ async def test_dialog_init(mock_archiver):
     mock_archiver["mock_get_id"].assert_called_once_with(
         mock_archiver["mock_dialog"].entity
     )
-    
+
     mock_archiver["mock_get_type"].assert_called_once()
 
     mock_archiver["mock_get_session"].assert_called_once()
     assert mock_archiver["obj"].session is mock_archiver["mock_session"]
 
-    new_dialog = mock_archiver["mock_db_dialog"](dialog_id=1, name="Me", type="Something")
+    new_dialog = mock_archiver["mock_db_dialog"](
+        dialog_id=1, name="Me", type="Something"
+    )
     mock_archiver["mock_session"].add.assert_called_once_with(new_dialog)
     mock_archiver["mock_session"].flush.assert_called_once()
-    mock_archiver["mock_session"].query.asssert_called_once_with(mock_archiver["mock_db_dialog"])
+    mock_archiver["mock_session"].query.asssert_called_once_with(
+        mock_archiver["mock_db_dialog"]
+    )
 
     mock_archiver["mock_client"].get_messages.assert_awaited_once_with(
         mock_archiver["mock_dialog"], limit=0
@@ -227,9 +232,7 @@ def test_dialog_save_checkpoint(
     mock_counter.assert_called_once()
 
 
-def test_dialog_get_checkpoint_with_empty_entry(
-    mock_archiver, mock_session
-):
+def test_dialog_get_checkpoint_with_empty_entry(mock_archiver, mock_session):
     obj = mock_archiver["obj"]
     obj.session = mock_session
     mock_session.add(Dialog(dialog_id=1, type="Anything"))
@@ -237,25 +240,33 @@ def test_dialog_get_checkpoint_with_empty_entry(
     assert obj.get_checkpoint() == (1, 0.0, 0.0)
 
 
-def test_dialog_get_checkpoint_with_one_entry(
-    mock_archiver, mock_session
-):
+def test_dialog_get_checkpoint_with_one_entry(mock_archiver, mock_session):
     obj = mock_archiver["obj"]
     obj.session = mock_session
 
-    new_dialog = Dialog(dialog_id=1, type="Anything", last_message_id=33, message_counter=3, archiving_time=3.3)
+    new_dialog = Dialog(
+        dialog_id=1,
+        type="Anything",
+        last_message_id=33,
+        message_counter=3,
+        archiving_time=3.3,
+    )
     mock_session.add(new_dialog)
 
     assert obj.get_checkpoint() == (33, 3, 3.3)
 
 
-def test_dialog_get_checkpoint_with_many_entries(
-    mock_archiver, mock_session
-):
+def test_dialog_get_checkpoint_with_many_entries(mock_archiver, mock_session):
     obj = mock_archiver["obj"]
     obj.session = mock_session
 
-    new_dialog1 = Dialog(dialog_id=1, type="Anything", last_message_id=33, message_counter=3, archiving_time=3.3)
+    new_dialog1 = Dialog(
+        dialog_id=1,
+        type="Anything",
+        last_message_id=33,
+        message_counter=3,
+        archiving_time=3.3,
+    )
     mock_session.add(new_dialog1)
 
     new_dialog2 = Dialog(dialog_id=2, type="Anything")
@@ -314,9 +325,7 @@ def test_dialog_key_interruption_with_one_user(
     )
 
     mock_save.assert_called_once()
-    mock_insert.assert_called_once_with(
-        mock_archiver["mock_session"], 1, 1
-    )
+    mock_insert.assert_called_once_with(mock_archiver["mock_session"], 1, 1)
 
     # one call in setup
     assert session.commit.call_count == 2

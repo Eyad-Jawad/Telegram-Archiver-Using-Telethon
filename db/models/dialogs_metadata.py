@@ -12,4 +12,6 @@ class DialogMetadata(Base):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     dialog_id: Mapped[int] = mapped_column(ForeignKey("dialogs.dialog_id"))
     full_request: Mapped[str] = mapped_column()
-    date_of_request: Mapped[datetime] = mapped_column(TimezoneAware(), default=lambda: datetime.now(tz=UTC))
+    date_of_request: Mapped[datetime] = mapped_column(
+        TimezoneAware(), default=lambda: datetime.now(tz=UTC)
+    )

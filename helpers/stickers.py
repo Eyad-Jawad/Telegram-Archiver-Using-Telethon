@@ -34,9 +34,19 @@ def find_sticker_set_in_db(
         ]
     """
 
-    query = session.query(StickerSet.pack_name, StickerSet.pack_link, StickerSet.sticker_set_id, StickerSet.access_hash).filter(StickerSet.sticker_set_id == id, StickerSet.access_hash == hash).one_or_none()
+    query = (
+        session.query(
+            StickerSet.pack_name,
+            StickerSet.pack_link,
+            StickerSet.sticker_set_id,
+            StickerSet.access_hash,
+        )
+        .filter(StickerSet.sticker_set_id == id, StickerSet.access_hash == hash)
+        .one_or_none()
+    )
 
-    if not query: return None
+    if not query:
+        return None
     return query._t
 
 

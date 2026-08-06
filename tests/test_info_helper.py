@@ -73,7 +73,12 @@ def test_get_latest_photo_date_for_empty_DB(mock_session):
 
 
 def test_get_latest_photo_date_for_empty_entry(mock_session):
-    new_dialog_photo = DialogPhoto(dialog_id=1, photo_id="Anything", photo_path="Anything", photo_date=date_consts()[0])
+    new_dialog_photo = DialogPhoto(
+        dialog_id=1,
+        photo_id="Anything",
+        photo_path="Anything",
+        photo_date=date_consts()[0],
+    )
     mock_session.add(new_dialog_photo)
 
     assert get_latest_photo_date(mock_session, 1) == date_consts()[0]
@@ -82,15 +87,43 @@ def test_get_latest_photo_date_for_empty_entry(mock_session):
 def test_get_latest_photo_date_for_one_entry(mock_session):
     DATES = date_consts()
 
-    mock_session.add(DialogPhoto(dialog_id=1, photo_date=DATES[1], photo_id="Anything", photo_path="Anything"))
+    mock_session.add(
+        DialogPhoto(
+            dialog_id=1,
+            photo_date=DATES[1],
+            photo_id="Anything",
+            photo_path="Anything",
+        )
+    )
     assert get_latest_photo_date(mock_session, 1) == DATES[1]
 
 
 def test_get_latest_photo_date_for_many_dates(mock_session):
     DATES = date_consts()
-    mock_session.add(DialogPhoto(dialog_id=1, photo_date=DATES[1], photo_id="Anything", photo_path="Anything"))
-    mock_session.add(DialogPhoto(dialog_id=1, photo_date=DATES[2], photo_id="Anything", photo_path="Anything"))
-    mock_session.add(DialogPhoto(dialog_id=1, photo_date=DATES[3], photo_id="Anything", photo_path="Anything"))
+    mock_session.add(
+        DialogPhoto(
+            dialog_id=1,
+            photo_date=DATES[1],
+            photo_id="Anything",
+            photo_path="Anything",
+        )
+    )
+    mock_session.add(
+        DialogPhoto(
+            dialog_id=1,
+            photo_date=DATES[2],
+            photo_id="Anything",
+            photo_path="Anything",
+        )
+    )
+    mock_session.add(
+        DialogPhoto(
+            dialog_id=1,
+            photo_date=DATES[3],
+            photo_id="Anything",
+            photo_path="Anything",
+        )
+    )
 
     assert get_latest_photo_date(mock_session, 1) == DATES[3]
 
@@ -98,9 +131,30 @@ def test_get_latest_photo_date_for_many_dates(mock_session):
 def test_get_latest_photo_date_for_many_entries(mock_session):
     DATES = date_consts()
 
-    mock_session.add(DialogPhoto(dialog_id=1, photo_date=DATES[1], photo_id="Anything", photo_path="Anything"))
-    mock_session.add(DialogPhoto(dialog_id=2, photo_date=DATES[2], photo_id="Anything", photo_path="Anything"))
-    mock_session.add(DialogPhoto(dialog_id=3, photo_date=DATES[3], photo_id="Anything", photo_path="Anything"))
+    mock_session.add(
+        DialogPhoto(
+            dialog_id=1,
+            photo_date=DATES[1],
+            photo_id="Anything",
+            photo_path="Anything",
+        )
+    )
+    mock_session.add(
+        DialogPhoto(
+            dialog_id=2,
+            photo_date=DATES[2],
+            photo_id="Anything",
+            photo_path="Anything",
+        )
+    )
+    mock_session.add(
+        DialogPhoto(
+            dialog_id=3,
+            photo_date=DATES[3],
+            photo_id="Anything",
+            photo_path="Anything",
+        )
+    )
 
     assert get_latest_photo_date(mock_session, 1) == DATES[1]
 
@@ -109,16 +163,25 @@ def test_push_info_with_one_entry(mock_session):
     mock_session.add(DialogMetadata(dialog_id=1, full_request="Anything"))
     insert_info_into_appropriate_table(mock_session, 1, "Chickens")
 
-    result = mock_session.query(DialogMetadata.full_request).filter(DialogMetadata.dialog_id == 1).all()
+    result = (
+        mock_session.query(DialogMetadata.full_request)
+        .filter(DialogMetadata.dialog_id == 1)
+        .all()
+    )
 
     assert [("Anything",), ("Chickens",)] == result
+
 
 @patch("db.models.dialogs_metadata.datetime")
 def test_push_info_with_many_entries(mock_time, mock_session):
     DATES = date_consts()
     mock_time.now.return_value = DATES[2]
 
-    mock_session.add(DialogMetadata(dialog_id=1, full_request="Chickens", date_of_request=DATES[1]))
+    mock_session.add(
+        DialogMetadata(
+            dialog_id=1, full_request="Chickens", date_of_request=DATES[1]
+        )
+    )
 
     insert_info_into_appropriate_table(mock_session, 1, "Chicken wings")
 
@@ -128,12 +191,10 @@ def test_push_info_with_many_entries(mock_time, mock_session):
         DialogMetadata.date_of_request,
     ).all()
 
-    assert [
-        (1, "Chickens", DATES[1]),
-        (1, "Chicken wings", DATES[2])
-    ] == result
+    assert [(1, "Chickens", DATES[1]), (1, "Chicken wings", DATES[2])] == result
 
     mock_time.now.assert_called_once()
+
 
 @pytest.mark.parametrize(
     ("photo_data"),
@@ -186,6 +247,7 @@ def test_push_photos_info_with_many_entries(mock_session):
     ).all()
 
     assert photo_info == result
+
 
 @pytest.mark.asyncio
 @patch("helpers.info.get_full_request", new_callable=AsyncMock)

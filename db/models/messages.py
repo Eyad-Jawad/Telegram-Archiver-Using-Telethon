@@ -30,6 +30,7 @@ class Message(Base):
     downloaded_file: Mapped[bool | None] = mapped_column(default=False)
 
     __table_args__ = (
-        UniqueConstraint("dialog_id", "message_id", sqlite_on_conflict="IGNORE"),
+        UniqueConstraint(
+            "dialog_id", "message_id", sqlite_on_conflict="IGNORE"
+        ),
     )
-

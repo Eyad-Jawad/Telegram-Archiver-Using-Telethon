@@ -162,7 +162,12 @@ def insert_channel_reaction(
             The returned value of telethon's get reaction functions.
     """
 
-    new_reaction = Reaction(dialog_id=dialog_id, message_id=message_id, reaction=reaction_type(react), count=react.count)
+    new_reaction = Reaction(
+        dialog_id=dialog_id,
+        message_id=message_id,
+        reaction=reaction_type(react),
+        count=react.count,
+    )
 
     session.add(new_reaction)
 

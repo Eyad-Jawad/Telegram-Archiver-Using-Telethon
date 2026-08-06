@@ -23,6 +23,7 @@ def mock_session():
         session.close()
         engine.dispose()
 
+
 @pytest.fixture
 def mock_conn_and_cursor():
     conn = MagicMock()

@@ -129,7 +129,6 @@ async def test_stickers_handler_with_new_sticker_set(
 def test_insert_sticker_set_info_with_no_entry(mock_session):
     insert_sticker_set_info(mock_session, None)
 
-
     result = mock_session.scalars(select(StickerSet)).all()
 
     assert [] == result
@@ -138,16 +137,19 @@ def test_insert_sticker_set_info_with_no_entry(mock_session):
 def test_insert_sticker_set_info_with_one_entry(mock_session):
     insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
 
-
-    result = mock_session.query(
-        StickerSet.id,
-        StickerSet.dialog_id,
-        StickerSet.message_id,
-        StickerSet.pack_name,
-        StickerSet.pack_link,
-        StickerSet.sticker_set_id,
-        StickerSet.access_hash,
-    ).filter(StickerSet.dialog_id == 1).all()
+    result = (
+        mock_session.query(
+            StickerSet.id,
+            StickerSet.dialog_id,
+            StickerSet.message_id,
+            StickerSet.pack_name,
+            StickerSet.pack_link,
+            StickerSet.sticker_set_id,
+            StickerSet.access_hash,
+        )
+        .filter(StickerSet.dialog_id == 1)
+        .all()
+    )
 
     assert [(1, 1, 10, "pack", "add", 123, 321)] == result
 
@@ -155,30 +157,37 @@ def test_insert_sticker_set_info_with_one_entry(mock_session):
 def test_insert_sticker_set_info_with_many_entries(mock_session):
     insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
 
-    result = mock_session.query(
-        StickerSet.id,
-        StickerSet.dialog_id,
-        StickerSet.message_id,
-        StickerSet.pack_name,
-        StickerSet.pack_link,
-        StickerSet.sticker_set_id,
-        StickerSet.access_hash,
-    ).filter(StickerSet.dialog_id == 1).all()
+    result = (
+        mock_session.query(
+            StickerSet.id,
+            StickerSet.dialog_id,
+            StickerSet.message_id,
+            StickerSet.pack_name,
+            StickerSet.pack_link,
+            StickerSet.sticker_set_id,
+            StickerSet.access_hash,
+        )
+        .filter(StickerSet.dialog_id == 1)
+        .all()
+    )
 
     assert [(1, 1, 10, "pack", "add", 123, 321)] == result
 
     insert_sticker_set_info(mock_session, (1, 10, "names", "nah", 654, 456))
 
-
-    result = mock_session.query(
-        StickerSet.id,
-        StickerSet.dialog_id,
-        StickerSet.message_id,
-        StickerSet.pack_name,
-        StickerSet.pack_link,
-        StickerSet.sticker_set_id,
-        StickerSet.access_hash,
-    ).filter(StickerSet.dialog_id == 1).all()
+    result = (
+        mock_session.query(
+            StickerSet.id,
+            StickerSet.dialog_id,
+            StickerSet.message_id,
+            StickerSet.pack_name,
+            StickerSet.pack_link,
+            StickerSet.sticker_set_id,
+            StickerSet.access_hash,
+        )
+        .filter(StickerSet.dialog_id == 1)
+        .all()
+    )
 
     assert [(1, 1, 10, "pack", "add", 123, 321)] == result
 

@@ -16,5 +16,7 @@ class StickerSet(Base):
     access_hash: Mapped[int] = mapped_column(nullable=False, default=0)
 
     __table_args__ = (
-        UniqueConstraint("dialog_id", "message_id", sqlite_on_conflict="IGNORE"),
+        UniqueConstraint(
+            "dialog_id", "message_id", sqlite_on_conflict="IGNORE"
+        ),
     )
