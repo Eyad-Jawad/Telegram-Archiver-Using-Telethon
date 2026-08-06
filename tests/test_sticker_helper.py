@@ -1,34 +1,11 @@
-import sqlite3
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from telethon import errors
 
 from helpers.stickers import *
-
-
-@pytest.fixture
-def mock_cursor():
-    conn = sqlite3.connect(":memory:")
-
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS sticker_sets (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            dialog_id INTEGER,
-            message_id INTEGER,
-            pack_name TEXT,
-            pack_link TEXT,
-            sticker_set_id INTEGER,
-            access_hash INTEGER,
-            UNIQUE (dialog_id, message_id)
-        )
-    """)
-
-    yield cursor
-
-    conn.close()
+from db.models import StickerSet
+from sqlalchemy import select
 
 
 @pytest.fixture
@@ -113,16 +90,16 @@ async def test_stickers_handler_with_empty_sticker_set(
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_existing_sticker_set(
-    mock_get_info, mock_insert, mock_find, mock_message, mock_cursor
+    mock_get_info, mock_insert, mock_find, mock_message, mock_session
 ):
     client = MagicMock()
     dialog_id = 1
     mock_find.return_value = ("pack", "link", 123, 321)
-    await stickers_handler(client, mock_message, dialog_id, mock_cursor)
+    await stickers_handler(client, mock_message, dialog_id, mock_session)
 
-    mock_find.assert_called_once_with(mock_cursor, 123, 321)
+    mock_find.assert_called_once_with(mock_session, 123, 321)
     mock_insert.assert_called_once_with(
-        mock_cursor, (1, 10, "pack", "link", 123, 321)
+        mock_session, (1, 10, "pack", "link", 123, 321)
     )
     mock_get_info.assert_not_awaited()
 
@@ -132,49 +109,78 @@ async def test_stickers_handler_with_existing_sticker_set(
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_new_sticker_set(
-    mock_get_info, mock_insert, mock_find, mock_message, mock_cursor
+    mock_get_info, mock_insert, mock_find, mock_message, mock_session
 ):
     client = MagicMock()
     dialog_id = 1
     mock_find.return_value = None
     mock_get_info.return_value = ("things", "add", 123, 321)
-    await stickers_handler(client, mock_message, dialog_id, mock_cursor)
+    await stickers_handler(client, mock_message, dialog_id, mock_session)
 
-    mock_find.assert_called_once_with(mock_cursor, 123, 321)
+    mock_find.assert_called_once_with(mock_session, 123, 321)
     mock_insert.assert_called_once_with(
-        mock_cursor, (1, 10, "things", "add", 123, 321)
+        mock_session, (1, 10, "things", "add", 123, 321)
     )
     mock_get_info.assert_awaited_once_with(
         client, mock_message.file.sticker_set
     )
 
 
-def test_insert_sticker_set_info_with_no_entry(mock_cursor):
-    insert_sticker_set_info(mock_cursor, None)
-
-    mock_cursor.execute("SELECT * FROM sticker_sets")
-
-    assert [] == mock_cursor.fetchall()
+def test_insert_sticker_set_info_with_no_entry(mock_session):
+    insert_sticker_set_info(mock_session, None)
 
 
-def test_insert_sticker_set_info_with_one_entry(mock_cursor):
-    insert_sticker_set_info(mock_cursor, (1, 10, "pack", "add", 123, 321))
+    result = mock_session.scalars(select(StickerSet)).all()
 
-    mock_cursor.execute("SELECT * FROM sticker_sets")
-
-    assert [(1, 1, 10, "pack", "add", 123, 321)] == mock_cursor.fetchall()
+    assert [] == result
 
 
-def test_insert_sticker_set_info_with_many_entries(mock_cursor):
-    insert_sticker_set_info(mock_cursor, (1, 10, "pack", "add", 123, 321))
+def test_insert_sticker_set_info_with_one_entry(mock_session):
+    insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
 
-    mock_cursor.execute("SELECT * FROM sticker_sets")
 
-    assert [(1, 1, 10, "pack", "add", 123, 321)] == mock_cursor.fetchall()
+    result = mock_session.query(
+        StickerSet.id,
+        StickerSet.dialog_id,
+        StickerSet.message_id,
+        StickerSet.pack_name,
+        StickerSet.pack_link,
+        StickerSet.sticker_set_id,
+        StickerSet.access_hash,
+    ).filter(StickerSet.dialog_id == 1).all()
 
-    insert_sticker_set_info(mock_cursor, (1, 10, "names", "nah", 654, 456))
+    assert [(1, 1, 10, "pack", "add", 123, 321)] == result
 
-    assert [] == mock_cursor.fetchall()
+
+def test_insert_sticker_set_info_with_many_entries(mock_session):
+    insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
+
+    result = mock_session.query(
+        StickerSet.id,
+        StickerSet.dialog_id,
+        StickerSet.message_id,
+        StickerSet.pack_name,
+        StickerSet.pack_link,
+        StickerSet.sticker_set_id,
+        StickerSet.access_hash,
+    ).filter(StickerSet.dialog_id == 1).all()
+
+    assert [(1, 1, 10, "pack", "add", 123, 321)] == result
+
+    insert_sticker_set_info(mock_session, (1, 10, "names", "nah", 654, 456))
+
+
+    result = mock_session.query(
+        StickerSet.id,
+        StickerSet.dialog_id,
+        StickerSet.message_id,
+        StickerSet.pack_name,
+        StickerSet.pack_link,
+        StickerSet.sticker_set_id,
+        StickerSet.access_hash,
+    ).filter(StickerSet.dialog_id == 1).all()
+
+    assert [(1, 1, 10, "pack", "add", 123, 321)] == result
 
 
 @pytest.mark.asyncio
@@ -244,26 +250,23 @@ async def test_get_sticker_set_info_with_unknown_exception(
     mock_requset.assert_called_once_with(stickerset=sticker_set, hash=0)
 
 
-def test_find_sticker_set_in_db_with_empty_db(mock_cursor):
-    assert find_sticker_set_in_db(mock_cursor, 0, 0) == None
+def test_find_sticker_set_in_db_with_empty_db(mock_session):
+    assert find_sticker_set_in_db(mock_session, 0, 0) == None
 
 
-def test_find_sticker_set_in_db_with_one_entry(mock_cursor):
-    mock_cursor.execute(
-        """
-        INSERT INTO sticker_sets (
-            dialog_id,
-            message_id,
-            pack_name,
-            pack_link,
-            sticker_set_id,
-            access_hash
-        )
-        VALUES (?, ?, ?, ?, ?, ?)
-    """,
-        (1, 10, "Pack", "Link", 123, 321),
+def test_find_sticker_set_in_db_with_one_entry(mock_session):
+    new_sticker_set = StickerSet(
+        dialog_id=1,
+        message_id=10,
+        pack_name="Pack",
+        pack_link="Link",
+        sticker_set_id=123,
+        access_hash=321,
     )
-    assert find_sticker_set_in_db(mock_cursor, 123, 321) == (
+
+    mock_session.add(new_sticker_set)
+
+    assert find_sticker_set_in_db(mock_session, 123, 321) == (
         "Pack",
         "Link",
         123,

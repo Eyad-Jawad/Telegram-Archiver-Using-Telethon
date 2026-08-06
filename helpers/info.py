@@ -1,5 +1,4 @@
 import logging
-import sqlite3
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -11,6 +10,9 @@ from telethon.errors import (
 )
 
 from objects.errors import Errors
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+from db.models import DialogMetadata, DialogPhoto, User
 
 logger = logging.getLogger(__name__)
 
@@ -57,15 +59,15 @@ def user_id_handler(
         return ("", 0)
 
 
-def get_latest_photo_date(cursor: sqlite3.Cursor, dialog_id: int) -> datetime:
+def get_latest_photo_date(session: Session, dialog_id: int) -> datetime:
     """
     A function that gets the date of the latest profile photo
     for entities, so that you only donwload photos that are newer
     than the last one saved.
 
     Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
 
         dialog_id (int):
             The id of the entity.
@@ -77,45 +79,17 @@ def get_latest_photo_date(cursor: sqlite3.Cursor, dialog_id: int) -> datetime:
 
     # format: 2026-03-06 17:45:25+00:00
 
-    cursor.execute(
-        "SELECT MAX(photo_date) FROM dialog_photos WHERE dialog_id = ?",
-        [dialog_id],
-    )
+    query = session.query(func.max(DialogPhoto.photo_date)).filter(DialogPhoto.dialog_id == dialog_id).scalar()
 
-    query = cursor.fetchone()
-    if not query or not query[0]:
+    if not query:
         return datetime(1900, 1, 1, tzinfo=UTC)  # arbitrary date
     else:
-        return datetime.fromisoformat(query[0])
+        return query
 
-
-def is_archived(cursor: sqlite3.Cursor, dialog_id: int) -> bool:
-    """
-    A function that checks if dialog metadata was archived before.
-
-    Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
-
-        dialog_id (int):
-            The id of the entity.
-
-    Returns:
-        bool:
-            A boolean for if dialog metadata was archived before.
-    """
-    cursor.execute(
-        "SELECT full_request FROM dialog_metadata WHERE dialog_id = ?",
-        [dialog_id],
-    )
-
-    query = cursor.fetchone()
-
-    return bool(query and query[0])
 
 
 def insert_info_into_appropriate_table(
-    cursor: sqlite3.Cursor, dialog_id: int, full_request: str
+    session: Session, dialog_id: int, full_request: str
 ) -> None:
     """
     A function that inserts dialog metadata into dialog_metadata
@@ -124,8 +98,8 @@ def insert_info_into_appropriate_table(
     while also inserting new metadata into dialog_metadata.
 
     Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
 
         dialog_id (int):
             The id of the entity.
@@ -136,46 +110,19 @@ def insert_info_into_appropriate_table(
     """
 
     # Check if the dialog's metadata was archived before
-    if is_archived(cursor, dialog_id):
-        # Get the past metadata
-        cursor.execute(
-            """
-            SELECT dialog_id, full_request, date_of_request
-            FROM dialog_metadata
-            WHERE dialog_id = ?
-        """,
-            [dialog_id],
-        )
-
-        result = cursor.fetchone()
-
-        # Insert it into the metadata archive
-        cursor.execute(
-            """
-            INSERT OR IGNORE INTO dialog_metadata_archive
-            (dialog_id, full_request, date_of_request)
-            VALUES (?, ?, ?)
-        """,
-            result,
-        )
-
-    # Insert new metadata into dialog_metadata
-    cursor.execute(
-        "UPDATE dialog_metadata SET full_request = ?, date_of_request = ? WHERE dialog_id = ?",
-        [full_request, datetime.now(UTC).isoformat(), dialog_id],
-    )
-
+    new_dialog_metadata = DialogMetadata(dialog_id=dialog_id, full_request=full_request)
+    session.add(new_dialog_metadata)
 
 def insert_photo_info(
-    cursor: sqlite3.Cursor, photo_info: list[tuple[int, int, str, str]]
+    session: Session, photo_info: list[tuple[int, int, str, str]]
 ) -> None:
     """
     A function that inserts photo data acquired from get_photo_info
     into the database.
 
     Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
 
         photo_info list[tuple(
             int (dialog id),
@@ -190,33 +137,9 @@ def insert_photo_info(
         if len(row) == 0:
             continue
 
-        cursor.execute(
-            "INSERT OR IGNORE INTO dialog_photos (dialog_id, photo_id, photo_path, photo_date) VALUES (?, ?, ?, ?)",
-            row,
-        )
+        new_dialog_photo = DialogPhoto(dialog_id=row[0], photo_id=row[1], photo_path=row[2], photo_date=row[3])
 
-
-def ensure_dialog_row_exists(cursor: sqlite3.Cursor, dialog_id: int) -> None:
-    """
-    A function that makes sure an entry of the dialog exists
-    in dialog_metadata so other functions can do their work safely.
-
-    Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
-
-        dialog_id (int):
-            The id of the entity.
-    """
-
-    # For safety
-    if not dialog_id:
-        return
-
-    cursor.execute(
-        "INSERT OR IGNORE INTO dialog_metadata (dialog_id) VALUES (?)",
-        [dialog_id],
-    )
+        session.add(new_dialog_photo)
 
 
 async def get_dialog_info(
@@ -224,7 +147,7 @@ async def get_dialog_info(
     dialog: tl.custom.dialog.Dialog,
     users: set[int],
     errors_handler: Errors,
-    cursor: sqlite3.Cursor,
+    session: Session,
 ) -> None:
     """
     A function that handles all things having to do with info, user ids, or metadata
@@ -242,20 +165,19 @@ async def get_dialog_info(
 
         errors_handler (objects.errors.Errors):
             An object that handles errors appropriately.
+
+        session (sqlalchemy.Session):
+            The session of the database.
     """
 
-    dialog = dialog.entity
+    full_request = await get_full_request(client, dialog.entity, errors_handler)
+    insert_info_into_appropriate_table(session, dialog.entity.id, full_request)
 
-    ensure_dialog_row_exists(cursor, dialog.id)
-
-    full_request = await get_full_request(client, dialog, errors_handler)
-    insert_info_into_appropriate_table(cursor, dialog.id, full_request)
-
-    latest_photo_date = get_latest_photo_date(cursor, dialog.id)
+    latest_photo_date = get_latest_photo_date(session, dialog.entity.id)
     photo_info = await get_photo_info(
-        client, dialog, errors_handler, latest_photo_date
+        client, dialog.entity, errors_handler, latest_photo_date
     )
-    insert_photo_info(cursor, photo_info)
+    insert_photo_info(session, photo_info)
 
     await add_users_to_set(client, dialog, users, errors_handler)
 
@@ -330,8 +252,9 @@ async def get_photo_info(
         client (telethon.TelegramClient):
             Your account's client.
 
-        dialog (telethon.tl.custom.dialog.Dialog):
-            The object which you get from client.iter_dialogs.
+        dialog (telethon.types.[entity]):
+            The entity you want their info, it can be User, Channel,
+            or Chat.
 
         errors_handler (objects.errors.Errors):
             An object that handles errors appropriately.
@@ -366,7 +289,7 @@ async def get_photo_info(
                     dialog.id,
                     photo.id,
                     photo_path,
-                    datetime.isoformat(photo.date),
+                    photo.date,
                 )
             )
 
@@ -432,13 +355,13 @@ async def add_users_to_set(
         await errors_handler.handle(e)
 
 
-def insert_users_ids(cursor: sqlite3.Cursor, user: int, dialog_id: int) -> None:
+def insert_users_ids(session: Session, user: int, dialog_id: int) -> None:
     """
     A function that inserts a user's id into the database.
 
-    Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+    Args:            
+        session (sqlalchemy.Session):
+            The session of the database.
 
         user (int):
             the id of the user we want to insert their id into the database.
@@ -452,10 +375,9 @@ def insert_users_ids(cursor: sqlite3.Cursor, user: int, dialog_id: int) -> None:
     if not user or not dialog_id:
         return
 
-    cursor.execute(
-        "INSERT OR IGNORE INTO users (user_id, dialog_id) VALUES (?, ?)",
-        [user, dialog_id],
-    )
+    new_user = User(user_id=user, dialog_id=dialog_id)
+
+    session.add(new_user)
 
 
 async def entity_handler(
@@ -463,7 +385,7 @@ async def entity_handler(
     dialog: tl.custom.dialog.Dialog,
     users: set[int],
     errors_handler: Errors,
-    cursor: sqlite3.Cursor,
+    session: Session,
     skip_details: bool = False,
 ) -> None:
     """
@@ -483,8 +405,8 @@ async def entity_handler(
         errors_handler (objects.errors.Errors):
             An object that handles errors appropriately.
 
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
 
         skip_details (bool):
             A flag for skipping requesting metadata of users
@@ -500,7 +422,7 @@ async def entity_handler(
     dialog_id = dialog.entity.id
 
     for user in users:
-        insert_users_ids(cursor, user, dialog_id)
+        insert_users_ids(session, user, dialog_id)
 
     # In case of a key interruption
     if skip_details:
@@ -518,5 +440,5 @@ async def entity_handler(
         # We pass an empty set because we don't want
         # it to function as a crawler, for now at least
         await get_dialog_info(
-            client, fake_dialog, set(), errors_handler, cursor
+            client, fake_dialog, set(), errors_handler, session
         )

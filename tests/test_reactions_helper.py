@@ -1,31 +1,20 @@
-import sqlite3
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 from telethon import types
 
 from helpers.reactions import *
+from db.models import Reaction
 
 
-@pytest.fixture
-def insert_react_fixture():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE reactions (
-            dialog_id INTEGER, 
-            message_id INTEGER,
-            reactors_id INTEGER,
-            reacting_date DATETIME,
-            reaction TEXT,
-            count INTEGER NOT NULL DEFAULT 1
-        )
-    """)
-
-    yield cursor
-
-    conn.close()
+def date_consts():
+    return [
+        datetime(1900, 1, 1, tzinfo=UTC),
+        datetime(2026, 1, 10, 10, 10, 10, tzinfo=UTC),
+        datetime(2026, 5, 10, 10, 10, 10, tzinfo=UTC),
+        datetime(2026, 10, 10, 10, 10, 10, tzinfo=UTC),
+    ]
 
 
 def test_reaction_type_with_no_react():
@@ -133,7 +122,9 @@ async def test_get_reaction_list_with_one_reaction(
     mock_reaction_type.return_value = "🐔"
     mock_get_id.return_value = 5
 
-    react.date = "Anything"
+    DATES = date_consts()
+
+    react.date = DATES[1]
 
     request = MagicMock()
     request.reactions = [react]
@@ -142,7 +133,7 @@ async def test_get_reaction_list_with_one_reaction(
     client.return_value = request
 
     assert await get_reaction_list(client, dialog, message) == [
-        (1, 10, 5, "Anything", "🐔")
+        (1, 10, 5, DATES[1], "🐔")
     ]
 
     client.assert_awaited_once_with("idk what")
@@ -175,8 +166,10 @@ async def test_get_reaction_list_with_many_reactions(
     mock_reaction_type.side_effect = ["🐔", "🐤"]
     mock_get_id.side_effect = [5, 15]
 
-    react1.date = "Anything"
-    react2.date = "Something"
+    DATES = date_consts()
+
+    react1.date = DATES[1]
+    react2.date = DATES[2]
 
     reqeust1 = MagicMock()
     reqeust2 = MagicMock()
@@ -190,8 +183,8 @@ async def test_get_reaction_list_with_many_reactions(
     client.side_effect = [reqeust1, reqeust2]
 
     assert await get_reaction_list(client, dialog, message) == [
-        (1, 10, 5, "Anything", "🐔"),
-        (1, 10, 15, "Something", "🐤"),
+        (1, 10, 5, DATES[1], "🐔"),
+        (1, 10, 15, DATES[2], "🐤"),
     ]
 
     assert client.await_count == 2
@@ -211,30 +204,43 @@ async def test_get_reaction_list_with_many_reactions(
 
 
 @patch("helpers.reactions.reaction_type")
-def test_insert_channel_reaction(mock_reaction_type, insert_react_fixture):
-    cursor = insert_react_fixture
+def test_insert_channel_reaction(mock_reaction_type, mock_session):
     react = MagicMock()
     react.count = 12
 
     mock_reaction_type.return_value = "🐔"
 
-    insert_channel_reaction(cursor, 1, 10, react)
+    insert_channel_reaction(mock_session, 1, 10, react)
 
-    cursor.execute("SELECT * FROM reactions")
+    result = mock_session.query(
+        Reaction.dialog_id,
+        Reaction.message_id,
+        Reaction.reactors_id,
+        Reaction.reacting_date,
+        Reaction.reaction,
+        Reaction.count,
+    ).all()
 
-    assert (1, 10, None, None, "🐔", 12) == cursor.fetchone()
+    assert [(1, 10, None, None, "🐔", 12)] == result
     mock_reaction_type.assert_called_once_with(react)
 
 
-def test_insert_chat_reaction(insert_react_fixture):
-    cursor = insert_react_fixture
-    result = (1, 10, 5, "Someday", "🐔")
+def test_insert_chat_reaction(mock_session):
+    DATES = date_consts()
+    result = (1, 10, 5, DATES[1], "🐔")
 
-    insert_chat_reaction(cursor, result)
+    insert_chat_reaction(mock_session, result)
 
-    cursor.execute("SELECT * FROM reactions")
+    result = mock_session.query(
+        Reaction.dialog_id,
+        Reaction.message_id,
+        Reaction.reactors_id,
+        Reaction.reacting_date,
+        Reaction.reaction,
+        Reaction.count,
+    ).all()
 
-    assert (1, 10, 5, "Someday", "🐔", 1) == cursor.fetchone()
+    assert [(1, 10, 5, DATES[1], "🐔", 1)] == result
 
 
 @pytest.mark.asyncio
@@ -277,7 +283,7 @@ async def test_reaction_handler_with_channel_reactions(
     client = MagicMock()
     dialog = MagicMock()
     message = MagicMock()
-    cursor = MagicMock()
+    session = MagicMock()
 
     dialog.id = 1
     message.id = 10
@@ -291,9 +297,9 @@ async def test_reaction_handler_with_channel_reactions(
 
     message.reactions = result
 
-    await reaction_handler(client, dialog, message, cursor)
+    await reaction_handler(client, dialog, message, session)
 
-    mock_insert_Channel.assert_called_once_with(cursor, 1, 10, react)
+    mock_insert_Channel.assert_called_once_with(session, 1, 10, react)
     mock_insert_Chat.assert_not_called()
     mock_get_reaction.assert_not_awaited()
 
@@ -308,7 +314,7 @@ async def test_reaction_handler_with_valid_chat_reactions(
     client = MagicMock()
     dialog = MagicMock()
     message = MagicMock()
-    cursor = MagicMock()
+    session = MagicMock()
 
     result = MagicMock()
 
@@ -321,8 +327,8 @@ async def test_reaction_handler_with_valid_chat_reactions(
 
     mock_get_reaction.return_value = [[1, 2, 3], []]
 
-    await reaction_handler(client, dialog, message, cursor)
+    await reaction_handler(client, dialog, message, session)
 
     mock_insert_Channel.assert_not_called()
-    mock_insert_Chat.assert_called_once_with(cursor, [1, 2, 3])
+    mock_insert_Chat.assert_called_once_with(session, [1, 2, 3])
     mock_get_reaction.assert_awaited_once_with(client, dialog, message)

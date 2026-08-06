@@ -1,21 +1,22 @@
 import logging
-import sqlite3
 
 from telethon import TelegramClient, custom, errors, functions, types
+from sqlalchemy.orm import Session
+from db.models import StickerSet
 
 logger = logging.getLogger(__name__)
 
 
 def find_sticker_set_in_db(
-    cursor: sqlite3.Cursor, id: int, hash: int
+    session: Session, id: int, hash: int
 ) -> tuple[str, str, int, int] | None:
     """
     A function that gets info about the sticker set from the database, in case it was
     archived before so we can skip sending another api call.
 
     Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
 
         id (int):
             The id of the sticker set.
@@ -31,21 +32,11 @@ def find_sticker_set_in_db(
             int (The access hash to the sticker set),
         ]
     """
-    cursor.execute(
-        """
-    SELECT 
-        pack_name, 
-        pack_link, 
-        sticker_set_id, 
-        access_hash
-    FROM sticker_sets
-    WHERE sticker_set_id = ?
-    AND access_hash = ?
-    """,
-        [id, hash],
-    )
 
-    return cursor.fetchone()
+    query = session.query(StickerSet.pack_name, StickerSet.pack_link, StickerSet.sticker_set_id, StickerSet.access_hash).filter(StickerSet.sticker_set_id == id, StickerSet.access_hash == hash).one_or_none()
+
+    if not query: return None
+    return query._t
 
 
 async def get_sticker_set_info(
@@ -102,7 +93,7 @@ async def get_sticker_set_info(
 
 
 def insert_sticker_set_info(
-    cursor: sqlite3.Cursor,
+    session: Session,
     sticker_set_info: tuple[int, int, str, str, int, int],
 ) -> None:
     """
@@ -110,8 +101,8 @@ def insert_sticker_set_info(
     inserts it into the database.
 
     Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
 
         sticker_set_info (tuple[
             int (Dialog id),
@@ -128,28 +119,23 @@ def insert_sticker_set_info(
     if not sticker_set_info:
         return
 
-    cursor.execute(
-        """
-    INSERT OR IGNORE INTO sticker_sets 
-    (
-        dialog_id,
-        message_id,
-        pack_name,
-        pack_link,
-        sticker_set_id,
-        access_hash
+    new_sticker_set = StickerSet(
+        dialog_id=sticker_set_info[0],
+        message_id=sticker_set_info[1],
+        pack_name=sticker_set_info[2],
+        pack_link=sticker_set_info[3],
+        sticker_set_id=sticker_set_info[4],
+        access_hash=sticker_set_info[5],
     )
-    VALUES (?, ?, ?, ?, ?, ?)
-    """,
-        sticker_set_info,
-    )
+
+    session.add(new_sticker_set)
 
 
 async def stickers_handler(
     client: TelegramClient,
     message: custom.Message,
     dialog_id: int,
-    cursor: sqlite3.Cursor,
+    session: Session,
 ) -> None:
     """
     A function that handles things having to do with stickers, it archives the
@@ -166,8 +152,8 @@ async def stickers_handler(
         dialog_id (int):
             The id of the entity where the message is.
 
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
     """
 
     # Just for safety
@@ -184,14 +170,14 @@ async def stickers_handler(
     # Check if the sticker set was archived before so we can
     # skip an api call
     result = find_sticker_set_in_db(
-        cursor, sticker_set.id, sticker_set.access_hash
+        session, sticker_set.id, sticker_set.access_hash
     )
     if result:
-        insert_sticker_set_info(cursor, message_info + result)
+        insert_sticker_set_info(session, message_info + result)
         return
 
     result = await get_sticker_set_info(client, sticker_set)
     if not result:
         return
 
-    insert_sticker_set_info(cursor, message_info + result)
+    insert_sticker_set_info(session, message_info + result)

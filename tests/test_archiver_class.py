@@ -1,4 +1,4 @@
-import sqlite3
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -6,6 +6,16 @@ import pytest_asyncio
 from telethon import types
 
 from objects.archiver import Archiver
+from db.models import Dialog, Message
+
+
+def date_consts():
+    return [
+        datetime(1900, 1, 1, tzinfo=UTC),
+        datetime(2026, 1, 10, 10, 10, 10, tzinfo=UTC),
+        datetime(2026, 5, 10, 10, 10, 10, tzinfo=UTC),
+        datetime(2026, 10, 10, 10, 10, 10, tzinfo=UTC),
+    ]
 
 
 @pytest.fixture
@@ -40,88 +50,22 @@ def mock_config():
 
     return config
 
-
-@pytest.fixture
-def mock_conn_and_cursor():
-    conn = MagicMock()
-    cursor = MagicMock()
-    conn.cursor.return_value = cursor
-
-    return conn, cursor
-
-
-@pytest.fixture
-def checkpoint_fixture():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS dialogs (
-            dialog_id INTEGER,
-            last_message_id INTEGER,
-            message_counter INTEGER, 
-            archiving_time FLOAT NOT NULL DEFAULT 0.0
-        )
-    """)
-
-    cursor.execute("INSERT INTO dialogs (dialog_id) VALUES (?)", [1])
-
-    yield cursor
-
-    conn.close()
-
-
-@pytest.fixture
-def archive_message_fixture():
-    conn = sqlite3.connect(":memory:")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            dialog_id INTEGER,
-            message_id INTEGER ,
-            author_name TEXT,
-            views INTEGER,
-            sender_id INTEGER,
-            forward_from_username INTEGER,
-            forward_from_user_id INTEGER,
-            replied_to_id INTEGER,
-            replied_to_entity_id INTEGER,
-            replied_to_text TEXT,
-            text TEXT,
-            date DATETIME,
-            edit_date DATETIME,
-            file_path TEXT,
-            file_name TEXT,
-            file_id TEXT,
-            file_size FLOAT NOT NULL DEFAULT 0.0,
-            downloaded_file BOOL NOT NULL DEFAULT FALSE,
-            UNIQUE (dialog_id, message_id)
-        )
-    """)
-
-    yield cursor
-
-    conn.close()
-
-
 @pytest_asyncio.fixture
 @patch("objects.archiver.Archiver.get_checkpoint")
 @patch("objects.archiver.file")
 @patch("objects.archiver.prog")
 @patch("objects.archiver.err")
-@patch("objects.archiver.make_tables")
+@patch("objects.archiver.Dialog")
+@patch("objects.archiver.get_session")
 @patch("objects.archiver.Archiver.get_dialog_type")
 @patch("telethon.utils.get_peer_id")
-@patch("sqlite3.connect")
 @patch("logging.Logger.info")
 async def mock_archiver(
     mock_logger,
-    mock_connect,
     mock_get_id,
     mock_get_type,
-    mock_make_tables,
+    mock_get_session,
+    mock_db_dialog,
     mock_error,
     mock_progress,
     mock_file,
@@ -129,13 +73,11 @@ async def mock_archiver(
     mock_client,
     mock_dialog,
     mock_config,
-    mock_conn_and_cursor,
 ):
     progress = MagicMock()
     file = MagicMock()
     error = MagicMock()
-
-    mock_connect.return_value = mock_conn_and_cursor[0]
+    mock_session = MagicMock()
 
     mock_get_id.return_value = 1
     mock_get_type.return_value = "Something"
@@ -143,6 +85,8 @@ async def mock_archiver(
     mock_error.return_value = error
     mock_progress.return_value = progress
     mock_file.return_value = file
+
+    mock_get_session.return_value = mock_session
 
     mock_checkpoint.return_value = [123]
 
@@ -155,11 +99,11 @@ async def mock_archiver(
         "mock_client": mock_client,
         "mock_config": mock_config,
         "mock_logger": mock_logger,
-        "mock_connect": mock_connect,
         "mock_get_id": mock_get_id,
         "mock_get_type": mock_get_type,
-        "mock_make_tables": mock_make_tables,
-        "mock_conn_and_cursor": mock_conn_and_cursor,
+        "mock_get_session": mock_get_session,
+        "mock_db_dialog": mock_db_dialog,
+        "mock_session": mock_session,
         "mock_progress": mock_progress,
         "progress": progress,
         "mock_file": mock_file,
@@ -183,28 +127,19 @@ async def test_dialog_init(mock_archiver):
         call("Initiating the dialog class (the synchronous part)..."),
         call("Initiating the dialog class (the asynchronous part)..."),
     ]
-    mock_archiver["mock_connect"].assert_called_once_with("telegram.db")
     mock_archiver["mock_get_id"].assert_called_once_with(
         mock_archiver["mock_dialog"].entity
     )
+    
     mock_archiver["mock_get_type"].assert_called_once()
-    mock_archiver["mock_make_tables"].assert_called_once_with(
-        mock_archiver["mock_conn_and_cursor"][1]
-    )
 
-    assert mock_archiver["mock_conn_and_cursor"][1].execute.call_count == 2
-    assert mock_archiver["mock_conn_and_cursor"][1].execute.call_args_list == [
-        call(
-            "INSERT OR IGNORE INTO dialogs (dialog_id, name, type) VALUES  (?, ?, ?)",
-            [1, "Me", "Something"],
-        ),
-        call(
-            "UPDATE dialogs SET total_number_of_messages = ? WHERE dialog_id = ?",
-            [10, 1],
-        ),
-    ]
+    mock_archiver["mock_get_session"].assert_called_once()
+    assert mock_archiver["obj"].session is mock_archiver["mock_session"]
 
-    assert mock_archiver["mock_conn_and_cursor"][0].commit.call_count == 2
+    new_dialog = mock_archiver["mock_db_dialog"](dialog_id=1, name="Me", type="Something")
+    mock_archiver["mock_session"].add.assert_called_once_with(new_dialog)
+    mock_archiver["mock_session"].flush.assert_called_once()
+    mock_archiver["mock_session"].query.asssert_called_once_with(mock_archiver["mock_db_dialog"])
 
     mock_archiver["mock_client"].get_messages.assert_awaited_once_with(
         mock_archiver["mock_dialog"], limit=0
@@ -212,7 +147,6 @@ async def test_dialog_init(mock_archiver):
     mock_archiver["mock_progress"].assert_called_once_with(10, "Me")
     mock_archiver["mock_file"].assert_called_once_with(5)
     mock_archiver["mock_error"].assert_called_once_with(
-        mock_archiver["mock_conn_and_cursor"][0],
         mock_archiver["progress"],
         mock_archiver["obj"],
     )
@@ -262,7 +196,7 @@ def test_dialog_get_type_with_unknown(mock_archiver):
 @patch("objects.archiver.Archiver.get_checkpoint")
 @patch("time.perf_counter")
 def test_dialog_save_checkpoint(
-    mock_counter, mock_get_checkpoint, mock_archiver, checkpoint_fixture
+    mock_counter, mock_get_checkpoint, mock_archiver, mock_session
 ):
     obj = mock_archiver["obj"]
     progress = mock_archiver["progress"]
@@ -273,61 +207,59 @@ def test_dialog_save_checkpoint(
     mock_counter.return_value = 3.3
     progress.time_start = 3.1
 
-    obj.cursor = checkpoint_fixture
+    obj.session = mock_session
 
     mock_get_checkpoint.return_value = (None, None, 0.0)
+    mock_session.add(Dialog(dialog_id=1, type="Anything"))
 
     obj.save_checkpoint()
 
-    checkpoint_fixture.execute("SELECT * FROM dialogs")
+    result = mock_session.query(
+        Dialog.dialog_id,
+        Dialog.last_message_id,
+        Dialog.message_counter,
+        Dialog.archiving_time,
+    ).one()
 
     # Python floating point precision makes it so it's not 0.2
-    assert (1, 33, 3, 0.19999999999999973) == checkpoint_fixture.fetchone()
+    assert (1, 33, 3, 0.19999999999999973) == result
     mock_get_checkpoint.assert_called_once()
     mock_counter.assert_called_once()
 
 
 def test_dialog_get_checkpoint_with_empty_entry(
-    mock_archiver, checkpoint_fixture
+    mock_archiver, mock_session
 ):
     obj = mock_archiver["obj"]
-    obj.cursor = checkpoint_fixture
+    obj.session = mock_session
+    mock_session.add(Dialog(dialog_id=1, type="Anything"))
 
-    assert obj.get_checkpoint() == (None, None, 0.0)
+    assert obj.get_checkpoint() == (1, 0.0, 0.0)
 
 
 def test_dialog_get_checkpoint_with_one_entry(
-    mock_archiver, checkpoint_fixture
+    mock_archiver, mock_session
 ):
     obj = mock_archiver["obj"]
-    obj.cursor = checkpoint_fixture
+    obj.session = mock_session
 
-    checkpoint_fixture.execute("""
-        UPDATE dialogs SET
-            last_message_id = 33,
-            message_counter = 3,
-            archiving_time = 3.3
-        WHERE dialog_id = 1    
-    """)
+    new_dialog = Dialog(dialog_id=1, type="Anything", last_message_id=33, message_counter=3, archiving_time=3.3)
+    mock_session.add(new_dialog)
 
     assert obj.get_checkpoint() == (33, 3, 3.3)
 
 
 def test_dialog_get_checkpoint_with_many_entries(
-    mock_archiver, checkpoint_fixture
+    mock_archiver, mock_session
 ):
     obj = mock_archiver["obj"]
-    obj.cursor = checkpoint_fixture
+    obj.session = mock_session
 
-    checkpoint_fixture.execute("""
-        UPDATE dialogs SET
-            last_message_id = 33,
-            message_counter = 3,
-            archiving_time = 3.3
-        WHERE dialog_id = 1    
-    """)
+    new_dialog1 = Dialog(dialog_id=1, type="Anything", last_message_id=33, message_counter=3, archiving_time=3.3)
+    mock_session.add(new_dialog1)
 
-    checkpoint_fixture.execute("INSERT INTO dialogs (dialog_id) VALUES (2)")
+    new_dialog2 = Dialog(dialog_id=2, type="Anything")
+    mock_session.add(new_dialog2)
 
     assert obj.get_checkpoint() == (33, 3, 3.3)
 
@@ -339,7 +271,7 @@ def test_dialog_key_interruption_with_no_user_info(
 ):
     obj = mock_archiver["obj"]
 
-    conn = mock_archiver["mock_conn_and_cursor"][0]
+    session = mock_archiver["mock_session"]
 
     config = mock_archiver["mock_config"]
     config.user_info = False
@@ -355,9 +287,9 @@ def test_dialog_key_interruption_with_no_user_info(
     mock_save.assert_called_once()
     mock_insert.assert_not_called()
 
-    # two calls in setup
-    assert conn.commit.call_count == 3
-    conn.close.assert_called_once()
+    # one call in setup
+    assert session.commit.call_count == 2
+    session.close.assert_called_once()
 
 
 @patch("objects.archiver.Archiver.save_checkpoint")
@@ -368,7 +300,7 @@ def test_dialog_key_interruption_with_one_user(
     obj = mock_archiver["obj"]
     obj.users = {1}
 
-    conn = mock_archiver["mock_conn_and_cursor"][0]
+    session = mock_archiver["mock_session"]
 
     config = mock_archiver["mock_config"]
     config.user_info = True
@@ -383,12 +315,12 @@ def test_dialog_key_interruption_with_one_user(
 
     mock_save.assert_called_once()
     mock_insert.assert_called_once_with(
-        mock_archiver["mock_conn_and_cursor"][1], 1, 1
+        mock_archiver["mock_session"], 1, 1
     )
 
-    # two calls in setup
-    assert conn.commit.call_count == 3
-    conn.close.assert_called_once()
+    # one call in setup
+    assert session.commit.call_count == 2
+    session.close.assert_called_once()
 
 
 @patch("objects.archiver.Archiver.save_checkpoint")
@@ -399,7 +331,7 @@ def test_dialog_key_interruption_with_many_users(
     obj = mock_archiver["obj"]
     obj.users = {1, 2}
 
-    conn = mock_archiver["mock_conn_and_cursor"][0]
+    session = mock_archiver["mock_session"]
 
     config = mock_archiver["mock_config"]
     config.user_info = True
@@ -416,13 +348,13 @@ def test_dialog_key_interruption_with_many_users(
 
     assert mock_insert.call_count == 2
     assert mock_insert.call_args_list == [
-        call(mock_archiver["mock_conn_and_cursor"][1], 1, 1),
-        call(mock_archiver["mock_conn_and_cursor"][1], 2, 1),
+        call(mock_archiver["mock_session"], 1, 1),
+        call(mock_archiver["mock_session"], 2, 1),
     ]
 
-    # two calls in setup
-    assert conn.commit.call_count == 3
-    conn.close.assert_called_once()
+    # one call in setup
+    assert session.commit.call_count == 2
+    session.close.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -440,7 +372,7 @@ async def test_dialog_archive_message(
     mock_forward,
     mock_user,
     mock_archiver,
-    archive_message_fixture,
+    mock_session,
 ):
     obj = mock_archiver["obj"]
     config = mock_archiver["mock_config"]
@@ -453,8 +385,10 @@ async def test_dialog_archive_message(
     message.file = MagicMock()
     message.file.size = 100
     message.file.sticker_set = "Just a str for testing, not important"
-    message.date = "Today"
-    message.edit_date = "Just now"
+
+    DATES = date_consts()
+    message.date = DATES[1]
+    message.edit_date = DATES[2]
 
     config.texts = True
     config.files = True
@@ -465,7 +399,7 @@ async def test_dialog_archive_message(
 
     progress.used_space_in_MB = 25
 
-    obj.cursor = archive_message_fixture
+    obj.session = mock_session
 
     mock_user.return_value = ["Me", 5]
     mock_forward.return_value = ["He", 17]
@@ -484,7 +418,7 @@ async def test_dialog_archive_message(
         mock_archiver["mock_client"],
         message,
         1,
-        archive_message_fixture,
+        mock_session,
     )
     assert progress.used_space_in_MB == 25
 
@@ -492,10 +426,30 @@ async def test_dialog_archive_message(
         mock_archiver["mock_client"],
         mock_archiver["mock_dialog"],
         message,
-        archive_message_fixture,
+        mock_session,
     )
 
-    archive_message_fixture.execute("SELECT * FROM messages")
+    result = mock_session.query(
+        Message.id,
+        Message.dialog_id,
+        Message.message_id,
+        Message.author_name,
+        Message.views,
+        Message.sender_id,
+        Message.forward_from_username,
+        Message.forward_from_user_id,
+        Message.replied_to_id,
+        Message.replied_to_entity_id,
+        Message.replied_to_text,
+        Message.text,
+        Message.date,
+        Message.edit_date,
+        Message.file_path,
+        Message.file_name,
+        Message.file_id,
+        Message.file_size,
+        Message.downloaded_file,
+    ).one()
 
     assert (
         1,
@@ -510,11 +464,11 @@ async def test_dialog_archive_message(
         0,
         "Noice",
         "Noice day",
-        "Today",
-        "Just now",
+        DATES[1],
+        DATES[2],
         "There",
         "Name",
         "Secret",
         3.0,
         1,
-    ) == archive_message_fixture.fetchone()
+    ) == result

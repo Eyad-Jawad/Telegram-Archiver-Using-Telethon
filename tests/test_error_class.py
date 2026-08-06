@@ -8,25 +8,22 @@ from objects.errors import Errors
 
 @pytest.fixture
 def mock_error():
-    conn = MagicMock()
     progress = MagicMock()
     archiver = MagicMock()
 
     progress.last_message_id = 5
 
-    err = Errors(conn, progress, archiver)
+    err = Errors(progress, archiver)
 
     return err
 
 
 def test_error_class_attributes():
-    conn = MagicMock()
     progress = MagicMock()
     archiver = MagicMock()
 
-    err = Errors(conn, progress, archiver)
+    err = Errors(progress, archiver)
 
-    assert err.conn is conn
     assert err.progress is progress
     assert err.archiver is archiver
 

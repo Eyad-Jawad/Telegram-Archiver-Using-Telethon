@@ -18,11 +18,13 @@ from helpers.local_utils import (
 )
 from objects.archiver import Archiver
 from objects.config import Config
+from db import init_db, engine
 
 """
 
 TODO:
 Unit tests / pytest
+
 Handle migration
 forwarded from Pic
 stories
@@ -53,6 +55,7 @@ async def main():
 
     # This is th directory where we'll save files/images or any of the sort
     os.makedirs("Media/", exist_ok=True)
+    init_db(engine)
 
     console = Console()
     console.print("Started...")
@@ -183,3 +186,6 @@ if __name__ == "__main__":
 
         except asyncio.CancelledError:
             pass
+
+        finally:
+            engine.dispose()

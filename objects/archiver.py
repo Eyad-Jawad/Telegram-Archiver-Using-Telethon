@@ -1,7 +1,8 @@
 import asyncio
 import logging
-import sqlite3
 import time
+from db import get_session
+from db.models import Dialog, Message
 
 from rich.console import Console
 from telethon import TelegramClient, custom, types, utils
@@ -14,7 +15,6 @@ from helpers.info import (
 )
 from helpers.reactions import reaction_handler
 from helpers.stickers import stickers_handler
-from helpers.tables import make_tables
 from helpers.text import *
 
 from .config import Config as con
@@ -54,18 +54,13 @@ class Archiver:
 
         self.config: con = config
 
-        # The database connection
-        self.conn = sqlite3.connect("telegram.db")
-        self.cursor = self.conn.cursor()
+        # The database session
+        self.session = get_session()
 
         # Initialize the database by creating all the tables and inserting the dialog
-        make_tables(self.cursor)
-        self.cursor.execute(
-            "INSERT OR IGNORE INTO dialogs (dialog_id, name, type) VALUES  (?, ?, ?)",
-            [self.id, self.dialog.name, self.type],
-        )
-
-        self.conn.commit()
+        new_dialog = Dialog(dialog_id=self.id, name=self.dialog.name, type=self.type)
+        self.session.add(new_dialog)
+        self.session.flush()
 
     async def set_up(self) -> None:
         """Initialize the async part of the class."""
@@ -77,17 +72,15 @@ class Archiver:
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
-        self.cursor.execute(
-            "UPDATE dialogs SET total_number_of_messages = ? WHERE dialog_id = ?",
-            [self.total_messages, self.id],
-        )
+        self.session.query(Dialog).filter(Dialog.dialog_id == self.id).update({"total_number_of_messages": self.total_messages})
+        self.session.commit()
 
         # Initialize the needed objects
         self.progress: prog = prog(self.total_messages, self.dialog.name)
 
         self.file: file = file(self.config.size_threshold)
 
-        self.error: err = err(self.conn, self.progress, self)
+        self.error: err = err(self.progress, self)
 
         self.users: set[int] = (
             set()
@@ -96,8 +89,6 @@ class Archiver:
         # Get the progress in case this dialog was archived before.
         checkpoint: tuple = self.get_checkpoint()
         self.progress.use_checkpoint(checkpoint)
-
-        self.conn.commit()
 
     def get_dialog_type(self) -> str:
         """A method that returns the type of the dialog as a string."""
@@ -149,14 +140,14 @@ class Archiver:
 
             # Check if the user wants to archive dialog's metadata
             if self.config.dialog_metadata:
-                logger.info("Parsing dialog' metadata...")
-                progress_console.print("Parsing dialog' metadata...")
+                logger.info("Parsing dialog's metadata...")
+                progress_console.print("Parsing dialog's metadata...")
                 await get_dialog_info(
                     self.client,
                     self.dialog,
                     self.users,
                     self.error,
-                    self.cursor,
+                    self.session,
                 )
 
             # Check if the user wants to archive users' metadata
@@ -168,13 +159,13 @@ class Archiver:
                     self.dialog,
                     self.users,
                     self.error,
-                    self.cursor,
+                    self.session,
                 )
 
             self.save_checkpoint()
 
-            self.conn.commit()
-            self.conn.close()
+            self.session.commit()
+            self.session.close()
             logger.info(
                 f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.time_start} seconds."
             )
@@ -213,19 +204,15 @@ class Archiver:
             if value:
                 checkpoint[i] = value
 
-        checkpoint.append(self.id)
-
-        self.cursor.execute(
-            """
-            UPDATE dialogs 
-            SET 
-                last_message_id = ?,
-                message_counter = ?, 
-                archiving_time = ?
-            WHERE dialog_id = ?
-        """,
-            checkpoint,
+        self.session.query(Dialog).filter(Dialog.dialog_id == self.id).update(
+            {
+                "last_message_id": checkpoint[0],
+                "message_counter": checkpoint[1],
+                "archiving_time": checkpoint[2],
+            }
         )
+
+        self.session.commit()
 
     def get_checkpoint(self) -> tuple[int, int, float]:
         """
@@ -237,18 +224,11 @@ class Archiver:
                 message_counter: int,
                 archiving_time: float,
             ]
-        """
+        """ 
 
-        self.cursor.execute(
-            """
-            SELECT last_message_id, message_counter, archiving_time
-            FROM dialogs
-            WHERE dialog_id = ?
-        """,
-            [self.id],
-        )
+        checkpoint = self.session.query(Dialog.last_message_id, Dialog.message_counter, Dialog.archiving_time).filter(Dialog.dialog_id == self.id).one()
 
-        return self.cursor.fetchone()
+        return checkpoint._t
 
     async def archive_message(self, message: custom.message.Message) -> None:
         """
@@ -308,44 +288,38 @@ class Archiver:
             # this message is a sticker
             if self.config.stickers and message.file.sticker_set:
                 await stickers_handler(
-                    self.client, message, self.id, self.cursor
+                    self.client, message, self.id, self.session
                 )
 
         # Check if the user wants to archive reactions
         if self.config.reactions:
             await reaction_handler(
-                self.client, self.dialog, message, self.cursor
+                self.client, self.dialog, message, self.session
             )
 
-        self.cursor.execute(
-            """
-            INSERT OR IGNORE INTO messages 
-            (dialog_id, message_id, author_name, views, sender_id, forward_from_username, 
-            forward_from_user_id, replied_to_id, replied_to_entity_id, replied_to_text, 
-            text, date, edit_date, file_path, file_name, file_id, file_size, downloaded_file) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-            [
-                dialog_id,
-                message_id,
-                author_name,
-                views,
-                sender_id,
-                forward_from_name,
-                forward_from_id,
-                replied_to_id,
-                replied_to_entity_id,
-                replied_to_text,
-                text,
-                date,
-                edit_date,
-                file_path,
-                file_name,
-                file_id,
-                file_size,
-                downloaded_file,
-            ],
+        new_message = Message(
+            dialog_id=dialog_id,
+            message_id=message_id,
+            author_name=author_name,
+            views=views,
+            sender_id=sender_id,
+            forward_from_username=forward_from_name,
+            forward_from_user_id=forward_from_id,
+            replied_to_id=replied_to_id,
+            replied_to_entity_id=replied_to_entity_id,
+            replied_to_text=replied_to_text,
+            text=text,
+            date=date,
+            edit_date=edit_date,
+            file_path=file_path,
+            file_name=file_name,
+            file_id=file_id,
+            file_size=file_size,
+            downloaded_file=downloaded_file,
         )
+
+        self.session.add(new_message)
+
         self.progress.update(message_id)
 
     def handle_key_interruption(self) -> None:
@@ -368,10 +342,10 @@ class Archiver:
         """
         if self.config.user_metadata:
             for user in self.users:
-                insert_users_ids(self.cursor, user, self.id)
+                insert_users_ids(self.session, user, self.id)
 
-        self.conn.commit()
-        self.conn.close()
+        self.session.commit()
+        self.session.close()
 
         # utils.clearLastLine()
         logger.info("Done handling key interruption.")

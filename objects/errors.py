@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import sqlite3
 
 from telethon.errors import FloodWaitError
 
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 class Errors:
     def __init__(
         self,
-        conn: sqlite3.Connection,
         progress: Progress,
         archiver,
     ) -> None:
@@ -20,10 +18,6 @@ class Errors:
         Initialize the Errors class.
 
         Args:
-            conn (sqlite3.Connection):
-                The connection object to the sqlite3 database,
-                used to commit in caes of an error.
-
             progress (objects.progress.Progress):
                 The progress object for the program, used to access
                 updated last_message_id to log in caes of an error.
@@ -33,7 +27,6 @@ class Errors:
                 a checkpoint in case of an error.
         """
         logger.info("Setting up the Errors class...")
-        self.conn = conn
         self.progress = progress
         self.archiver = archiver
 
@@ -49,8 +42,6 @@ class Errors:
 
         # Save the progress
         self.archiver.save_checkpoint()
-
-        self.conn.commit()
 
         logger.error(f"Error occurred: {error}.")
         logger.error(

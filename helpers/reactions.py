@@ -1,8 +1,9 @@
 import logging
-import sqlite3
 from datetime import datetime
 
 from telethon import TelegramClient, custom, functions, tl, types
+from sqlalchemy.orm import Session
+from db.models import Reaction
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +140,7 @@ def get_peer_id(react) -> int:
 
 
 def insert_channel_reaction(
-    cursor: sqlite3.Cursor, dialog_id: int, message_id: int, react
+    session: Session, dialog_id: int, message_id: int, react
 ) -> None:
     """
     A function that interacts with the database to insert reaction data.
@@ -147,8 +148,8 @@ def insert_channel_reaction(
     you can't see who is reacting.
 
     Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
 
         dialog_id (int):
             The id of the dialog where the message is reacted on.
@@ -159,14 +160,14 @@ def insert_channel_reaction(
         react:
             The returned value of telethon's get reaction functions.
     """
-    cursor.execute(
-        "INSERT INTO reactions (dialog_id, message_id, reaction, count) VALUES (?, ?, ?, ?)",
-        [dialog_id, message_id, reaction_type(react), react.count],
-    )
+
+    new_reaction = Reaction(dialog_id=dialog_id, message_id=message_id, reaction=reaction_type(react), count=react.count)
+
+    session.add(new_reaction)
 
 
 def insert_chat_reaction(
-    cursor: sqlite3.Cursor, result: tuple[int, int, int, datetime, str]
+    session: Session, result: tuple[int, int, int, datetime, str]
 ) -> None:
     """
     A function that interacts with the database to insert reaction data.
@@ -174,8 +175,8 @@ def insert_chat_reaction(
     aka in a group, or a chat, or any other dialog type.
 
     Args:
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemt.Session):
+            The session of the database.
 
         result:
             The reaction's data: tuple(
@@ -186,17 +187,23 @@ def insert_chat_reaction(
                 str (reaction),
             )
     """
-    cursor.execute(
-        "INSERT INTO reactions (dialog_id, message_id, reactors_id, reacting_date, reaction) VALUES (?, ?, ?, ?, ?)",
-        result,
+
+    new_reaction = Reaction(
+        dialog_id=result[0],
+        message_id=result[1],
+        reactors_id=result[2],
+        reacting_date=result[3],
+        reaction=result[4],
     )
+
+    session.add(new_reaction)
 
 
 async def reaction_handler(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
     message: custom.message.Message,
-    cursor: sqlite3.Cursor,
+    session: Session,
 ) -> None:
     """
     A function that handles all things having to do with a message
@@ -212,8 +219,8 @@ async def reaction_handler(
         message (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
-        cursor (sqlite3.Cursor):
-            The cursor of the database.
+        session (sqlalchemy.Session):
+            The session of the database.
     """
 
     try:
@@ -226,7 +233,7 @@ async def reaction_handler(
         # For channels
         if not reactions.can_see_list:
             for react in reactions.results or []:
-                insert_channel_reaction(cursor, dialog.id, message.id, react)
+                insert_channel_reaction(session, dialog.id, message.id, react)
 
             return
 
@@ -235,7 +242,7 @@ async def reaction_handler(
 
         for react in result:
             if len(react) != 0:
-                insert_chat_reaction(cursor, react)
+                insert_chat_reaction(session, react)
 
     except Exception:
         logger.exception(f"Exception occurred at message {message.id}")
