@@ -1,6 +1,5 @@
 import logging
 from datetime import UTC, datetime
-from .local_utils import construct_fake_dialog
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,6 +12,8 @@ from telethon.errors import (
 
 from db.models import DialogMetadata, DialogPhoto, User
 from objects.errors import Errors
+
+from .local_utils import construct_fake_dialog
 
 logger = logging.getLogger(__name__)
 

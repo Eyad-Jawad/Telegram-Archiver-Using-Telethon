@@ -1,8 +1,12 @@
 from datetime import datetime
 
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import String, TypeDecorator
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 engine = create_async_engine(
     "sqlite+aiosqlite:///telegram.db", connect_args={"autocommit": False}

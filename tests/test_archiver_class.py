@@ -1,11 +1,11 @@
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, MagicMock, call, patch
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 import pytest_asyncio
-from telethon import types
 from sqlalchemy import select, update
+from telethon import types
 
 from db.models import Dialog, Message
 from objects.archiver import Archiver

@@ -2,11 +2,11 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy import select
 from telethon import types
 
 from db.models import DialogMetadata, DialogPhoto, User
 from helpers.info import *
-from sqlalchemy import select
 
 
 @pytest.mark.parametrize(

@@ -2,8 +2,8 @@ import asyncio
 import logging
 import time
 
-from sqlalchemy import select, update
 from rich.console import Console
+from sqlalchemy import select, update
 from telethon import TelegramClient, custom, types, utils
 
 from db import get_session

@@ -2,11 +2,11 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
+from sqlalchemy import select
 from telethon import types
 
 from db.models import Reaction
 from helpers.reactions import *
-from sqlalchemy import select
 
 
 def date_consts():
