@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 from telethon import TelegramClient, custom, functions, tl, types
 
 from db.models import Reaction
@@ -141,7 +141,7 @@ def get_peer_id(react) -> int:
 
 
 def insert_channel_reaction(
-    session: Session, dialog_id: int, message_id: int, react
+    session: AsyncSession, dialog_id: int, message_id: int, react
 ) -> None:
     """
     A function that interacts with the database to insert reaction data.
@@ -149,8 +149,8 @@ def insert_channel_reaction(
     you can't see who is reacting.
 
     Args:
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         dialog_id (int):
             The id of the dialog where the message is reacted on.
@@ -173,7 +173,7 @@ def insert_channel_reaction(
 
 
 def insert_chat_reaction(
-    session: Session, result: tuple[int, int, int, datetime, str]
+    session: AsyncSession, result: tuple[int, int, int, datetime, str]
 ) -> None:
     """
     A function that interacts with the database to insert reaction data.
@@ -181,8 +181,8 @@ def insert_chat_reaction(
     aka in a group, or a chat, or any other dialog type.
 
     Args:
-        session (sqlalchemt.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         result:
             The reaction's data: tuple(
@@ -209,7 +209,7 @@ async def reaction_handler(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
     message: custom.message.Message,
-    session: Session,
+    session: AsyncSession,
 ) -> None:
     """
     A function that handles all things having to do with a message
@@ -225,8 +225,8 @@ async def reaction_handler(
         message (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
     """
 
     try:

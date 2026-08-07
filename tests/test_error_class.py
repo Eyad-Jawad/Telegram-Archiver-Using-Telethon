@@ -9,7 +9,7 @@ from objects.errors import Errors
 @pytest.fixture
 def mock_error():
     progress = MagicMock()
-    archiver = MagicMock()
+    archiver = AsyncMock()
 
     progress.last_message_id = 5
 
@@ -20,7 +20,7 @@ def mock_error():
 
 def test_error_class_attributes():
     progress = MagicMock()
-    archiver = MagicMock()
+    archiver = AsyncMock()
 
     err = Errors(progress, archiver)
 
@@ -35,7 +35,7 @@ async def test_error_class_with_normal_error(mock_error):
 
     await mock_error.handle(err)
 
-    mock_error.archiver.save_checkpoint.assert_called_once()
+    mock_error.archiver.save_checkpoint.assert_awaited_once()
 
 
 @pytest.mark.asyncio
@@ -47,6 +47,6 @@ async def test_error_class_with_FloodWaitError_error(mock_sleep, mock_error):
 
     await mock_error.handle(err)
 
-    mock_error.archiver.save_checkpoint.assert_called_once()
+    mock_error.archiver.save_checkpoint.assert_awaited_once()
 
     mock_sleep.assert_awaited_once_with(10)

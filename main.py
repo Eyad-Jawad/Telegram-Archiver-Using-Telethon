@@ -25,11 +25,16 @@ from objects.config import Config
 TODO:
 Unit tests / pytest
 
+    remove all instance of mock_sesion being magic/async mock
+
+use 'returning' for new_dialog in archiver init in ohter funcs to
+make it simpler for other funcs
+
+test archiver line 233 test for delete, and othre stuff you think of
+    
 Handle migration
-forwarded from Pic
 stories
-special emoticon
-reverse the process (GUI)
+chagne replied to id to be a telegram link
 
 """
 
@@ -55,7 +60,7 @@ async def main():
 
     # This is th directory where we'll save files/images or any of the sort
     os.makedirs("Media/", exist_ok=True)
-    init_db(engine)
+    await init_db(engine)
 
     console = Console()
     console.print("Started...")
@@ -77,11 +82,13 @@ async def main():
             except KeyboardInterrupt:
                 logger.info("Exited the program by key interruption.")
                 console.clear()
+                await engine.dispose()
                 sys.exit(0)
 
             # If the user pressed q, exit
             if key.lower() == "q":
                 logger.info("Exited the program by pressing q.")
+                await engine.dispose()
                 sys.exit(0)
 
             # If the user pressed arrow up, go up a dialog
@@ -115,6 +122,7 @@ async def main():
                 except KeyboardInterrupt:
                     logger.info("Exited the program by key interruption.")
                     console.clear()
+                    await engine.dispose()
                     sys.exit(0)
                 except Exception:
                     logger.exception("Exception occurred")
@@ -124,6 +132,7 @@ async def main():
                 dialog = construct_fake_dialog(entity)
             else:
                 dialog = dialogs[current_dialog]
+                current_dialog += 1
 
             # Set up the dialog object
             archiver = Archiver(client, config, dialog)
@@ -168,6 +177,7 @@ async def main():
         # Key interruption mid sync code
         logger.info("Exited the program.")
         print("\n\nHave a good day!")
+        await engine.dispose()
         sys.exit(0)
 
 
@@ -186,6 +196,3 @@ if __name__ == "__main__":
 
         except asyncio.CancelledError:
             pass
-
-        finally:
-            engine.dispose()

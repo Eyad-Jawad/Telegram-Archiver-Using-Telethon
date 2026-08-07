@@ -99,7 +99,7 @@ python main.py -t -r -f -s 10
 
 ## Tests
 
-There are tests covering all of the helper module, and some classe, the coverage as reported by `coverage` is `71%`, to run the tests run:  
+There are tests covering all of the helper module, and some classe, the coverage as reported by `coverage` is `75%`, to run the tests run:  
 
 ```
 

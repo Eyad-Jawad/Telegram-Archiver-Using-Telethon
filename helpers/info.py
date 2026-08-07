@@ -1,9 +1,9 @@
 import logging
 from datetime import UTC, datetime
-from types import SimpleNamespace
+from .local_utils import construct_fake_dialog
 
-from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy import func, select
+from sqlalchemy.ext.asyncio import AsyncSession
 from telethon import TelegramClient, custom, functions, tl, types
 from telethon.errors import (
     BadRequestError,
@@ -59,15 +59,15 @@ def user_id_handler(
         return ("", 0)
 
 
-def get_latest_photo_date(session: Session, dialog_id: int) -> datetime:
+async def get_latest_photo_date(session: AsyncSession, dialog_id: int) -> datetime:
     """
     A function that gets the date of the latest profile photo
     for entities, so that you only donwload photos that are newer
     than the last one saved.
 
     Args:
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         dialog_id (int):
             The id of the entity.
@@ -79,11 +79,13 @@ def get_latest_photo_date(session: Session, dialog_id: int) -> datetime:
 
     # format: 2026-03-06 17:45:25+00:00
 
-    query = (
-        session.query(func.max(DialogPhoto.photo_date))
-        .filter(DialogPhoto.dialog_id == dialog_id)
-        .scalar()
-    )
+    stmt = select(
+        func.max(DialogPhoto.photo_date)
+    ).where(DialogPhoto.dialog_id == dialog_id)
+
+    result = await session.execute(stmt)
+
+    query = result.scalar()
 
     if not query:
         return datetime(1900, 1, 1, tzinfo=UTC)  # arbitrary date
@@ -91,8 +93,8 @@ def get_latest_photo_date(session: Session, dialog_id: int) -> datetime:
         return query
 
 
-def insert_info_into_appropriate_table(
-    session: Session, dialog_id: int, full_request: str
+def insert_dialog_metadata(
+    session: AsyncSession, dialog_id: int, full_request: str
 ) -> None:
     """
     A function that inserts dialog metadata into dialog_metadata
@@ -101,8 +103,8 @@ def insert_info_into_appropriate_table(
     while also inserting new metadata into dialog_metadata.
 
     Args:
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         dialog_id (int):
             The id of the entity.
@@ -120,15 +122,15 @@ def insert_info_into_appropriate_table(
 
 
 def insert_photo_info(
-    session: Session, photo_info: list[tuple[int, int, str, str]]
+    session: AsyncSession, photo_info: list[tuple[int, int, str, str]]
 ) -> None:
     """
     A function that inserts photo data acquired from get_photo_info
     into the database.
 
     Args:
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         photo_info list[tuple(
             int (dialog id),
@@ -158,7 +160,7 @@ async def get_dialog_info(
     dialog: tl.custom.dialog.Dialog,
     users: set[int],
     errors_handler: Errors,
-    session: Session,
+    session: AsyncSession,
 ) -> None:
     """
     A function that handles all things having to do with info, user ids, or metadata
@@ -177,14 +179,14 @@ async def get_dialog_info(
         errors_handler (objects.errors.Errors):
             An object that handles errors appropriately.
 
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
     """
 
     full_request = await get_full_request(client, dialog.entity, errors_handler)
-    insert_info_into_appropriate_table(session, dialog.entity.id, full_request)
+    insert_dialog_metadata(session, dialog.entity.id, full_request)
 
-    latest_photo_date = get_latest_photo_date(session, dialog.entity.id)
+    latest_photo_date = await get_latest_photo_date(session, dialog.entity.id)
     photo_info = await get_photo_info(
         client, dialog.entity, errors_handler, latest_photo_date
     )
@@ -366,13 +368,13 @@ async def add_users_to_set(
         await errors_handler.handle(e)
 
 
-def insert_users_ids(session: Session, user: int, dialog_id: int) -> None:
+def insert_users_ids(session: AsyncSession, user: int, dialog_id: int) -> None:
     """
     A function that inserts a user's id into the database.
 
     Args:
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         user (int):
             the id of the user we want to insert their id into the database.
@@ -396,7 +398,7 @@ async def entity_handler(
     dialog: tl.custom.dialog.Dialog,
     users: set[int],
     errors_handler: Errors,
-    session: Session,
+    session: AsyncSession,
     skip_details: bool = False,
 ) -> None:
     """
@@ -416,8 +418,8 @@ async def entity_handler(
         errors_handler (objects.errors.Errors):
             An object that handles errors appropriately.
 
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         skip_details (bool):
             A flag for skipping requesting metadata of users
@@ -446,7 +448,7 @@ async def entity_handler(
         # Right now the function get_dialog_info uses
         # dialog.entity, and since there's not way to get
         # a dialog class, just do this trick
-        fake_dialog = SimpleNamespace(entity=entity)
+        fake_dialog = construct_fake_dialog(entity)
 
         # We pass an empty set because we don't want
         # it to function as a crawler, for now at least

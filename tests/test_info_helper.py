@@ -6,6 +6,7 @@ from telethon import types
 
 from db.models import DialogMetadata, DialogPhoto, User
 from helpers.info import *
+from sqlalchemy import select
 
 
 @pytest.mark.parametrize(
@@ -68,11 +69,12 @@ def date_consts():
     ]
 
 
-def test_get_latest_photo_date_for_empty_DB(mock_session):
-    assert get_latest_photo_date(mock_session, 21) == date_consts()[0]
+@pytest.mark.asyncio
+async def test_get_latest_photo_date_for_empty_DB(mock_session):
+    assert await get_latest_photo_date(mock_session, 21) == date_consts()[0]
 
-
-def test_get_latest_photo_date_for_empty_entry(mock_session):
+@pytest.mark.asyncio
+async def test_get_latest_photo_date_for_empty_entry(mock_session):
     new_dialog_photo = DialogPhoto(
         dialog_id=1,
         photo_id="Anything",
@@ -81,10 +83,10 @@ def test_get_latest_photo_date_for_empty_entry(mock_session):
     )
     mock_session.add(new_dialog_photo)
 
-    assert get_latest_photo_date(mock_session, 1) == date_consts()[0]
+    assert await get_latest_photo_date(mock_session, 1) == date_consts()[0]
 
-
-def test_get_latest_photo_date_for_one_entry(mock_session):
+@pytest.mark.asyncio
+async def test_get_latest_photo_date_for_one_entry(mock_session):
     DATES = date_consts()
 
     mock_session.add(
@@ -95,10 +97,10 @@ def test_get_latest_photo_date_for_one_entry(mock_session):
             photo_path="Anything",
         )
     )
-    assert get_latest_photo_date(mock_session, 1) == DATES[1]
+    assert await get_latest_photo_date(mock_session, 1) == DATES[1]
 
-
-def test_get_latest_photo_date_for_many_dates(mock_session):
+@pytest.mark.asyncio
+async def test_get_latest_photo_date_for_many_dates(mock_session):
     DATES = date_consts()
     mock_session.add(
         DialogPhoto(
@@ -125,10 +127,10 @@ def test_get_latest_photo_date_for_many_dates(mock_session):
         )
     )
 
-    assert get_latest_photo_date(mock_session, 1) == DATES[3]
+    assert await get_latest_photo_date(mock_session, 1) == DATES[3]
 
-
-def test_get_latest_photo_date_for_many_entries(mock_session):
+@pytest.mark.asyncio
+async def test_get_latest_photo_date_for_many_entries(mock_session):
     DATES = date_consts()
 
     mock_session.add(
@@ -156,24 +158,23 @@ def test_get_latest_photo_date_for_many_entries(mock_session):
         )
     )
 
-    assert get_latest_photo_date(mock_session, 1) == DATES[1]
+    assert await get_latest_photo_date(mock_session, 1) == DATES[1]
 
-
-def test_push_info_with_one_entry(mock_session):
+@pytest.mark.asyncio
+async def test_push_info_with_one_entry(mock_session):
     mock_session.add(DialogMetadata(dialog_id=1, full_request="Anything"))
-    insert_info_into_appropriate_table(mock_session, 1, "Chickens")
+    insert_dialog_metadata(mock_session, 1, "Chickens")
 
-    result = (
-        mock_session.query(DialogMetadata.full_request)
-        .filter(DialogMetadata.dialog_id == 1)
-        .all()
-    )
+    stmt = select(DialogMetadata.full_request).where(DialogMetadata.dialog_id == 1)
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [("Anything",), ("Chickens",)] == result
 
 
+@pytest.mark.asyncio
 @patch("db.models.dialogs_metadata.datetime")
-def test_push_info_with_many_entries(mock_time, mock_session):
+async def test_push_info_with_many_entries(mock_time, mock_session):
     DATES = date_consts()
     mock_time.now.return_value = DATES[2]
 
@@ -183,53 +184,59 @@ def test_push_info_with_many_entries(mock_time, mock_session):
         )
     )
 
-    insert_info_into_appropriate_table(mock_session, 1, "Chicken wings")
+    insert_dialog_metadata(mock_session, 1, "Chicken wings")
 
-    result = mock_session.query(
-        DialogMetadata.dialog_id,
+    stmt = select(DialogMetadata.dialog_id,
         DialogMetadata.full_request,
         DialogMetadata.date_of_request,
-    ).all()
+    ).where(DialogMetadata.dialog_id == 1)
+
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [(1, "Chickens", DATES[1]), (1, "Chicken wings", DATES[2])] == result
 
     mock_time.now.assert_called_once()
 
-
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("photo_data"),
     [None, [], [[]]],
 )
-def test_push_photos_info_with_nothing(mock_session, photo_data):
+async def test_push_photos_info_with_nothing(mock_session, photo_data):
     insert_photo_info(mock_session, photo_data)
 
-    result = mock_session.query(
-        DialogPhoto.dialog_id,
+    stmt = select(DialogPhoto.dialog_id,
         DialogPhoto.photo_id,
         DialogPhoto.photo_path,
         DialogPhoto.photo_date,
-    ).all()
+    )
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [] == result
 
 
-def test_push_photos_info_with_one_entry(mock_session):
+@pytest.mark.asyncio
+async def test_push_photos_info_with_one_entry(mock_session):
     DATES = date_consts()
     photo_info = [(1, 1231, "Somewhere", DATES[1])]
 
     insert_photo_info(mock_session, photo_info)
 
-    result = mock_session.query(
-        DialogPhoto.dialog_id,
+    stmt = select(DialogPhoto.dialog_id,
         DialogPhoto.photo_id,
         DialogPhoto.photo_path,
         DialogPhoto.photo_date,
-    ).all()
+    )
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert photo_info == result
 
 
-def test_push_photos_info_with_many_entries(mock_session):
+@pytest.mark.asyncio
+async def test_push_photos_info_with_many_entries(mock_session):
     DATES = date_consts()
     photo_info = [
         (1, 1234, "somewhere", DATES[1]),
@@ -239,20 +246,21 @@ def test_push_photos_info_with_many_entries(mock_session):
 
     insert_photo_info(mock_session, photo_info)
 
-    result = mock_session.query(
-        DialogPhoto.dialog_id,
+    stmt = select(DialogPhoto.dialog_id,
         DialogPhoto.photo_id,
         DialogPhoto.photo_path,
         DialogPhoto.photo_date,
-    ).all()
+    )
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert photo_info == result
 
 
 @pytest.mark.asyncio
 @patch("helpers.info.get_full_request", new_callable=AsyncMock)
-@patch("helpers.info.insert_info_into_appropriate_table")
-@patch("helpers.info.get_latest_photo_date")
+@patch("helpers.info.insert_dialog_metadata")
+@patch("helpers.info.get_latest_photo_date", new_callable=AsyncMock)
 @patch("helpers.info.get_photo_info", new_callable=AsyncMock)
 @patch("helpers.info.insert_photo_info")
 @patch("helpers.info.add_users_to_set", new_callable=AsyncMock)
@@ -288,7 +296,7 @@ async def test_get_dialog_info(
     mock_get_photo.assert_awaited_once_with(
         client, dialog.entity, errors_handler, latest_photo_date
     )
-    mock_get_latest.assert_called_once_with(session, 1)
+    mock_get_latest.assert_awaited_once_with(session, 1)
     mock_push_into.assert_called_once_with(session, 1, full_request)
     mock_full_request.assert_awaited_once_with(
         client, dialog.entity, errors_handler
@@ -554,44 +562,54 @@ async def test_add_users_to_set_for_unknown_errors():
     errors_handler.handle.assert_awaited_once_with(error)
 
 
-def test_insert_users_with_no_entry(mock_session):
+@pytest.mark.asyncio
+async def test_insert_users_with_no_entry(mock_session):
     insert_users_ids(mock_session, None, 1)
     insert_users_ids(mock_session, 1, None)
     insert_users_ids(mock_session, None, None)
 
-    result = mock_session.query(User.user_id, User.dialog_id).all()
+    stmt = select(User.user_id, User.dialog_id)
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [] == result
 
-
-def test_insert_users_with_one_entry(mock_session):
+@pytest.mark.asyncio
+async def test_insert_users_with_one_entry(mock_session):
     insert_users_ids(mock_session, 1, 12)
 
-    result = mock_session.query(User.user_id, User.dialog_id).all()
+    stmt = select(User.user_id, User.dialog_id)
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [(1, 12)] == result
 
-
-def test_insert_users_with_many_entreis(mock_session):
+@pytest.mark.asyncio
+async def test_insert_users_with_many_entreis(mock_session):
     insert_users_ids(mock_session, 1, 12)
     insert_users_ids(mock_session, 1, 11)
     insert_users_ids(mock_session, 2, 12)
 
-    result = mock_session.query(User.user_id, User.dialog_id).all()
+    stmt = select(User.user_id, User.dialog_id)
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [(1, 12), (1, 11), (2, 12)] == result
 
-
-def test_insert_users_duplicate(mock_session):
+@pytest.mark.asyncio
+async def test_insert_users_duplicate(mock_session):
     insert_users_ids(mock_session, 1, 12)
 
-    result = mock_session.query(User.user_id, User.dialog_id).all()
+    stmt = select(User.user_id, User.dialog_id)
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [(1, 12)] == result
 
     insert_users_ids(mock_session, 1, 12)
 
-    result = mock_session.query(User.user_id, User.dialog_id).all()
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [(1, 12)] == result
 
@@ -624,11 +642,11 @@ async def test_entity_handler_with_one_entry_and_skip(mock_info, mock_insert):
 
 
 @pytest.mark.asyncio
-@patch("helpers.info.SimpleNamespace")
+@patch("helpers.info.construct_fake_dialog")
 @patch("helpers.info.insert_users_ids")
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
 async def test_entity_handler_with_one_entry_and_no_skip(
-    mock_info, mock_insert, mock_namespace
+    mock_info, mock_insert, mock_construct_fake_dialog
 ):
     client = AsyncMock()
     entity = MagicMock()
@@ -640,12 +658,12 @@ async def test_entity_handler_with_one_entry_and_no_skip(
 
     dialog.entity.id = 1
     client.get_entity.return_value = entity
-    mock_namespace.return_value = fake_dialog
+    mock_construct_fake_dialog.return_value = fake_dialog
     await entity_handler(client, dialog, users, errors_handler, session, False)
 
     mock_insert.assert_called_once_with(session, 5, 1)
     client.get_entity.assert_awaited_once_with(5)
-    mock_namespace.assert_called_once_with(entity=entity)
+    mock_construct_fake_dialog.assert_called_once_with(entity)
     mock_info.assert_awaited_once_with(
         client, fake_dialog, set(), errors_handler, session
     )

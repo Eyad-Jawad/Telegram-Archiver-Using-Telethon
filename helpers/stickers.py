@@ -1,6 +1,7 @@
 import logging
 
-from sqlalchemy.orm import Session
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from telethon import TelegramClient, custom, errors, functions, types
 
 from db.models import StickerSet
@@ -8,16 +9,17 @@ from db.models import StickerSet
 logger = logging.getLogger(__name__)
 
 
-def find_sticker_set_in_db(
-    session: Session, id: int, hash: int
+async def find_sticker_set_in_db(
+
+    session: AsyncSession, id: int, hash: int
 ) -> tuple[str, str, int, int] | None:
     """
     A function that gets info about the sticker set from the database, in case it was
     archived before so we can skip sending another api call.
 
     Args:
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         id (int):
             The id of the sticker set.
@@ -34,16 +36,19 @@ def find_sticker_set_in_db(
         ]
     """
 
-    query = (
-        session.query(
-            StickerSet.pack_name,
-            StickerSet.pack_link,
-            StickerSet.sticker_set_id,
-            StickerSet.access_hash,
-        )
-        .filter(StickerSet.sticker_set_id == id, StickerSet.access_hash == hash)
-        .one_or_none()
+    stmt = select(
+        StickerSet.pack_name,
+        StickerSet.pack_link,
+        StickerSet.sticker_set_id,
+        StickerSet.access_hash,
+    ).where (
+        StickerSet.sticker_set_id == id, 
+        StickerSet.access_hash == hash
     )
+
+    result = await session.execute(stmt)
+
+    query = result.one_or_none()
 
     if not query:
         return None
@@ -104,7 +109,7 @@ async def get_sticker_set_info(
 
 
 def insert_sticker_set_info(
-    session: Session,
+    session: AsyncSession,
     sticker_set_info: tuple[int, int, str, str, int, int],
 ) -> None:
     """
@@ -112,8 +117,8 @@ def insert_sticker_set_info(
     inserts it into the database.
 
     Args:
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
 
         sticker_set_info (tuple[
             int (Dialog id),
@@ -146,7 +151,7 @@ async def stickers_handler(
     client: TelegramClient,
     message: custom.Message,
     dialog_id: int,
-    session: Session,
+    session: AsyncSession,
 ) -> None:
     """
     A function that handles things having to do with stickers, it archives the
@@ -163,8 +168,8 @@ async def stickers_handler(
         dialog_id (int):
             The id of the entity where the message is.
 
-        session (sqlalchemy.Session):
-            The session of the database.
+        session (sqlalchemy.ext.asyncio.AsyncSession):
+            The async session of the database.
     """
 
     # Just for safety
@@ -180,7 +185,7 @@ async def stickers_handler(
 
     # Check if the sticker set was archived before so we can
     # skip an api call
-    result = find_sticker_set_in_db(
+    result = await find_sticker_set_in_db(
         session, sticker_set.id, sticker_set.access_hash
     )
     if result:

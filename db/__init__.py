@@ -1,11 +1,11 @@
 from datetime import datetime
 
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.types import String, TypeDecorator
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-engine = create_engine(
-    "sqlite:///telegram.db", connect_args={"autocommit": False}
+engine = create_async_engine(
+    "sqlite+aiosqlite:///telegram.db", connect_args={"autocommit": False}
 )
 
 
@@ -28,14 +28,14 @@ class TimezoneAware(TypeDecorator):
         return datetime.fromisoformat(value)
 
 
-SessionLocal = sessionmaker(bind=engine)
+SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 
-def init_db(engine):
+async def init_db(engine):
     from . import models as models
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-    Base.metadata.create_all(engine)
 
-
-def get_session() -> Session:
+def get_session() -> AsyncSession:
     return SessionLocal()

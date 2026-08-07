@@ -22,7 +22,7 @@ def mock_message():
 
 
 @pytest.mark.asyncio
-@patch("helpers.stickers.find_sticker_set_in_db")
+@patch("helpers.stickers.find_sticker_set_in_db", new_callable=AsyncMock)
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_no_message(
@@ -36,7 +36,7 @@ async def test_stickers_handler_with_no_message(
 
 
 @pytest.mark.asyncio
-@patch("helpers.stickers.find_sticker_set_in_db")
+@patch("helpers.stickers.find_sticker_set_in_db", new_callable=AsyncMock)
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_no_file(
@@ -52,7 +52,7 @@ async def test_stickers_handler_with_no_file(
 
 
 @pytest.mark.asyncio
-@patch("helpers.stickers.find_sticker_set_in_db")
+@patch("helpers.stickers.find_sticker_set_in_db", new_callable=AsyncMock)
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_no_sticker_set(
@@ -69,7 +69,7 @@ async def test_stickers_handler_with_no_sticker_set(
 
 
 @pytest.mark.asyncio
-@patch("helpers.stickers.find_sticker_set_in_db")
+@patch("helpers.stickers.find_sticker_set_in_db", new_callable=AsyncMock)
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_empty_sticker_set(
@@ -86,7 +86,7 @@ async def test_stickers_handler_with_empty_sticker_set(
 
 
 @pytest.mark.asyncio
-@patch("helpers.stickers.find_sticker_set_in_db")
+@patch("helpers.stickers.find_sticker_set_in_db", new_callable=AsyncMock)
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_existing_sticker_set(
@@ -97,7 +97,7 @@ async def test_stickers_handler_with_existing_sticker_set(
     mock_find.return_value = ("pack", "link", 123, 321)
     await stickers_handler(client, mock_message, dialog_id, mock_session)
 
-    mock_find.assert_called_once_with(mock_session, 123, 321)
+    mock_find.assert_awaited_once_with(mock_session, 123, 321)
     mock_insert.assert_called_once_with(
         mock_session, (1, 10, "pack", "link", 123, 321)
     )
@@ -105,7 +105,7 @@ async def test_stickers_handler_with_existing_sticker_set(
 
 
 @pytest.mark.asyncio
-@patch("helpers.stickers.find_sticker_set_in_db")
+@patch("helpers.stickers.find_sticker_set_in_db", new_callable=AsyncMock)
 @patch("helpers.stickers.insert_sticker_set_info")
 @patch("helpers.stickers.get_sticker_set_info", new_callable=AsyncMock)
 async def test_stickers_handler_with_new_sticker_set(
@@ -117,7 +117,7 @@ async def test_stickers_handler_with_new_sticker_set(
     mock_get_info.return_value = ("things", "add", 123, 321)
     await stickers_handler(client, mock_message, dialog_id, mock_session)
 
-    mock_find.assert_called_once_with(mock_session, 123, 321)
+    mock_find.assert_awaited_once_with(mock_session, 123, 321)
     mock_insert.assert_called_once_with(
         mock_session, (1, 10, "things", "add", 123, 321)
     )
@@ -125,71 +125,91 @@ async def test_stickers_handler_with_new_sticker_set(
         client, mock_message.file.sticker_set
     )
 
-
-def test_insert_sticker_set_info_with_no_entry(mock_session):
+@pytest.mark.asyncio
+async def test_insert_sticker_set_info_with_no_entry(mock_session):
     insert_sticker_set_info(mock_session, None)
 
-    result = mock_session.scalars(select(StickerSet)).all()
+    stmt = select(StickerSet)
+    result = await mock_session.execute(stmt)
+    result = result.all()
 
     assert [] == result
 
-
-def test_insert_sticker_set_info_with_one_entry(mock_session):
+@pytest.mark.asyncio
+async def test_insert_sticker_set_info_with_one_entry(mock_session):
     insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
 
-    result = (
-        mock_session.query(
-            StickerSet.id,
-            StickerSet.dialog_id,
-            StickerSet.message_id,
-            StickerSet.pack_name,
-            StickerSet.pack_link,
-            StickerSet.sticker_set_id,
-            StickerSet.access_hash,
-        )
-        .filter(StickerSet.dialog_id == 1)
-        .all()
-    )
+    stmt = select(StickerSet)
+    result = await mock_session.execute(stmt)
+    result = result.scalar_one()
 
-    assert [(1, 1, 10, "pack", "add", 123, 321)] == result
+    assert result.id == 1
+    assert result.dialog_id == 1
+    assert result.message_id == 10
+    assert result.pack_name == "pack"
+    assert result.pack_link == "add"
+    assert result.sticker_set_id == 123
+    assert result.access_hash == 321
 
-
-def test_insert_sticker_set_info_with_many_entries(mock_session):
+@pytest.mark.asyncio
+async def test_insert_sticker_set_info_with_many_entries(mock_session):
     insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
 
-    result = (
-        mock_session.query(
-            StickerSet.id,
-            StickerSet.dialog_id,
-            StickerSet.message_id,
-            StickerSet.pack_name,
-            StickerSet.pack_link,
-            StickerSet.sticker_set_id,
-            StickerSet.access_hash,
-        )
-        .filter(StickerSet.dialog_id == 1)
-        .all()
-    )
+    stmt = select(StickerSet)
+    result = await mock_session.execute(stmt)
+    result = result.scalar_one()
 
-    assert [(1, 1, 10, "pack", "add", 123, 321)] == result
+    assert result.id == 1
+    assert result.dialog_id == 1
+    assert result.message_id == 10
+    assert result.pack_name == "pack"
+    assert result.pack_link == "add"
+    assert result.sticker_set_id == 123
+    assert result.access_hash == 321
+
+    insert_sticker_set_info(mock_session, (1, 11, "names", "nah", 654, 456))
+
+    result = await mock_session.execute(stmt)
+    result = result.scalars().all()
+
+    assert result[1].id == 2
+    assert result[1].dialog_id == 1
+    assert result[1].message_id == 11
+    assert result[1].pack_name == "names"
+    assert result[1].pack_link == "nah"
+    assert result[1].sticker_set_id == 654
+    assert result[1].access_hash == 456
+
+
+@pytest.mark.filterwarnings("ignore:Identity map already had an identity for.*:sqlalchemy.exc.SAWarning")
+@pytest.mark.asyncio
+async def test_insert_sticker_set_info_with_dupes(mock_session):
+    insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
+
+    stmt = select(StickerSet)
+    result = await mock_session.execute(stmt)
+    result = result.scalar_one()
+
+    assert result.id == 1
+    assert result.dialog_id == 1
+    assert result.message_id == 10
+    assert result.pack_name == "pack"
+    assert result.pack_link == "add"
+    assert result.sticker_set_id == 123
+    assert result.access_hash == 321
 
     insert_sticker_set_info(mock_session, (1, 10, "names", "nah", 654, 456))
 
-    result = (
-        mock_session.query(
-            StickerSet.id,
-            StickerSet.dialog_id,
-            StickerSet.message_id,
-            StickerSet.pack_name,
-            StickerSet.pack_link,
-            StickerSet.sticker_set_id,
-            StickerSet.access_hash,
-        )
-        .filter(StickerSet.dialog_id == 1)
-        .all()
-    )
+    result = await mock_session.execute(stmt)
+    result = result.scalars().all()
 
-    assert [(1, 1, 10, "pack", "add", 123, 321)] == result
+    assert result[0].id == 1
+    assert result[0].dialog_id == 1
+    assert result[0].message_id == 10
+    assert result[0].pack_name == "pack"
+    assert result[0].pack_link == "add"
+    assert result[0].sticker_set_id == 123
+    assert result[0].access_hash == 321
 
 
 @pytest.mark.asyncio
@@ -259,11 +279,12 @@ async def test_get_sticker_set_info_with_unknown_exception(
     mock_requset.assert_called_once_with(stickerset=sticker_set, hash=0)
 
 
-def test_find_sticker_set_in_db_with_empty_db(mock_session):
-    assert find_sticker_set_in_db(mock_session, 0, 0) == None
+@pytest.mark.asyncio
+async def test_find_sticker_set_in_db_with_empty_db(mock_session):
+    assert await find_sticker_set_in_db(mock_session, 0, 0) == None
 
-
-def test_find_sticker_set_in_db_with_one_entry(mock_session):
+@pytest.mark.asyncio
+async def test_find_sticker_set_in_db_with_one_entry(mock_session):
     new_sticker_set = StickerSet(
         dialog_id=1,
         message_id=10,
@@ -275,7 +296,7 @@ def test_find_sticker_set_in_db_with_one_entry(mock_session):
 
     mock_session.add(new_sticker_set)
 
-    assert find_sticker_set_in_db(mock_session, 123, 321) == (
+    assert await find_sticker_set_in_db(mock_session, 123, 321) == (
         "Pack",
         "Link",
         123,

@@ -5,6 +5,7 @@ description = "A tool that parses messages and info from telegram."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "aiosqlite>=0.22.1",
     "python-dotenv>=1.2.2",
     "readchar>=4.2.2",
     "rich>=15.0.0",

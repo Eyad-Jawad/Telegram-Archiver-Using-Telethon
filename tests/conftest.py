@@ -1,27 +1,28 @@
 from unittest.mock import MagicMock
 
-import pytest
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+import pytest, pytest_asyncio
+from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
 
 import db
 
 
-@pytest.fixture
-def mock_session():
-    engine = create_engine("sqlite:///:memory:")
+@pytest_asyncio.fixture
+async def mock_session():
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:", connect_args={"autocommit": False}, echo=False,
+    )
 
-    db.init_db(engine)
+    await db.init_db(engine)
 
-    SessionLocal = sessionmaker(bind=engine)
+    SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
     session = SessionLocal()
 
     try:
         yield session
     finally:
-        session.close()
-        engine.dispose()
+        await session.close()
+        await engine.dispose()
 
 
 @pytest.fixture

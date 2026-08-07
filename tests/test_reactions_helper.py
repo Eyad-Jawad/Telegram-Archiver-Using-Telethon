@@ -6,6 +6,7 @@ from telethon import types
 
 from db.models import Reaction
 from helpers.reactions import *
+from sqlalchemy import select
 
 
 def date_consts():
@@ -203,8 +204,9 @@ async def test_get_reaction_list_with_many_reactions(
     assert mock_reaction_type.call_args_list == [call(react1), call(react2)]
 
 
+@pytest.mark.asyncio
 @patch("helpers.reactions.reaction_type")
-def test_insert_channel_reaction(mock_reaction_type, mock_session):
+async def test_insert_channel_reaction(mock_reaction_type, mock_session):
     react = MagicMock()
     react.count = 12
 
@@ -212,35 +214,34 @@ def test_insert_channel_reaction(mock_reaction_type, mock_session):
 
     insert_channel_reaction(mock_session, 1, 10, react)
 
-    result = mock_session.query(
-        Reaction.dialog_id,
-        Reaction.message_id,
-        Reaction.reactors_id,
-        Reaction.reacting_date,
-        Reaction.reaction,
-        Reaction.count,
-    ).all()
+    result = await mock_session.execute(select(Reaction))
+    result = result.scalar()
 
-    assert [(1, 10, None, None, "🐔", 12)] == result
+    assert result.dialog_id == 1
+    assert result.message_id == 10
+    assert result.reactors_id == None
+    assert result.reacting_date == None
+    assert result.reaction == "🐔"
+    assert result.count == 12
+
     mock_reaction_type.assert_called_once_with(react)
 
-
-def test_insert_chat_reaction(mock_session):
+@pytest.mark.asyncio
+async def test_insert_chat_reaction(mock_session):
     DATES = date_consts()
     result = (1, 10, 5, DATES[1], "🐔")
 
     insert_chat_reaction(mock_session, result)
 
-    result = mock_session.query(
-        Reaction.dialog_id,
-        Reaction.message_id,
-        Reaction.reactors_id,
-        Reaction.reacting_date,
-        Reaction.reaction,
-        Reaction.count,
-    ).all()
+    result = await mock_session.execute(select(Reaction))
+    result = result.scalar()
 
-    assert [(1, 10, 5, DATES[1], "🐔", 1)] == result
+    assert result.dialog_id == 1
+    assert result.message_id == 10
+    assert result.reactors_id == 5
+    assert result.reacting_date == DATES[1]
+    assert result.reaction == "🐔"
+    assert result.count == 1
 
 
 @pytest.mark.asyncio

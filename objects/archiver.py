@@ -2,6 +2,7 @@ import asyncio
 import logging
 import time
 
+from sqlalchemy import select, update
 from rich.console import Console
 from telethon import TelegramClient, custom, types, utils
 
@@ -62,22 +63,22 @@ class Archiver:
             dialog_id=self.id, name=self.dialog.name, type=self.type
         )
         self.session.add(new_dialog)
-        self.session.flush()
 
     async def set_up(self) -> None:
         """Initialize the async part of the class."""
+        await self.session.commit()
 
-        logger.info("Initiating the dialog class (the asynchronous part)...")
+        logger.info("Initiating the dialog class (the asynchronous part)...")        
 
         # Get the total number of actual messeages in the dialog.
         self.total_messages: int = (
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
-        self.session.query(Dialog).filter(Dialog.dialog_id == self.id).update(
-            {"total_number_of_messages": self.total_messages}
-        )
-        self.session.commit()
+        stmt = update(Dialog).where(Dialog.dialog_id == self.id).values(total_number_of_messages=self.total_messages)
+
+        await self.session.execute(stmt)
+        await self.session.commit()
 
         # Initialize the needed objects
         self.progress: prog = prog(self.total_messages, self.dialog.name)
@@ -91,7 +92,7 @@ class Archiver:
         )  # A set that collects entities over archiving time.
 
         # Get the progress in case this dialog was archived before.
-        checkpoint: tuple = self.get_checkpoint()
+        checkpoint: tuple = await self.get_checkpoint()
         self.progress.use_checkpoint(checkpoint)
 
     def get_dialog_type(self) -> str:
@@ -166,10 +167,10 @@ class Archiver:
                     self.session,
                 )
 
-            self.save_checkpoint()
+            await self.save_checkpoint()
 
-            self.session.commit()
-            self.session.close()
+            await self.session.commit()
+            await self.session.close()
             logger.info(
                 f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.time_start} seconds."
             )
@@ -182,7 +183,7 @@ class Archiver:
             logger.info(
                 f"Exiting mid-archiving the dialog {self.dialog.name}..."
             )
-            self.handle_key_interruption()
+            await self.handle_key_interruption()
 
         # Handle other unknown errors
         except Exception as e:
@@ -191,13 +192,13 @@ class Archiver:
             )
             await self.error.handle(e)
 
-    def save_checkpoint(self) -> None:
+    async def save_checkpoint(self) -> None:
         """A method that saves the progress of archiving in the database for future archiving."""
 
         logger.info("Saving the checkpoint...")
 
         # Get the past checkpoint in case some data was not initialized
-        checkpoint = list(self.get_checkpoint())
+        checkpoint = list(await self.get_checkpoint())
         args = [
             self.progress.last_message_id,
             self.progress.message_counter,
@@ -208,17 +209,16 @@ class Archiver:
             if value:
                 checkpoint[i] = value
 
-        self.session.query(Dialog).filter(Dialog.dialog_id == self.id).update(
-            {
-                "last_message_id": checkpoint[0],
-                "message_counter": checkpoint[1],
-                "archiving_time": checkpoint[2],
-            }
+        stmt = update(Dialog).where(Dialog.dialog_id == self.id).values(
+            last_message_id=checkpoint[0],
+            message_counter=checkpoint[1],
+            archiving_time=checkpoint[2],
         )
 
-        self.session.commit()
+        await self.session.execute(stmt)
+        await self.session.commit()
 
-    def get_checkpoint(self) -> tuple[int, int, float]:
+    async def get_checkpoint(self) -> tuple[int, int, float]:
         """
         Get the past checkpoint of progerss in archiving the dialog if it exists.
 
@@ -230,15 +230,15 @@ class Archiver:
             ]
         """
 
-        checkpoint = (
-            self.session.query(
-                Dialog.last_message_id,
-                Dialog.message_counter,
-                Dialog.archiving_time,
-            )
-            .filter(Dialog.dialog_id == self.id)
-            .one()
-        )
+        stmt = select(
+            Dialog.last_message_id,
+            Dialog.message_counter,
+            Dialog.archiving_time,
+        ).where(Dialog.dialog_id == self.id)
+
+        result = await self.session.execute(stmt)
+
+        checkpoint = result.one()
 
         return checkpoint._t
 
@@ -334,14 +334,14 @@ class Archiver:
 
         self.progress.update(message_id)
 
-    def handle_key_interruption(self) -> None:
+    async def handle_key_interruption(self) -> None:
         """A method for existing safely when interrupted mid archiving."""
 
         print("\nPlease wait a moment while the saving the checkpoint")
         logger.info("Handling key interruption...")
 
         # Save checkpoint, most important thing in this method
-        self.save_checkpoint()
+        await self.save_checkpoint()
 
         """
         Check if the user wants to save user data.
@@ -356,8 +356,8 @@ class Archiver:
             for user in self.users:
                 insert_users_ids(self.session, user, self.id)
 
-        self.session.commit()
-        self.session.close()
+        await self.session.commit()
+        await self.session.close()
 
         # utils.clearLastLine()
         logger.info("Done handling key interruption.")

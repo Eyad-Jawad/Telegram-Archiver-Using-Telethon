@@ -41,7 +41,7 @@ class Errors:
         """
 
         # Save the progress
-        self.archiver.save_checkpoint()
+        await self.archiver.save_checkpoint()
 
         logger.error(f"Error occurred: {error}.")
         logger.error(
