@@ -46,9 +46,15 @@ async def find_sticker_set_in_db(
 
     query = result.one_or_none()
 
-    if not query:
+    if query is None:
         return None
-    return query._t
+
+    return (
+        query[0],
+        query[1],
+        query[2],
+        query[3],
+    )
 
 
 async def get_sticker_set_info(

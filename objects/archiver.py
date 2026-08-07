@@ -248,7 +248,11 @@ class Archiver:
 
         checkpoint = result.one()
 
-        return checkpoint._t
+        return (
+            checkpoint[0],
+            checkpoint[1],
+            checkpoint[2],
+        )
 
     async def archive_message(self, message: custom.message.Message) -> None:
         """
