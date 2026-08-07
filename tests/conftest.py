@@ -11,7 +11,6 @@ import db
 async def mock_session():
     engine = create_async_engine(
         "sqlite+aiosqlite:///:memory:",
-        connect_args={"autocommit": False},
         echo=False,
     )
 
