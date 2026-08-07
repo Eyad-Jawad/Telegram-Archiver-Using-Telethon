@@ -128,8 +128,7 @@ class Archiver:
                     reverse=True,  # Start from the oldest message.
                     offset_id=self.progress.last_message_id,  # Skip already archived messages.
                 ):
-                    # If 5 seconds have passed, or multipls of 10% messages were archived,
-                    # update the progress panel in the CLI.
+                    # If 5 seconds have passed, update the progress panel in the CLI.
                     if time.monotonic() - last_progress_refresh > 5:
                         last_progress_refresh = time.monotonic()
                         screen.update(
