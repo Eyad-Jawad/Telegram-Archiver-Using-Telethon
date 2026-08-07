@@ -73,6 +73,7 @@ def date_consts():
 async def test_get_latest_photo_date_for_empty_DB(mock_session):
     assert await get_latest_photo_date(mock_session, 21) == date_consts()[0]
 
+
 @pytest.mark.asyncio
 async def test_get_latest_photo_date_for_empty_entry(mock_session):
     new_dialog_photo = DialogPhoto(
@@ -84,6 +85,7 @@ async def test_get_latest_photo_date_for_empty_entry(mock_session):
     mock_session.add(new_dialog_photo)
 
     assert await get_latest_photo_date(mock_session, 1) == date_consts()[0]
+
 
 @pytest.mark.asyncio
 async def test_get_latest_photo_date_for_one_entry(mock_session):
@@ -98,6 +100,7 @@ async def test_get_latest_photo_date_for_one_entry(mock_session):
         )
     )
     assert await get_latest_photo_date(mock_session, 1) == DATES[1]
+
 
 @pytest.mark.asyncio
 async def test_get_latest_photo_date_for_many_dates(mock_session):
@@ -128,6 +131,7 @@ async def test_get_latest_photo_date_for_many_dates(mock_session):
     )
 
     assert await get_latest_photo_date(mock_session, 1) == DATES[3]
+
 
 @pytest.mark.asyncio
 async def test_get_latest_photo_date_for_many_entries(mock_session):
@@ -160,12 +164,15 @@ async def test_get_latest_photo_date_for_many_entries(mock_session):
 
     assert await get_latest_photo_date(mock_session, 1) == DATES[1]
 
+
 @pytest.mark.asyncio
 async def test_push_info_with_one_entry(mock_session):
     mock_session.add(DialogMetadata(dialog_id=1, full_request="Anything"))
     insert_dialog_metadata(mock_session, 1, "Chickens")
 
-    stmt = select(DialogMetadata.full_request).where(DialogMetadata.dialog_id == 1)
+    stmt = select(DialogMetadata.full_request).where(
+        DialogMetadata.dialog_id == 1
+    )
     result = await mock_session.execute(stmt)
     result = result.all()
 
@@ -186,7 +193,8 @@ async def test_push_info_with_many_entries(mock_time, mock_session):
 
     insert_dialog_metadata(mock_session, 1, "Chicken wings")
 
-    stmt = select(DialogMetadata.dialog_id,
+    stmt = select(
+        DialogMetadata.dialog_id,
         DialogMetadata.full_request,
         DialogMetadata.date_of_request,
     ).where(DialogMetadata.dialog_id == 1)
@@ -198,6 +206,7 @@ async def test_push_info_with_many_entries(mock_time, mock_session):
 
     mock_time.now.assert_called_once()
 
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("photo_data"),
@@ -206,7 +215,8 @@ async def test_push_info_with_many_entries(mock_time, mock_session):
 async def test_push_photos_info_with_nothing(mock_session, photo_data):
     insert_photo_info(mock_session, photo_data)
 
-    stmt = select(DialogPhoto.dialog_id,
+    stmt = select(
+        DialogPhoto.dialog_id,
         DialogPhoto.photo_id,
         DialogPhoto.photo_path,
         DialogPhoto.photo_date,
@@ -224,7 +234,8 @@ async def test_push_photos_info_with_one_entry(mock_session):
 
     insert_photo_info(mock_session, photo_info)
 
-    stmt = select(DialogPhoto.dialog_id,
+    stmt = select(
+        DialogPhoto.dialog_id,
         DialogPhoto.photo_id,
         DialogPhoto.photo_path,
         DialogPhoto.photo_date,
@@ -246,7 +257,8 @@ async def test_push_photos_info_with_many_entries(mock_session):
 
     insert_photo_info(mock_session, photo_info)
 
-    stmt = select(DialogPhoto.dialog_id,
+    stmt = select(
+        DialogPhoto.dialog_id,
         DialogPhoto.photo_id,
         DialogPhoto.photo_path,
         DialogPhoto.photo_date,
@@ -574,6 +586,7 @@ async def test_insert_users_with_no_entry(mock_session):
 
     assert [] == result
 
+
 @pytest.mark.asyncio
 async def test_insert_users_with_one_entry(mock_session):
     insert_users_ids(mock_session, 1, 12)
@@ -583,6 +596,7 @@ async def test_insert_users_with_one_entry(mock_session):
     result = result.all()
 
     assert [(1, 12)] == result
+
 
 @pytest.mark.asyncio
 async def test_insert_users_with_many_entreis(mock_session):
@@ -595,6 +609,7 @@ async def test_insert_users_with_many_entreis(mock_session):
     result = result.all()
 
     assert [(1, 12), (1, 11), (2, 12)] == result
+
 
 @pytest.mark.asyncio
 async def test_insert_users_duplicate(mock_session):

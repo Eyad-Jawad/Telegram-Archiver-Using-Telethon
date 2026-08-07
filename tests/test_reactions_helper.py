@@ -226,6 +226,7 @@ async def test_insert_channel_reaction(mock_reaction_type, mock_session):
 
     mock_reaction_type.assert_called_once_with(react)
 
+
 @pytest.mark.asyncio
 async def test_insert_chat_reaction(mock_session):
     DATES = date_consts()

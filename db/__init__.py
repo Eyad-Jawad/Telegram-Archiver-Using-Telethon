@@ -37,6 +37,7 @@ SessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False)
 
 async def init_db(engine):
     from . import models as models
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 

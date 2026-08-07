@@ -109,24 +109,23 @@ async def mock_archiver(
         mock_checkpoint=mock_checkpoint,
     )
 
+
 @pytest.mark.asyncio
 async def test_dialog_init(mock_archiver):
     arc = mock_archiver
-    
+
     assert arc.obj.client is arc.mock_client
     assert arc.obj.dialog is arc.mock_dialog
     assert arc.obj.entity is arc.mock_dialog.entity
 
     assert arc.obj.id == 1
-    arc.mock_get_id.assert_called_once_with(
-        arc.mock_dialog.entity
-    )
+    arc.mock_get_id.assert_called_once_with(arc.mock_dialog.entity)
 
     assert arc.obj.type == "Something"
     arc.mock_get_type.assert_called_once()
 
     assert arc.obj.config is arc.mock_config
-    
+
     assert arc.obj.total_messages == 10
 
     assert arc.obj.session is arc.mock_session
@@ -230,14 +229,18 @@ async def test_dialog_save_checkpoint(
     mock_get_checkpoint.assert_called_once()
     mock_counter.assert_called_once()
 
+
 @pytest.mark.asyncio
 async def test_dialog_get_checkpoint_with_empty_entry(mock_archiver):
     obj = mock_archiver.obj
 
     assert await obj.get_checkpoint() == (1, 0.0, 0.0)
 
+
 @pytest.mark.asyncio
-async def test_dialog_get_checkpoint_with_one_entry(mock_archiver, mock_session):
+async def test_dialog_get_checkpoint_with_one_entry(
+    mock_archiver, mock_session
+):
     obj = mock_archiver.obj
 
     stmt = update(Dialog).values(
@@ -250,8 +253,11 @@ async def test_dialog_get_checkpoint_with_one_entry(mock_archiver, mock_session)
 
     assert await obj.get_checkpoint() == (33, 3, 3.3)
 
+
 @pytest.mark.asyncio
-async def test_dialog_get_checkpoint_with_many_entries(mock_archiver, mock_session):
+async def test_dialog_get_checkpoint_with_many_entries(
+    mock_archiver, mock_session
+):
     obj = mock_archiver.obj
     obj.session = mock_session
 
@@ -268,11 +274,15 @@ async def test_dialog_get_checkpoint_with_many_entries(mock_archiver, mock_sessi
 
     assert await obj.get_checkpoint() == (33, 3, 3.3)
 
+
 @pytest.mark.asyncio
 @patch("objects.archiver.Archiver.save_checkpoint")
 @patch("objects.archiver.insert_users_ids")
 async def test_dialog_key_interruption_with_no_user_info(
-    mock_insert, mock_save, mock_archiver, capsys,
+    mock_insert,
+    mock_save,
+    mock_archiver,
+    capsys,
 ):
     obj = mock_archiver.obj
     session = AsyncMock()
@@ -294,6 +304,7 @@ async def test_dialog_key_interruption_with_no_user_info(
 
     session.commit.assert_awaited_once()
     session.close.assert_awaited_once()
+
 
 @pytest.mark.asyncio
 @patch("objects.archiver.Archiver.save_checkpoint")
@@ -323,6 +334,7 @@ async def test_dialog_key_interruption_with_one_user(
 
     session.commit.assert_awaited_once()
     session.close.assert_awaited_once()
+
 
 @pytest.mark.asyncio
 @patch("objects.archiver.Archiver.save_checkpoint")

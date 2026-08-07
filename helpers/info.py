@@ -60,7 +60,9 @@ def user_id_handler(
         return ("", 0)
 
 
-async def get_latest_photo_date(session: AsyncSession, dialog_id: int) -> datetime:
+async def get_latest_photo_date(
+    session: AsyncSession, dialog_id: int
+) -> datetime:
     """
     A function that gets the date of the latest profile photo
     for entities, so that you only donwload photos that are newer
@@ -80,9 +82,9 @@ async def get_latest_photo_date(session: AsyncSession, dialog_id: int) -> dateti
 
     # format: 2026-03-06 17:45:25+00:00
 
-    stmt = select(
-        func.max(DialogPhoto.photo_date)
-    ).where(DialogPhoto.dialog_id == dialog_id)
+    stmt = select(func.max(DialogPhoto.photo_date)).where(
+        DialogPhoto.dialog_id == dialog_id
+    )
 
     result = await session.execute(stmt)
 

@@ -10,7 +10,9 @@ import db
 @pytest_asyncio.fixture
 async def mock_session():
     engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:", connect_args={"autocommit": False}, echo=False,
+        "sqlite+aiosqlite:///:memory:",
+        connect_args={"autocommit": False},
+        echo=False,
     )
 
     await db.init_db(engine)

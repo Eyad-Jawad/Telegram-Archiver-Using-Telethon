@@ -68,14 +68,18 @@ class Archiver:
         """Initialize the async part of the class."""
         await self.session.commit()
 
-        logger.info("Initiating the dialog class (the asynchronous part)...")        
+        logger.info("Initiating the dialog class (the asynchronous part)...")
 
         # Get the total number of actual messeages in the dialog.
         self.total_messages: int = (
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
-        stmt = update(Dialog).where(Dialog.dialog_id == self.id).values(total_number_of_messages=self.total_messages)
+        stmt = (
+            update(Dialog)
+            .where(Dialog.dialog_id == self.id)
+            .values(total_number_of_messages=self.total_messages)
+        )
 
         await self.session.execute(stmt)
         await self.session.commit()
@@ -209,10 +213,14 @@ class Archiver:
             if value:
                 checkpoint[i] = value
 
-        stmt = update(Dialog).where(Dialog.dialog_id == self.id).values(
-            last_message_id=checkpoint[0],
-            message_counter=checkpoint[1],
-            archiving_time=checkpoint[2],
+        stmt = (
+            update(Dialog)
+            .where(Dialog.dialog_id == self.id)
+            .values(
+                last_message_id=checkpoint[0],
+                message_counter=checkpoint[1],
+                archiving_time=checkpoint[2],
+            )
         )
 
         await self.session.execute(stmt)

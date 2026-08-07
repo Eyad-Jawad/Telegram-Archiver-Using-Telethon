@@ -125,6 +125,7 @@ async def test_stickers_handler_with_new_sticker_set(
         client, mock_message.file.sticker_set
     )
 
+
 @pytest.mark.asyncio
 async def test_insert_sticker_set_info_with_no_entry(mock_session):
     insert_sticker_set_info(mock_session, None)
@@ -134,6 +135,7 @@ async def test_insert_sticker_set_info_with_no_entry(mock_session):
     result = result.all()
 
     assert [] == result
+
 
 @pytest.mark.asyncio
 async def test_insert_sticker_set_info_with_one_entry(mock_session):
@@ -150,6 +152,7 @@ async def test_insert_sticker_set_info_with_one_entry(mock_session):
     assert result.pack_link == "add"
     assert result.sticker_set_id == 123
     assert result.access_hash == 321
+
 
 @pytest.mark.asyncio
 async def test_insert_sticker_set_info_with_many_entries(mock_session):
@@ -181,7 +184,9 @@ async def test_insert_sticker_set_info_with_many_entries(mock_session):
     assert result[1].access_hash == 456
 
 
-@pytest.mark.filterwarnings("ignore:Identity map already had an identity for.*:sqlalchemy.exc.SAWarning")
+@pytest.mark.filterwarnings(
+    "ignore:Identity map already had an identity for.*:sqlalchemy.exc.SAWarning"
+)
 @pytest.mark.asyncio
 async def test_insert_sticker_set_info_with_dupes(mock_session):
     insert_sticker_set_info(mock_session, (1, 10, "pack", "add", 123, 321))
@@ -282,6 +287,7 @@ async def test_get_sticker_set_info_with_unknown_exception(
 @pytest.mark.asyncio
 async def test_find_sticker_set_in_db_with_empty_db(mock_session):
     assert await find_sticker_set_in_db(mock_session, 0, 0) == None
+
 
 @pytest.mark.asyncio
 async def test_find_sticker_set_in_db_with_one_entry(mock_session):

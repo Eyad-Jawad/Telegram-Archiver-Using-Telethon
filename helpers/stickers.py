@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 
 async def find_sticker_set_in_db(
-
     session: AsyncSession, id: int, hash: int
 ) -> tuple[str, str, int, int] | None:
     """
@@ -41,10 +40,7 @@ async def find_sticker_set_in_db(
         StickerSet.pack_link,
         StickerSet.sticker_set_id,
         StickerSet.access_hash,
-    ).where (
-        StickerSet.sticker_set_id == id, 
-        StickerSet.access_hash == hash
-    )
+    ).where(StickerSet.sticker_set_id == id, StickerSet.access_hash == hash)
 
     result = await session.execute(stmt)
 
