@@ -4,6 +4,7 @@ import os
 import signal
 import sys
 from datetime import UTC, datetime
+from pathlib import Path
 
 import readchar
 from dotenv import load_dotenv
@@ -39,6 +40,9 @@ chagne replied to id to be a telegram link
 """
 
 logger = logging.getLogger(__name__)
+session_dir = Path.home() / ".telegram-archiver"
+session_dir.mkdir(mode=0o700, exist_ok=True)
+session_path = session_dir / "session"
 
 
 async def main():
@@ -188,7 +192,7 @@ if __name__ == "__main__":
     API_ID = os.getenv("TELEGRAM_API_KEY")
     API_HASH = os.getenv("TELEGRAM_API_HASH")
 
-    client = TelegramClient("Scrapper", API_ID, API_HASH)
+    client = TelegramClient(str(session_path), API_ID, API_HASH)
 
     with client:
         try:
