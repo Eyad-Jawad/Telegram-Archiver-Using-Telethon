@@ -365,7 +365,7 @@ class Archiver:
         """
         if self.config.user_metadata:
             for user in self.users:
-                insert_users_ids(self.session, user, self.id)
+                await insert_users_ids(self.session, user, self.id)
 
         await self.session.commit()
         await self.session.close()

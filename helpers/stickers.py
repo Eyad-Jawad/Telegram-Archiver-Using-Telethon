@@ -44,7 +44,7 @@ async def find_sticker_set_in_db(
 
     result = await session.execute(stmt)
 
-    query = result.one_or_none()
+    query = result.first()
 
     if query is None:
         return None

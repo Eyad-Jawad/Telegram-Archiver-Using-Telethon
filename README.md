@@ -9,13 +9,11 @@ It archives:
 License: MIT  
 Author: Eyad Jawad  
 
-### WARNING:
+I have used this tool to archive 1 million text messages in less than 4 hours, this is around the maximum speed set by the Telegram api, which is 100 msg/s, factoring floodwaits in, and you get a similar number.  
+Know that the numbers above do not put multimedia into account, in such a case the speed would depend wholly on your internet speed, and probably a stricter floodwait protocol set by Telegram, I personally have not tried to use this tool to archive a huge number of files.  
 
-DO NOT RUN THIS PROGRAM AGRESSIVELY!  
-I haven't tried running the program for extended periods of time, but if you run it for say, days, you might be rate limited multiple times, even though the program handles rate limit, too much rate limit might very well get your account banned, so I'd suggest you be careful when using it for large dialogs.  
-
-#### Update: 
-I have used it to archive ~1 Million messages in less than 4 hours, and didn't get banned or rate limited at all, but I aimed for text messages only, still, it is good to be careful and monitor the terminal when planning to use for an extened periods of time, and better yet use it in sessions, not all at once.  
+### Warning
+Use this tool on your own accord, it is still possible to get banned for spam if you use it "too aggresivly", I used it very much so, but haven't gotten into any problem or what so ever, however, be careful when you using it.  
 
 ### Setting The API keys
 

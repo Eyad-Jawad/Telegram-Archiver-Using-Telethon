@@ -277,7 +277,7 @@ async def test_dialog_get_checkpoint_with_many_entries(
 
 @pytest.mark.asyncio
 @patch("objects.archiver.Archiver.save_checkpoint")
-@patch("objects.archiver.insert_users_ids")
+@patch("objects.archiver.insert_users_ids", new_callable=AsyncMock)
 async def test_dialog_key_interruption_with_no_user_info(
     mock_insert,
     mock_save,
@@ -300,7 +300,7 @@ async def test_dialog_key_interruption_with_no_user_info(
     )
 
     mock_save.assert_called_once()
-    mock_insert.assert_not_called()
+    mock_insert.assert_not_awaited()
 
     session.commit.assert_awaited_once()
     session.close.assert_awaited_once()
@@ -308,7 +308,7 @@ async def test_dialog_key_interruption_with_no_user_info(
 
 @pytest.mark.asyncio
 @patch("objects.archiver.Archiver.save_checkpoint")
-@patch("objects.archiver.insert_users_ids")
+@patch("objects.archiver.insert_users_ids", new_callable=AsyncMock)
 async def test_dialog_key_interruption_with_one_user(
     mock_insert, mock_save, mock_archiver, capsys
 ):
@@ -330,7 +330,7 @@ async def test_dialog_key_interruption_with_one_user(
     )
 
     mock_save.assert_called_once()
-    mock_insert.assert_called_once_with(session, 1, 1)
+    mock_insert.assert_awaited_once_with(session, 1, 1)
 
     session.commit.assert_awaited_once()
     session.close.assert_awaited_once()
@@ -338,7 +338,7 @@ async def test_dialog_key_interruption_with_one_user(
 
 @pytest.mark.asyncio
 @patch("objects.archiver.Archiver.save_checkpoint")
-@patch("objects.archiver.insert_users_ids")
+@patch("objects.archiver.insert_users_ids", new_callable=AsyncMock)
 async def test_dialog_key_interruption_with_many_users(
     mock_insert, mock_save, mock_archiver, capsys
 ):
@@ -361,8 +361,8 @@ async def test_dialog_key_interruption_with_many_users(
 
     mock_save.assert_called_once()
 
-    assert mock_insert.call_count == 2
-    assert mock_insert.call_args_list == [
+    assert mock_insert.await_count == 2
+    assert mock_insert.await_args_list == [
         call(session, 1, 1),
         call(session, 2, 1),
     ]

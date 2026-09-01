@@ -576,9 +576,9 @@ async def test_add_users_to_set_for_unknown_errors():
 
 @pytest.mark.asyncio
 async def test_insert_users_with_no_entry(mock_session):
-    insert_users_ids(mock_session, None, 1)
-    insert_users_ids(mock_session, 1, None)
-    insert_users_ids(mock_session, None, None)
+    await insert_users_ids(mock_session, None, 1)
+    await insert_users_ids(mock_session, 1, None)
+    await insert_users_ids(mock_session, None, None)
 
     stmt = select(User.user_id, User.dialog_id)
     result = await mock_session.execute(stmt)
@@ -589,7 +589,7 @@ async def test_insert_users_with_no_entry(mock_session):
 
 @pytest.mark.asyncio
 async def test_insert_users_with_one_entry(mock_session):
-    insert_users_ids(mock_session, 1, 12)
+    await insert_users_ids(mock_session, 1, 12)
 
     stmt = select(User.user_id, User.dialog_id)
     result = await mock_session.execute(stmt)
@@ -600,9 +600,9 @@ async def test_insert_users_with_one_entry(mock_session):
 
 @pytest.mark.asyncio
 async def test_insert_users_with_many_entreis(mock_session):
-    insert_users_ids(mock_session, 1, 12)
-    insert_users_ids(mock_session, 1, 11)
-    insert_users_ids(mock_session, 2, 12)
+    await insert_users_ids(mock_session, 1, 12)
+    await insert_users_ids(mock_session, 1, 11)
+    await insert_users_ids(mock_session, 2, 12)
 
     stmt = select(User.user_id, User.dialog_id)
     result = await mock_session.execute(stmt)
@@ -613,7 +613,7 @@ async def test_insert_users_with_many_entreis(mock_session):
 
 @pytest.mark.asyncio
 async def test_insert_users_duplicate(mock_session):
-    insert_users_ids(mock_session, 1, 12)
+    await insert_users_ids(mock_session, 1, 12)
 
     stmt = select(User.user_id, User.dialog_id)
     result = await mock_session.execute(stmt)
@@ -621,7 +621,7 @@ async def test_insert_users_duplicate(mock_session):
 
     assert [(1, 12)] == result
 
-    insert_users_ids(mock_session, 1, 12)
+    await insert_users_ids(mock_session, 1, 12)
 
     result = await mock_session.execute(stmt)
     result = result.all()
@@ -630,17 +630,17 @@ async def test_insert_users_duplicate(mock_session):
 
 
 @pytest.mark.asyncio
-@patch("helpers.info.insert_users_ids")
+@patch("helpers.info.insert_users_ids", new_callable=AsyncMock)
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
 async def test_entity_handler_with_empty_set(mock_info, mock_insert):
     await entity_handler(None, None, set(), None, None, True)
 
     mock_info.assert_not_awaited()
-    mock_insert.assert_not_called()
+    mock_insert.assert_not_awaited()
 
 
 @pytest.mark.asyncio
-@patch("helpers.info.insert_users_ids")
+@patch("helpers.info.insert_users_ids", new_callable=AsyncMock)
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
 async def test_entity_handler_with_one_entry_and_skip(mock_info, mock_insert):
     client = MagicMock()
@@ -652,13 +652,13 @@ async def test_entity_handler_with_one_entry_and_skip(mock_info, mock_insert):
     dialog.entity.id = 1
     await entity_handler(client, dialog, users, errors_handler, session, True)
 
-    mock_insert.assert_called_once_with(session, 5, 1)
+    mock_insert.assert_awaited_once_with(session, 5, 1)
     mock_info.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 @patch("helpers.info.construct_fake_dialog")
-@patch("helpers.info.insert_users_ids")
+@patch("helpers.info.insert_users_ids", new_callable=AsyncMock)
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
 async def test_entity_handler_with_one_entry_and_no_skip(
     mock_info, mock_insert, mock_construct_fake_dialog
