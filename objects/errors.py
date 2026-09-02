@@ -26,7 +26,7 @@ class Errors:
                 The archiver object of the program, used to save
                 a checkpoint in case of an error.
         """
-        logger.info("Setting up the Errors class...")
+        logger.debug("Setting up the Errors class...")
         self.progress = progress
         self.archiver = archiver
 

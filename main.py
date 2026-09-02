@@ -60,7 +60,7 @@ async def main():
     config: Config = Config()
     parse_args(config)
 
-    logger.info(f"Started at {datetime.now(tz=UTC)} with config: {config}")
+    logger.debug(f"Started at {datetime.now(tz=UTC)} with config: {config}")
 
     # This is th directory where we'll save files/images or any of the sort
     os.makedirs("Media/", exist_ok=True)

@@ -24,7 +24,7 @@ class Progress:
                 through dialog.name.
         """
 
-        logger.info("Setting up the Progress class...")
+        logger.debug("Setting up the Progress class...")
 
         self.dialog_name = dialog_name
         self.total_messages: int = total_messages

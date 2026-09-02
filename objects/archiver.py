@@ -42,7 +42,7 @@ class Archiver:
                 The object which you get from client.iter_dialogs.
         """
 
-        logger.info("Initiating the dialog class (the synchronous part)...")
+        logger.debug("Initiating the dialog class (the synchronous part)...")
 
         # Telethon objects
         self.client = client
@@ -68,7 +68,7 @@ class Archiver:
         """Initialize the async part of the class."""
         await self.session.commit()
 
-        logger.info("Initiating the dialog class (the asynchronous part)...")
+        logger.debug("Initiating the dialog class (the asynchronous part)...")
 
         # Get the total number of actual messeages in the dialog.
         self.total_messages: int = (
@@ -116,7 +116,7 @@ class Archiver:
     async def archive(self) -> None:
         """The main archiving loop for the dialog."""
 
-        logger.info("Started the archiving loop...")
+        logger.debug("Started the archiving loop...")
 
         try:
             last_progress_refresh = time.monotonic() - 10

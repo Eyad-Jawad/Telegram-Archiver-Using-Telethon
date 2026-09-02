@@ -13,7 +13,7 @@ I have used this tool to archive 1 million text messages in less than 4 hours, t
 Know that the numbers above do not put multimedia into account, in such a case the speed would depend wholly on your internet speed, and probably a stricter floodwait protocol set by Telegram, I personally have not tried to use this tool to archive a huge number of files.  
 
 ### Warning
-Use this tool on your own accord, it is still possible to get banned for spam if you use it "too aggresivly", I used it very much so, but haven't gotten into any problem or what so ever, however, be careful when you using it.  
+Use this tool on your own accord, it is still possible to get banned for spam if you use it "too aggressively", I used it very much so, but haven't gotten into any problem or what so ever, however, be careful when you using it.  
 
 ### Setting The API keys
 

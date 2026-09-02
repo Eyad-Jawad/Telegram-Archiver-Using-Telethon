@@ -18,7 +18,7 @@ class File:
                 will be ignored, parsed by the config class from user in CLI args.
         """
 
-        logger.info("Setting up the File class...")
+        logger.debug("Setting up the File class...")
 
         self.size_threshold = size_threshold  # in bytes
         self.PATH = "Media/"
