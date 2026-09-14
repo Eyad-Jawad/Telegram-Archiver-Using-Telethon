@@ -31,9 +31,6 @@ make it simpler for other funcs
     
 Handle migration
 stories
-chagne replied to id to be a telegram link
-
-batch commits
 
 """
 

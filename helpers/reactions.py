@@ -52,27 +52,27 @@ async def get_reaction_list(
                 )
             )
             result = request.reactions
+
+            for react in result or []:
+                reactions.append(
+                    (
+                        dialog.id,
+                        message.id,
+                        get_peer_id(react),
+                        react.date,
+                        reaction_type(react),
+                    )
+                )
+
+            if not request or not request.next_offset:
+                break
+
+            offset = request.next_offset
+
         except Exception:
             logger.exception(
                 f"Exception occurred while requesting a reaction list at message {message.id}"
             )
-            return
-
-        for react in result or []:
-            reactions.append(
-                (
-                    dialog.id,
-                    message.id,
-                    get_peer_id(react),
-                    react.date,
-                    reaction_type(react),
-                )
-            )
-
-        if not request or not request.next_offset:
-            break
-
-        offset = request.next_offset
 
     return reactions
 

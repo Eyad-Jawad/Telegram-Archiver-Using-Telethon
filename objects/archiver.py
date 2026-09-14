@@ -24,6 +24,7 @@ from .file import File as file
 from .progress import Progress as prog
 
 logger = logging.getLogger(__name__)
+BATCH_SIZE = 700
 
 
 class Archiver:
@@ -123,6 +124,7 @@ class Archiver:
             progress_console = Console()
             with progress_console.screen() as screen:
                 # The progress panel in the CLI.
+                i = 0
                 async for message in self.client.iter_messages(
                     self.entity,
                     reverse=True,  # Start from the oldest message.
@@ -137,6 +139,10 @@ class Archiver:
 
                     # Archive the message, this method handles it all
                     await self.archive_message(message)
+
+                    i += 1
+                    if i % BATCH_SIZE == 0:
+                        await self.session.commit()
 
             # Ensure the progress panel is showed at 100% at the end.
             progress_console.print(
