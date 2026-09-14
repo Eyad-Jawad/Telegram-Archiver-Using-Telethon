@@ -294,15 +294,19 @@ class Archiver:
             # Check if the user wants to archive stickers, and if
             # this message is a sticker
             if self.config.stickers and tel_msg.file.sticker_set:
-                tasks.append(stickers_handler(
-                    self.client, tel_msg, self.id, self.session
-                ))
+                tasks.append(
+                    stickers_handler(
+                        self.client, tel_msg, self.id, self.session
+                    )
+                )
 
         # Check if the user wants to archive reactions
         if self.config.reactions:
-            tasks.append(reaction_handler(
-                self.client, self.dialog, tel_msg, self.session
-            ))
+            tasks.append(
+                reaction_handler(
+                    self.client, self.dialog, tel_msg, self.session
+                )
+            )
 
         await asyncio.gather(*tasks)
 

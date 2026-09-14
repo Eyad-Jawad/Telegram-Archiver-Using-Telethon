@@ -16,14 +16,18 @@ def test_file_class_attributes(file_class):
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_no_message(file_class, mock_message, check_db_msg_defaults):
+async def test_file_handle_with_no_message(
+    file_class, mock_message, check_db_msg_defaults
+):
     await file_class.handle(None, mock_message)
 
     await check_db_msg_defaults(mock_message)
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_no_file(file_class, mock_message, check_db_msg_defaults):
+async def test_file_handle_with_no_file(
+    file_class, mock_message, check_db_msg_defaults
+):
     message = AsyncMock()
     message.file = None
 
@@ -33,7 +37,9 @@ async def test_file_handle_with_no_file(file_class, mock_message, check_db_msg_d
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_photo(file_class, mock_message, check_db_msg_defaults):
+async def test_file_handle_with_photo(
+    file_class, mock_message, check_db_msg_defaults
+):
     message = AsyncMock()
     file = MagicMock()
     photo = MagicMock()
@@ -49,14 +55,14 @@ async def test_file_handle_with_photo(file_class, mock_message, check_db_msg_def
     await file_class.handle(message, mock_message)
 
     await check_db_msg_defaults(
-        mock_message, 
+        mock_message,
         skips=(
             "file_path",
             "file_name",
             "file_id",
             "file_size",
             "downloaded_file",
-        )
+        ),
     )
     assert mock_message.file_path == "Somewhere"
     assert mock_message.file_name == "Photo"
@@ -68,7 +74,9 @@ async def test_file_handle_with_photo(file_class, mock_message, check_db_msg_def
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_file(file_class, mock_message, check_db_msg_defaults):
+async def test_file_handle_with_file(
+    file_class, mock_message, check_db_msg_defaults
+):
     message = AsyncMock()
     file = MagicMock()
 
@@ -83,14 +91,14 @@ async def test_file_handle_with_file(file_class, mock_message, check_db_msg_defa
     await file_class.handle(message, mock_message)
 
     await check_db_msg_defaults(
-        mock_message, 
+        mock_message,
         skips=(
             "file_path",
             "file_name",
             "file_id",
             "file_size",
             "downloaded_file",
-        )
+        ),
     )
     assert mock_message.file_path == "There"
     assert mock_message.file_name == "Big nose"
@@ -102,7 +110,9 @@ async def test_file_handle_with_file(file_class, mock_message, check_db_msg_defa
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_big_file(file_class, mock_message, check_db_msg_defaults):
+async def test_file_handle_with_big_file(
+    file_class, mock_message, check_db_msg_defaults
+):
     message = AsyncMock()
     file = MagicMock()
 
@@ -115,12 +125,12 @@ async def test_file_handle_with_big_file(file_class, mock_message, check_db_msg_
     await file_class.handle(message, mock_message)
 
     await check_db_msg_defaults(
-        mock_message, 
+        mock_message,
         skips=(
             "file_name",
             "file_id",
             "file_size",
-        )
+        ),
     )
     assert mock_message.file_name == "Blueprint"
     assert mock_message.file_id == "ijk"

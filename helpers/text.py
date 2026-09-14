@@ -19,7 +19,7 @@ def reply_handler(
             A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):
-            The database orm object that holds the data and will 
+            The database orm object that holds the data and will
             be appended into the database.
 
         users (set[int]):
@@ -81,7 +81,7 @@ def forward_handler(
             A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):
-            The database orm object that holds the data and will 
+            The database orm object that holds the data and will
             be appended into the database.
 
         users (set[int]):
@@ -126,18 +126,22 @@ def text_handler(tel_msg: custom.message.Message, db_msg) -> None:
             A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):
-            The database orm object that holds the data and will 
+            The database orm object that holds the data and will
             be appended into the database.
     """
 
     action_handlers = {
-        types.MessageActionPinMessage: lambda a: ("A message was pinned."),
-        types.MessageActionChatAddUser: lambda a: (f"{a.users} was added."),
+        types.MessageActionPinMessage: lambda a: "A message was pinned.",
+        types.MessageActionChatAddUser: lambda a: f"{a.users} was added.",
         types.MessageActionChatJoinedByLink: lambda a: (
             f"{a.inviter_id} joined."
         ),
-        types.MessageActionChatJoinedByRequest: lambda a: "A user joined by request.",
-        types.MessageActionChatDeleteUser: lambda a: f"{a.user_id} was kicked/left.",
+        types.MessageActionChatJoinedByRequest: lambda a: (
+            "A user joined by request."
+        ),
+        types.MessageActionChatDeleteUser: lambda a: (
+            f"{a.user_id} was kicked/left."
+        ),
         types.MessageActionChatEditPhoto: lambda a: "Chat photo was changed.",
         types.MessageActionChatDeletePhoto: lambda a: "Chat photo was deleted.",
         types.MessageActionChatEditTitle: lambda a: (
@@ -147,14 +151,18 @@ def text_handler(tel_msg: custom.message.Message, db_msg) -> None:
             f"{a.title} was created with users: {a.users}."
         ),
         types.MessageActionChannelCreate: lambda a: f"{a.title} was created.",
-        types.MessageActionHistoryClear: lambda a: "Message history was cleared.",
+        types.MessageActionHistoryClear: lambda a: (
+            "Message history was cleared."
+        ),
         types.MessageActionPhoneCall: lambda a: (
             f"A {'video' if a.video else ''} call for {a.duration}."
         ),
         types.MessageActionTopicEdit: lambda a: (
             f"Topic was editied: {a.title}, and emoji: {a.icon_emoji_id}."
         ),
-        types.MessageActionGroupCall: lambda a: f"A group call for {a.duration}.",
+        types.MessageActionGroupCall: lambda a: (
+            f"A group call for {a.duration}."
+        ),
         types.MessageActionInviteToGroupCall: lambda a: (
             f"A group call invite with the users: {a.users}"
         ),

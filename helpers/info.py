@@ -31,9 +31,9 @@ def user_id_handler(
             A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):
-            The database orm object that holds the data and will 
+            The database orm object that holds the data and will
             be appended into the database.
-        
+
         users (set[int]):
             A set that holds the ids of users.
     """

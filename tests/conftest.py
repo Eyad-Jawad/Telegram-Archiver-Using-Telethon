@@ -44,9 +44,10 @@ def mock_message() -> Message:
 
     return msg
 
+
 @pytest.fixture
 def check_db_msg_defaults(mock_session):
-    async def _check_db_msg_defaults(msg: Message, *, skips=()):        
+    async def _check_db_msg_defaults(msg: Message, *, skips=()):
         dialog = Dialog()
         dialog.dialog_id = 1
         dialog.name = "1"

@@ -14,7 +14,9 @@ from helpers.info import *
     "post_author_input",
     ["eyad", "EYAD", "\\//\\//", "12", "🥀something"],
 )
-async def test_user_id_handler_with_post_author(post_author_input, mock_message, check_db_msg_defaults):
+async def test_user_id_handler_with_post_author(
+    post_author_input, mock_message, check_db_msg_defaults
+):
     message = MagicMock()
     message.post_author = post_author_input
     users_set = set()
@@ -28,7 +30,9 @@ async def test_user_id_handler_with_post_author(post_author_input, mock_message,
 
 
 @pytest.mark.asyncio
-async def test_user_id_handler_with_sender_id(mock_message, check_db_msg_defaults):
+async def test_user_id_handler_with_sender_id(
+    mock_message, check_db_msg_defaults
+):
     message = MagicMock()
     message.post_author = None
     message.sender_id = 1234
@@ -40,7 +44,9 @@ async def test_user_id_handler_with_sender_id(mock_message, check_db_msg_default
 
 
 @pytest.mark.asyncio
-async def test_user_id_handler_with_no_sender_id(mock_message, check_db_msg_defaults):
+async def test_user_id_handler_with_no_sender_id(
+    mock_message, check_db_msg_defaults
+):
     message = MagicMock()
     message.post_author = None
     message.sender_id = None

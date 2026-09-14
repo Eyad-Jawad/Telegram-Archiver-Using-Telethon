@@ -25,7 +25,9 @@ class File:
         self.PATH = "Media/"
 
     async def handle(
-        self, tel_msg: custom.message.Message, db_msg: Message,
+        self,
+        tel_msg: custom.message.Message,
+        db_msg: Message,
     ) -> None:
         """
         A method that handles downloading a file, and getting its metadata.
@@ -35,7 +37,7 @@ class File:
                 A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):
-            The database orm object that holds the data and will 
+            The database orm object that holds the data and will
             be appended into the database.
         """
         try:
