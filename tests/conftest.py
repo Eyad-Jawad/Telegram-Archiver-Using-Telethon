@@ -1,12 +1,12 @@
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
-from datetime import datetime, UTC
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
 import db
-from db.models import Message, Dialog
+from db.models import Dialog, Message
 
 
 @pytest_asyncio.fixture

@@ -11,7 +11,7 @@ from telethon.errors import (
     ChatAdminRequiredError,
 )
 
-from db.models import DialogMetadata, DialogPhoto, User, Message
+from db.models import DialogMetadata, DialogPhoto, Message, User
 from objects.errors import Errors
 
 from .local_utils import construct_fake_dialog

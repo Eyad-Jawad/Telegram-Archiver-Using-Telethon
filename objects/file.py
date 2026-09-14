@@ -2,8 +2,8 @@ import logging
 
 from telethon import custom
 
-from helpers.local_utils import byte_to_mb
 from db.models import Message
+from helpers.local_utils import byte_to_mb
 
 logger = logging.getLogger(__name__)
 

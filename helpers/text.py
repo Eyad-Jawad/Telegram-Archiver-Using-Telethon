@@ -2,6 +2,7 @@ import logging
 
 from telethon import custom, types
 from telethon.utils import get_peer_id
+
 from db.models import Message
 
 logger = logging.getLogger(__name__)
