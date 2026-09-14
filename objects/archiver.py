@@ -253,7 +253,7 @@ class Archiver:
             checkpoint[2],
         )
 
-    async def archive_message(self, message: custom.message.Message) -> None:
+    async def archive_message(self, tel_msg: custom.message.Message) -> None:
         """
         A method for archiving, and exctracting data from a telegram message.
 
@@ -262,88 +262,53 @@ class Archiver:
                 A telegram dialog's message provided by telethon.
         """
 
+        db_msg = Message()
         # for writing into the file at once
-        dialog_id = self.id
-        message_id = message.id
-        author_name = ""
-        views = message.views
-        sender_id = 0
-        forward_from_name = ""
-        forward_from_id = 0
-        replied_to_id = 0
-        replied_to_entity_id = 0
-        replied_to_text = ""
-        text = ""
-        date = message.date
-        edit_date = message.edit_date
-        file_path = ""
-        file_name = ""
-        file_id = ""
-        file_size = 0.0
-        downloaded_file = False
+        db_msg.dialog_id = self.id
+        db_msg.message_id = tel_msg.id
+        db_msg.views = tel_msg.views
+        db_msg.date = tel_msg.date
+        db_msg.edit_date = tel_msg.edit_date
+
+        tasks = []
 
         # Check if the user wants to archive text data
         if self.config.texts:
-            author_name, sender_id = user_id_handler(message, self.users)
-            forward_from_name, forward_from_id = forward_handler(
-                message, self.users
-            )
-            replied_to_id, replied_to_entity_id, replied_to_text = (
-                reply_handler(message, self.users)
-            )
-            text = text_handler(message)
+            user_id_handler(tel_msg, db_msg, self.users)
+            forward_handler(tel_msg, db_msg, self.users)
+            reply_handler(tel_msg, db_msg, self.users)
+            text_handler(tel_msg, db_msg)
 
         # Check if the user wants to archive files
-        if message.file:
+        if tel_msg.file:
             if self.config.files:
-                file_path, file_name, file_id, file_size, downloaded_file = (
-                    await self.file.handle(message)
-                )
+                tasks.append(self.file.handle(tel_msg, db_msg))
 
                 # If the user doesn't want to archive files, the
                 # program will save the files' metadata either way
                 # and self.config.files would be true, but the size
                 # threshold is 0
                 if self.config.size_threshold != 0:
-                    self.progress.update_file_progress(message.file.size)
+                    self.progress.update_file_progress(tel_msg.file.size)
 
             # Check if the user wants to archive stickers, and if
             # this message is a sticker
-            if self.config.stickers and message.file.sticker_set:
-                await stickers_handler(
-                    self.client, message, self.id, self.session
-                )
+            if self.config.stickers and tel_msg.file.sticker_set:
+                tasks.append(stickers_handler(
+                    self.client, tel_msg, self.id, self.session
+                ))
 
         # Check if the user wants to archive reactions
         if self.config.reactions:
-            await reaction_handler(
-                self.client, self.dialog, message, self.session
-            )
+            tasks.append(reaction_handler(
+                self.client, self.dialog, tel_msg, self.session
+            ))
 
-        new_message = Message(
-            dialog_id=dialog_id,
-            message_id=message_id,
-            author_name=author_name,
-            views=views,
-            sender_id=sender_id,
-            forward_from_username=forward_from_name,
-            forward_from_user_id=forward_from_id,
-            replied_to_id=replied_to_id,
-            replied_to_entity_id=replied_to_entity_id,
-            replied_to_text=replied_to_text,
-            text=text,
-            date=date,
-            edit_date=edit_date,
-            file_path=file_path,
-            file_name=file_name,
-            file_id=file_id,
-            file_size=file_size,
-            downloaded_file=downloaded_file,
-        )
+        await asyncio.gather(*tasks)
 
-        self.session.add(new_message)
+        self.session.add(db_msg)
 
-        self.progress.update(message_id)
+        self.progress.update(tel_msg.id)
 
     async def handle_key_interruption(self) -> None:
         """A method for existing safely when interrupted mid archiving."""

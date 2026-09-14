@@ -32,7 +32,7 @@ jobs:
         run: uv run ruff check .
 
       - name: Check formatting
-        run: uv run black --check --diff .
+        run: uv run ruff format --check .
       
       - name: Type checking
         run: uv run mypy .

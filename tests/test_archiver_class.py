@@ -372,6 +372,7 @@ async def test_dialog_key_interruption_with_many_users(
 
 
 @pytest.mark.asyncio
+@patch("objects.archiver.Message")
 @patch("objects.archiver.user_id_handler")
 @patch("objects.archiver.forward_handler")
 @patch("objects.archiver.reply_handler")
@@ -385,8 +386,10 @@ async def test_dialog_archive_message(
     mock_reply,
     mock_forward,
     mock_user,
+    mock_message_called,
     mock_archiver,
     mock_session,
+    mock_message,
 ):
     obj = mock_archiver.obj
     config = mock_archiver.mock_config
@@ -409,25 +412,21 @@ async def test_dialog_archive_message(
     config.reactions = True
 
     file.handle = AsyncMock()
-    file.handle.return_value = ["There", "Name", "Secret", 3.0, 1]
 
     progress.used_space_in_MB = 25
 
     obj.session = mock_session
 
-    mock_user.return_value = ["Me", 5]
-    mock_forward.return_value = ["He", 17]
-    mock_reply.return_value = (32, 0, "Noice")
-    mock_text.return_value = "Noice day"
+    mock_message_called.return_value = mock_message
 
     await obj.archive_message(message)
 
-    mock_user.assert_called_once_with(message, obj.users)
-    mock_forward.assert_called_once_with(message, obj.users)
-    mock_reply.assert_called_once_with(message, obj.users)
-    mock_text.assert_called_once_with(message)
+    mock_user.assert_called_once_with(message, mock_message, obj.users)
+    mock_forward.assert_called_once_with(message, mock_message, obj.users)
+    mock_reply.assert_called_once_with(message, mock_message, obj.users)
+    mock_text.assert_called_once_with(message, mock_message)
 
-    file.handle.assert_awaited_once_with(message)
+    file.handle.assert_awaited_once_with(message, mock_message)
     mock_stickers.assert_awaited_once_with(
         mock_archiver.mock_client,
         message,
@@ -450,19 +449,19 @@ async def test_dialog_archive_message(
     assert query.id == 1
     assert query.dialog_id == 1
     assert query.message_id == 33
-    assert query.author_name == "Me"
+    assert query.author_name == ""
     assert query.views == 600
-    assert query.sender_id == 5
-    assert query.forward_from_username == "He"
-    assert query.forward_from_user_id == 17
-    assert query.replied_to_id == 32
+    assert query.sender_id == 0
+    assert query.forward_from_username == ""
+    assert query.forward_from_user_id == 0
+    assert query.replied_to_id == 0
     assert query.replied_to_entity_id == 0
-    assert query.replied_to_text == "Noice"
-    assert query.text == "Noice day"
+    assert query.replied_to_text == ""
+    assert query.text == ""
     assert query.date == DATES[1]
     assert query.edit_date == DATES[2]
-    assert query.file_path == "There"
-    assert query.file_name == "Name"
-    assert query.file_id == "Secret"
-    assert query.file_size == 3.0
-    assert query.downloaded_file == 1
+    assert query.file_path == ""
+    assert query.file_name == ""
+    assert query.file_id == ""
+    assert query.file_size == 0.0
+    assert query.downloaded_file == False

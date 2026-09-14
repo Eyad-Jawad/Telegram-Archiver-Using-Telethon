@@ -9,53 +9,65 @@ from db.models import DialogMetadata, DialogPhoto, User
 from helpers.info import *
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "post_author_input",
     ["eyad", "EYAD", "\\//\\//", "12", "🥀something"],
 )
-def test_user_id_handler_with_post_author(post_author_input):
+async def test_user_id_handler_with_post_author(post_author_input, mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.post_author = post_author_input
     users_set = set()
 
-    assert user_id_handler(message, users_set) == (post_author_input, 0)
-    assert len(users_set) == 0
+    user_id_handler(message, mock_message, users_set)
+
+    await check_db_msg_defaults(mock_message, skips="author_name")
+    assert mock_message.author_name == post_author_input
+
+    assert users_set == set()
 
 
-def test_user_id_handler_with_sender_id():
+@pytest.mark.asyncio
+async def test_user_id_handler_with_sender_id(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.post_author = None
     message.sender_id = 1234
 
-    assert user_id_handler(message, set()) == ("", 1234)
+    user_id_handler(message, mock_message, set())
+
+    await check_db_msg_defaults(mock_message, skips=("sender_id"))
+    assert mock_message.sender_id == 1234
 
 
-def test_user_id_handler_with_no_sender_id():
+@pytest.mark.asyncio
+async def test_user_id_handler_with_no_sender_id(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.post_author = None
     message.sender_id = None
 
-    assert user_id_handler(message, set()) == ("", 0)
+    user_id_handler(message, check_db_msg_defaults, set())
+    await check_db_msg_defaults(mock_message)
 
 
-def test_user_id_handler_for_users_set():
+@pytest.mark.asyncio
+async def test_user_id_handler_for_users_set(mock_message):
     users_set = set()
 
     message = MagicMock()
     message.post_author = None
     message.sender_id = 1234
 
-    user_id_handler(message, users_set)
+    user_id_handler(message, mock_message, users_set)
 
     assert users_set == {1234}
 
     message.sender_id = 4321
 
-    user_id_handler(message, users_set)
+    user_id_handler(message, mock_message, users_set)
 
     assert users_set == {1234, 4321}
 
-    user_id_handler(message, users_set)
+    user_id_handler(message, mock_message, users_set)
 
     assert users_set == {1234, 4321}
 

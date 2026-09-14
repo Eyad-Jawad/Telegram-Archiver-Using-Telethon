@@ -2,13 +2,14 @@ import logging
 
 from telethon import custom, types
 from telethon.utils import get_peer_id
+from db.models import Message
 
 logger = logging.getLogger(__name__)
 
 
 def reply_handler(
-    message: custom.message.Message, users: set[int]
-) -> tuple[int, int, str]:
+    tel_msg: custom.message.Message, db_msg: Message, users: set[int]
+) -> None:
     """
     A function that handles message replies. It has many edge cases:
     reply to user, reply to private chat, reply to channel, and perhaps more.
@@ -17,42 +18,39 @@ def reply_handler(
         message (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
+        db_msg (db.models.Message):
+            The database orm object that holds the data and will 
+            be appended into the database.
+
         users (set[int]):
             A set of user ids or any kind of entity where
             entity ids accumulate over the time archiving.
-
-    Returns:
-        tuple(
-            int (message id),
-            int (entity id, if it's not from this dialog),
-            str (entity name : replied to text, in case both
-                of the above fail, or a describtion of the thing),
     """
 
     # check if this message is a reply to another
     try:
         # for safety
-        if not message or not message.reply_to:
-            return (0, 0, "")
+        if not tel_msg or not tel_msg.reply_to:
+            return
 
         # check if it's from a user or a channel
-        replied_to = message.reply_to
+        replied_to = tel_msg.reply_to
 
         # What to do with a reply to a story
         # temp solution unitl I make some stuff for stories
         if isinstance(replied_to, types.MessageReplyStoryHeader):
-            return (0, 0, "Replied to a story")
+            db_msg.replied_to_text = "Replied to a story"
+            return
 
         if not (replied_to and replied_to.reply_to_peer_id):
             # This case is for replies from private dialogs
-            if not message.reply_to_msg_id:
-                return (
-                    0,
-                    0,
-                    f"{message.reply_to.reply_from.from_name}:{message.reply_to.quote_text}",
-                )
+            if not tel_msg.reply_to_msg_id:
+                db_msg.replied_to_text = f"{tel_msg.reply_to.reply_from.from_name}:{tel_msg.reply_to.quote_text}"
+                return
 
-            return (message.reply_to_msg_id, 0, message.reply_to.quote_text)
+            db_msg.replied_to_id = tel_msg.reply_to_msg_id
+            db_msg.replied_to_text = tel_msg.reply_to.quote_text
+            return
 
         # if it's from a channel
         replied_to_id = get_peer_id(replied_to.reply_to_peer_id)
@@ -60,20 +58,20 @@ def reply_handler(
         if replied_to_id not in users:
             users.add(replied_to_id)
 
-        return (
-            message.reply_to_msg_id,
-            replied_to_id,
-            message.reply_to.quote_text,
-        )
+        db_msg.replied_to_id = tel_msg.reply_to_msg_id
+        db_msg.replied_to_entity_id = replied_to_id
+        db_msg.replied_to_text = tel_msg.reply_to.quote_text
+
+        return
 
     except Exception:
-        logger.exception(f"Exception occurred at message {message.id}")
-        return (0, 0, "")
+        logger.exception(f"Exception occurred at message {tel_msg}")
+        return
 
 
 def forward_handler(
-    message: custom.message.Message, users: set[int]
-) -> tuple[str, int]:
+    tel_msg: custom.message.Message, db_msg: Message, users: set[int]
+) -> None:
     """
     A function that handles forwarded messages from users with
     hidden or shown profiles, and from other enitities like channels.
@@ -82,29 +80,27 @@ def forward_handler(
         message (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
+        db_msg (db.models.Message):
+            The database orm object that holds the data and will 
+            be appended into the database.
+
         users (set[int]):
             A set of user ids or any kind of entity where
             entity ids accumulate over the time archiving.
-
-    Returns:
-        Tuple (
-            str (The name of the entity forwarded from.),
-            int (The id the entity forwarded from, if it exists.)
-        )
     """
 
     try:
         # For safety.
-        if not message or not message.forward:
-            return ("", 0)
+        if not tel_msg or not tel_msg.forward:
+            return
 
-        forward = message.forward
+        forward = tel_msg.forward
+        db_msg.forward_from_username = forward.from_name
 
-        forward_from_name = f"{forward.from_name}"
         # Users who have their profile hidden, or
         # private channels have their id also hidden.
         if not forward.from_id:
-            return (forward_from_name, 0)
+            return
 
         entity = forward.from_id
         peer_id = get_peer_id(entity)
@@ -112,14 +108,15 @@ def forward_handler(
         if peer_id not in users:
             users.add(peer_id)
 
-        return (forward_from_name, peer_id)
+        db_msg.forward_from_user_id = peer_id
+        return
 
     except Exception:
-        logger.exception(f"Exception occurred at message {message.id}")
-        return ("", 0)
+        logger.exception(f"Exception occurred at message {tel_msg.id}")
+        return
 
 
-def text_handler(message: custom.message.Message) -> str:
+def text_handler(tel_msg: custom.message.Message, db_msg) -> None:
     """
     A function that handles text messages, as well as actions
     if the message happens not to be a text message.
@@ -128,10 +125,9 @@ def text_handler(message: custom.message.Message) -> str:
         message (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
-    Returns:
-        str:
-            a string of the text message, or a string
-            describing the action.
+        db_msg (db.models.Message):
+            The database orm object that holds the data and will 
+            be appended into the database.
     """
 
     action_handlers = {
@@ -168,20 +164,23 @@ def text_handler(message: custom.message.Message) -> str:
     }
 
     text = ""
-    if message.text:
+    if tel_msg.text:
         # check for text
-        text = f"{message.text}"
-    elif isinstance(message, types.MessageService):
-        action = message.action
+        text = f"{tel_msg.text}"
+    elif isinstance(tel_msg, types.MessageService):
+        action = tel_msg.action
         # Get the action, if it's not something we've written
         # a response for, just give it the default.
         for known_actions, handler in action_handlers.items():
             if isinstance(action, known_actions):
-                return handler(action)
+                db_msg.text = handler(action)
+                return
 
-        return f"{action} was done."
+        db_msg.text = f"{action} was done."
+        return
 
-    return text
+    db_msg.text = text
+    return
 
 
 """

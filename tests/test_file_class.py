@@ -10,27 +10,30 @@ def file_class():
     return File(5)
 
 
-def test_file_class_attributes():
-    file = File(5)
-
-    assert file.size_threshold == 5
-    assert file.PATH == "Media/"
+def test_file_class_attributes(file_class):
+    assert file_class.size_threshold == 5
+    assert file_class.PATH == "Media/"
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_no_message(file_class):
-    assert await file_class.handle(None) == ("", "", "", 0.0, False)
+async def test_file_handle_with_no_message(file_class, mock_message, check_db_msg_defaults):
+    await file_class.handle(None, mock_message)
+
+    await check_db_msg_defaults(mock_message)
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_no_file(file_class):
+async def test_file_handle_with_no_file(file_class, mock_message, check_db_msg_defaults):
     message = AsyncMock()
     message.file = None
-    assert await file_class.handle(message) == ("", "", "", 0.0, False)
+
+    await file_class.handle(message, mock_message)
+
+    await check_db_msg_defaults(mock_message)
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_photo(file_class):
+async def test_file_handle_with_photo(file_class, mock_message, check_db_msg_defaults):
     message = AsyncMock()
     file = MagicMock()
     photo = MagicMock()
@@ -43,18 +46,29 @@ async def test_file_handle_with_photo(file_class):
 
     message.download_media.return_value = "Somewhere"
 
-    assert await file_class.handle(message) == (
-        "Somewhere",
-        "Photo",
-        "xyz",
-        3.814697265625e-06,
-        True,
+    await file_class.handle(message, mock_message)
+
+    await check_db_msg_defaults(
+        mock_message, 
+        skips=(
+            "file_path",
+            "file_name",
+            "file_id",
+            "file_size",
+            "downloaded_file",
+        )
     )
+    assert mock_message.file_path == "Somewhere"
+    assert mock_message.file_name == "Photo"
+    assert mock_message.file_id == "xyz"
+    assert mock_message.file_size == 3.814697265625e-06
+    assert mock_message.downloaded_file == True
+
     message.download_media.assert_awaited_once_with(file="Media/")
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_file(file_class):
+async def test_file_handle_with_file(file_class, mock_message, check_db_msg_defaults):
     message = AsyncMock()
     file = MagicMock()
 
@@ -66,18 +80,29 @@ async def test_file_handle_with_file(file_class):
 
     message.download_media.return_value = "There"
 
-    assert await file_class.handle(message) == (
-        "There",
-        "Big nose",
-        "zyx",
-        1.9073486328125e-06,
-        True,
+    await file_class.handle(message, mock_message)
+
+    await check_db_msg_defaults(
+        mock_message, 
+        skips=(
+            "file_path",
+            "file_name",
+            "file_id",
+            "file_size",
+            "downloaded_file",
+        )
     )
+    assert mock_message.file_path == "There"
+    assert mock_message.file_name == "Big nose"
+    assert mock_message.file_id == "zyx"
+    assert mock_message.file_size == 1.9073486328125e-06
+    assert mock_message.downloaded_file == True
+
     message.download_media.assert_awaited_once_with(file="Media/")
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_big_file(file_class):
+async def test_file_handle_with_big_file(file_class, mock_message, check_db_msg_defaults):
     message = AsyncMock()
     file = MagicMock()
 
@@ -87,10 +112,16 @@ async def test_file_handle_with_big_file(file_class):
     message.photo = None
     message.file = file
 
-    assert await file_class.handle(message) == (
-        "",
-        "Blueprint",
-        "ijk",
-        4.76837158203125e-05,
-        False,
+    await file_class.handle(message, mock_message)
+
+    await check_db_msg_defaults(
+        mock_message, 
+        skips=(
+            "file_name",
+            "file_id",
+            "file_size",
+        )
     )
+    assert mock_message.file_name == "Blueprint"
+    assert mock_message.file_id == "ijk"
+    assert mock_message.file_size == 4.76837158203125e-05

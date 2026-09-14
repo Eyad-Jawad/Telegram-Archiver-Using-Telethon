@@ -11,7 +11,7 @@ from telethon.errors import (
     ChatAdminRequiredError,
 )
 
-from db.models import DialogMetadata, DialogPhoto, User
+from db.models import DialogMetadata, DialogPhoto, User, Message
 from objects.errors import Errors
 
 from .local_utils import construct_fake_dialog
@@ -20,45 +20,48 @@ logger = logging.getLogger(__name__)
 
 
 def user_id_handler(
-    message: custom.message.Message, users: set[int]
-) -> tuple[str, int]:
+    tel_msg: custom.message.Message, db_msg: Message, users: set[int]
+) -> None:
     """
     A function that parses user id from messages, or post author name
     in case of channels.
 
     Args:
-        message (telethon.custom.message.Message):
+        tel_msg (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
-    Returns:
-        tuple (
-            str (Post author name in case of channels),
-            int (user id)
-        )
+        db_msg (db.models.Message):
+            The database orm object that holds the data and will 
+            be appended into the database.
+        
+        users (set[int]):
+            A set that holds the ids of users.
     """
 
     try:
-        # If it is a channel return post author name
-        if message.post_author:
-            return (message.post_author, 0)
+        # If it is a channel set the post author name and return
+        if tel_msg.post_author:
+            db_msg.author_name = tel_msg.post_author
+            return
 
         # If for some reason it's not a channel and there's
-        # no sender id return empty things
-        elif not message.sender_id:
+        # no sender id just return
+        elif not tel_msg.sender_id:
             logger.warning(
-                f"A message where no name or id was received: {message}."
+                f"A message where no name or id was received: {tel_msg}."
             )
-            return ("", 0)
+            return
 
         # check if the sender is not saved
-        if message.sender_id not in users:
-            users.add(message.sender_id)
+        if tel_msg.sender_id not in users:
+            users.add(tel_msg.sender_id)
 
-        return ("", message.sender_id)
+        db_msg.sender_id = tel_msg.sender_id
+        return
 
     except Exception:
-        logger.exception(f"Exception occurred at message {message.id}")
-        return ("", 0)
+        logger.exception(f"Exception occurred at message {tel_msg.id}")
+        return
 
 
 async def get_latest_photo_date(

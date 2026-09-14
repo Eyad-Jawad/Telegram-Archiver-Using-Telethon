@@ -5,28 +5,37 @@ from telethon import types
 
 from helpers.text import *
 
+@pytest.mark.asyncio
+async def test_reply_handler_with_no_message(mock_message, check_db_msg_defaults):
+    reply_handler(None, mock_message, None)
+    await check_db_msg_defaults(mock_message)
 
-def test_reply_handler_with_no_message():
-    assert reply_handler(None, None) == (0, 0, "")
 
-
-def test_reply_handler_with_empty_message():
+@pytest.mark.asyncio
+async def test_reply_handler_with_empty_message(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.reply_to = None
-    assert reply_handler(message, None) == (0, 0, "")
+    reply_handler(message, mock_message, None)
+    await check_db_msg_defaults(mock_message)
 
 
-def test_reply_handler_with_reply_to_user():
+@pytest.mark.asyncio
+async def test_reply_handler_with_reply_to_user(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.reply_to = MagicMock()
     message.reply_to.reply_to_peer_id = None
     message.reply_to_msg_id = 10
     message.reply_to.quote_text = "Noice"
 
-    assert reply_handler(message, None) == (10, 0, "Noice")
+    reply_handler(message, mock_message, None)
+
+    await check_db_msg_defaults(mock_message, skips=("replied_to_id", "replied_to_text"))
+    assert mock_message.replied_to_id == 10
+    assert mock_message.replied_to_text == "Noice"
 
 
-def test_reply_handler_with_reply_to_private_dialog():
+@pytest.mark.asyncio
+async def test_reply_handler_with_reply_to_private_dialog(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.reply_to = MagicMock()
     message.reply_to.reply_to_peer_id = None
@@ -34,18 +43,26 @@ def test_reply_handler_with_reply_to_private_dialog():
     message.reply_to.reply_from.from_name = "He"
     message.reply_to.quote_text = "Hi"
 
-    assert reply_handler(message, None) == (0, 0, "He:Hi")
+    reply_handler(message, mock_message, None)
+
+    await check_db_msg_defaults(mock_message, skips=("replied_to_text"))
+    assert mock_message.replied_to_text == "He:Hi"
 
 
-def test_reply_handler_with_reply_to_story():
+@pytest.mark.asyncio
+async def test_reply_handler_with_reply_to_story(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.reply_to = MagicMock(spec=types.MessageReplyStoryHeader)
 
-    assert reply_handler(message, None) == (0, 0, "Replied to a story")
+    reply_handler(message, mock_message, None)
+
+    await check_db_msg_defaults(mock_message, skips=("replied_to_text"))
+    assert mock_message.replied_to_text == "Replied to a story"
 
 
+@pytest.mark.asyncio
 @patch("helpers.text.get_peer_id")
-def test_reply_handler_with_reply_to_channel(mock_get_id):
+async def test_reply_handler_with_reply_to_channel(mock_get_id, mock_message, check_db_msg_defaults):
     message = MagicMock()
     users = set()
     message.reply_to = MagicMock()
@@ -55,36 +72,56 @@ def test_reply_handler_with_reply_to_channel(mock_get_id):
 
     mock_get_id.return_value = 1001
 
-    assert reply_handler(message, users) == (10, 1001, "Noice")
+    reply_handler(message, mock_message, users)
+
+    await check_db_msg_defaults(
+        mock_message, 
+        skips=(
+            "replied_to_id", 
+            "replied_to_entity_id", 
+            "replied_to_text"
+        ),
+    )
+    assert mock_message.replied_to_id == 10
+    assert mock_message.replied_to_entity_id == 1001
+    assert mock_message.replied_to_text == "Noice"
+
     assert users == {1001}
     mock_get_id.assert_called_once_with(1)
 
 
-def test_forward_handler_with_no_message():
-    assert forward_handler(None, None) == ("", 0)
+@pytest.mark.asyncio
+async def test_forward_handler_with_no_message(mock_message, check_db_msg_defaults):
+    forward_handler(None, mock_message, None)
+    await check_db_msg_defaults(mock_message)
 
 
-def test_forward_handler_with_no_forward():
+@pytest.mark.asyncio
+async def test_forward_handler_with_no_forward(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.forward = None
 
-    assert forward_handler(message, None) == ("", 0)
+    forward_handler(message, mock_message, None)
+    await check_db_msg_defaults(mock_message)
 
 
-def test_forward_handler_with_forward_and_no_user():
+@pytest.mark.asyncio
+async def test_forward_handler_with_forward_and_no_user(mock_message, check_db_msg_defaults):
     message = MagicMock()
     forward = MagicMock()
 
     message.forward = forward
 
     forward.from_name = "Me"
-    forward.from_id = None
 
-    assert forward_handler(message, None) == ("Me", 0)
+    forward_handler(message, mock_message,None)
+    assert mock_message.forward_from_username == "Me"
+    await check_db_msg_defaults(mock_message, skips=("forward_from_username"))
 
 
+@pytest.mark.asyncio
 @patch("helpers.text.get_peer_id")
-def test_forward_handler_with_forward_and_user(mock_get_id):
+async def test_forward_handler_with_forward_and_user(mock_get_id, mock_message, check_db_msg_defaults):
     message = MagicMock()
     users = set()
     forward = MagicMock()
@@ -96,18 +133,28 @@ def test_forward_handler_with_forward_and_user(mock_get_id):
 
     mock_get_id.return_value = 1001
 
-    assert forward_handler(message, users) == ("Me", 1001)
+    forward_handler(message, mock_message, users)
+
+    assert mock_message.forward_from_username == "Me"
+    assert mock_message.forward_from_user_id == 1001
+    await check_db_msg_defaults(mock_message, skips=("forward_from_username", "forward_from_user_id"))
+
     mock_get_id.assert_called_once_with(1)
     assert users == {1001}
 
 
-def test_text_handler_with_text_message():
+@pytest.mark.asyncio
+async def test_text_handler_with_text_message(mock_message, check_db_msg_defaults):
     message = MagicMock()
     message.text = "Noice"
 
-    assert text_handler(message) == "Noice"
+    text_handler(message, mock_message)
+
+    await check_db_msg_defaults(mock_message, skips="text")
+    assert mock_message.text == "Noice"
 
 
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("action_type, output_message"),
     [
@@ -140,7 +187,7 @@ def test_text_handler_with_text_message():
         (None, "MagicMock was done."),
     ],
 )
-def test_text_handler_with_action_message(action_type, output_message):
+async def test_text_handler_with_action_message(action_type, output_message, mock_message, check_db_msg_defaults):
     message = MagicMock(spec=types.MessageService)
     message.text = None
 
@@ -158,4 +205,8 @@ def test_text_handler_with_action_message(action_type, output_message):
 
     message.action = action
 
-    assert text_handler(message) == output_message
+    text_handler(message, mock_message)
+
+    await check_db_msg_defaults(mock_message, skips="text")
+    assert mock_message.text == output_message
+

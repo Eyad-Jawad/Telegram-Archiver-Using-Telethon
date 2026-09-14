@@ -3,6 +3,7 @@ import logging
 from telethon import custom
 
 from helpers.local_utils import byte_to_mb
+from db.models import Message
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +25,8 @@ class File:
         self.PATH = "Media/"
 
     async def handle(
-        self, message: custom.message.Message
-    ) -> tuple[str, str, str, float, bool]:
+        self, tel_msg: custom.message.Message, db_msg: Message,
+    ) -> None:
         """
         A method that handles downloading a file, and getting its metadata.
 
@@ -33,55 +34,44 @@ class File:
             message (telethon.custom.message.Message):
                 A telegram dialog's message provided by telethon.
 
-        Returns:
-            Tuple: [
-                str (File path, if downloaded, else empty),
-                str (File name, if it has one, else empty)
-                str (File id, id there's any, else emtpy),
-                float (File size in megabytes, if there's any, else 0.0),
-                bool (Downloaded file, True for yes and False for no, which can
-                be because the file exceeds the size_threshold, or because there's no file)
-            ]
+        db_msg (db.models.Message):
+            The database orm object that holds the data and will 
+            be appended into the database.
         """
         try:
             # If there's not message (safety), or the message
-            # does not have a file, return empty inputs
-            if not message or not message.file:
-                return (
-                    "",  # File path
-                    "",  # File name
-                    "",  # File id
-                    0.0,  # File size
-                    False,  # Downloaded file (flag)
-                )
+            # does not have a file, just return without setting anything
+            if not tel_msg or not tel_msg.file:
+                return
 
-            file = message.file
+            file = tel_msg.file
             file_name = file.name or ""
 
             file_id = None
 
             # Telethon or telegram internal thing, photos and files are alike,
             # but to get a photo's id is different from getting a file's id.
-            if message.photo:
-                file_id = message.photo.id
+            if tel_msg.photo:
+                file_id = tel_msg.photo.id
             else:
                 file_id = file.id
 
-            # If the file is withing the threshold, download it
+            db_msg.file_size = byte_to_mb(file.size)
+            db_msg.file_name = file_name
+            db_msg.file_id = file_id
+
+            # If the file is within the threshold, download it
             if file.size < self.size_threshold:
-                file_path = await message.download_media(file=self.PATH)
+                file_path = await tel_msg.download_media(file=self.PATH)
 
-                return (
-                    file_path,
-                    file_name,
-                    file_id,
-                    byte_to_mb(file.size),
-                    True,
-                )
+                db_msg.file_path = file_path
+                db_msg.downloaded_file = True
 
-            # Did not download the file, return the metadata only
-            return ("", file_name, file_id, byte_to_mb(file.size), False)
+                return
+
+            # Did not download the file, return
+            return
 
         except Exception:
-            logger.exception(f"Exception occurred at message {message.id}")
-            return ("", "", "", 0.0, False)
+            logger.exception(f"Exception occurred at message {tel_msg.id}")
+            return
