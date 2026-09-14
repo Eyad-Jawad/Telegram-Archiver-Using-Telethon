@@ -26,16 +26,14 @@ from objects.config import Config
 TODO:
 Unit tests / pytest
 
-    remove all instance of mock_sesion being magic/async mock
-
 use 'returning' for new_dialog in archiver init in ohter funcs to
 make it simpler for other funcs
-
-test archiver line 233 test for delete, and othre stuff you think of
     
 Handle migration
 stories
 chagne replied to id to be a telegram link
+
+batch commits
 
 """
 
