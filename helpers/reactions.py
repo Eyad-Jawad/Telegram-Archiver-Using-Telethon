@@ -73,6 +73,7 @@ async def get_reaction_list(
             logger.exception(
                 f"Exception occurred while requesting a reaction list at message {message.id}"
             )
+            return reactions
 
     return reactions
 
