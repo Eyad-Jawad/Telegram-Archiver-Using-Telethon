@@ -7,7 +7,7 @@ from objects.file import File
 
 @pytest.fixture()
 def file_class():
-    return File(5)
+    return File(5, MagicMock())
 
 
 def test_file_class_attributes(file_class):
@@ -135,3 +135,25 @@ async def test_file_handle_with_big_file(
     assert mock_message.file_name == "Blueprint"
     assert mock_message.file_id == "ijk"
     assert mock_message.file_size == 4.76837158203125e-05
+
+
+@pytest.mark.asyncio
+async def test_file_calls_update_file_size(mock_message):
+    prog_delegation = MagicMock()
+    file_class = File(5, prog_delegation)
+    message = AsyncMock()
+    file = MagicMock()
+
+    file.size = 2
+    file.id = "zyx"
+    file.name = "Big nose"
+    message.photo = None
+    message.file = file
+
+    message.download_media.return_value = "There"
+
+    await file_class.handle(message, mock_message)
+
+    prog_delegation.update_file_progress.assert_called_once_with(
+        1.9073486328125e-06
+    )

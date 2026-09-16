@@ -4,7 +4,7 @@ import time
 from rich.progress_bar import ProgressBar
 from rich.table import Table
 
-from helpers.local_utils import byte_to_mb, format_eta
+from helpers.local_utils import format_eta
 
 logger = logging.getLogger(__name__)
 
@@ -79,13 +79,13 @@ class Progress:
         self.last_message_id = last_message_id
         self.bar.update(self.message_counter)
 
-    def update_file_progress(self, file_size: int) -> None:
+    def update_file_progress(self, file_size: float) -> None:
         """
         A method that updates attributes having to do with files.
 
         Args:
             file_size (int):
-                The size of the last file downloaded in bytes.
+                The size of the last file downloaded in megabytes.
         """
 
         # For safety
@@ -96,7 +96,7 @@ class Progress:
             logger.error("Recived negative file size.")
             return
 
-        self.used_space_in_MB += byte_to_mb(file_size)
+        self.used_space_in_MB += file_size
 
     def make_table(self) -> Table:
         """
@@ -153,3 +153,17 @@ class Progress:
         )
 
         return table
+
+
+class ProgressFileDelegation:
+    """
+    A class that acts an interface to the File class
+    to use, so it doesn't expose anything other than the
+    needed method.
+    """
+
+    def __init__(self, progress: Progress):
+        self.__progress = progress
+
+    def update_file_progress(self, file_size: int):
+        self.__progress.update_file_progress(file_size)

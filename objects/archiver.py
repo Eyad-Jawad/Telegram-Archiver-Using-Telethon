@@ -3,7 +3,6 @@ import logging
 import time
 
 from rich.console import Console
-from sqlalchemy import select, update
 from telethon import TelegramClient, custom, types, utils
 
 from db import get_session
@@ -21,6 +20,7 @@ from helpers.text import *
 from .config import Config as con
 from .file import File as file
 from .progress import Progress as prog
+from .progress import ProgressFileDelegation
 
 logger = logging.getLogger(__name__)
 BATCH_SIZE = 700
@@ -59,10 +59,10 @@ class Archiver:
         self.session = get_session()
 
         # Initialize the database by creating all the tables and inserting the dialog
-        new_dialog = Dialog(
+        self.db_dialog = Dialog(
             dialog_id=self.id, name=self.dialog.name, type=self.type
         )
-        self.session.add(new_dialog)
+        self.session.add(self.db_dialog)
 
     async def set_up(self) -> None:
         """Initialize the async part of the class."""
@@ -75,19 +75,16 @@ class Archiver:
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
-        stmt = (
-            update(Dialog)
-            .where(Dialog.dialog_id == self.id)
-            .values(total_number_of_messages=self.total_messages)
-        )
+        self.db_dialog.total_number_of_messages = self.total_messages
 
-        await self.session.execute(stmt)
         await self.session.commit()
 
         # Initialize the needed objects
         self.progress: prog = prog(self.total_messages, self.dialog.name)
 
-        self.file: file = file(self.config.size_threshold)
+        self.file: file = file(
+            self.config.size_threshold, ProgressFileDelegation(self.progress)
+        )
 
         self.users: set[int] = (
             set()
@@ -213,17 +210,10 @@ class Archiver:
             if value:
                 checkpoint[i] = value
 
-        stmt = (
-            update(Dialog)
-            .where(Dialog.dialog_id == self.id)
-            .values(
-                last_message_id=checkpoint[0],
-                message_counter=checkpoint[1],
-                archiving_time=checkpoint[2],
-            )
-        )
+        self.db_dialog.last_message_id = checkpoint[0]
+        self.db_dialog.message_counter = checkpoint[1]
+        self.db_dialog.archiving_time = checkpoint[2]
 
-        await self.session.execute(stmt)
         await self.session.commit()
 
     async def get_checkpoint(self) -> tuple[int, int, float]:
@@ -238,20 +228,10 @@ class Archiver:
             ]
         """
 
-        stmt = select(
-            Dialog.last_message_id,
-            Dialog.message_counter,
-            Dialog.archiving_time,
-        ).where(Dialog.dialog_id == self.id)
-
-        result = await self.session.execute(stmt)
-
-        checkpoint = result.one()
-
         return (
-            checkpoint[0],
-            checkpoint[1],
-            checkpoint[2],
+            self.db_dialog.last_message_id,
+            self.db_dialog.message_counter,
+            self.db_dialog.archiving_time,
         )
 
     async def archive_message(self, tel_msg: custom.message.Message) -> None:
@@ -264,7 +244,6 @@ class Archiver:
         """
 
         db_msg = Message()
-        # for writing into the file at once
         db_msg.dialog_id = self.id
         db_msg.message_id = tel_msg.id
         db_msg.views = tel_msg.views
@@ -281,25 +260,15 @@ class Archiver:
             text_handler(tel_msg, db_msg)
 
         # Check if the user wants to archive files
-        if tel_msg.file:
-            if self.config.files:
-                tasks.append(self.file.handle(tel_msg, db_msg))
+        if self.config.files and tel_msg.file:
+            tasks.append(self.file.handle(tel_msg, db_msg))
 
-                # If the user doesn't want to archive files, the
-                # program will save the files' metadata either way
-                # and self.config.files would be true, but the size
-                # threshold is 0
-                if self.config.size_threshold != 0:
-                    self.progress.update_file_progress(tel_msg.file.size)
-
-            # Check if the user wants to archive stickers, and if
-            # this message is a sticker
-            if self.config.stickers and tel_msg.file.sticker_set:
-                tasks.append(
-                    stickers_handler(
-                        self.client, tel_msg, self.id, self.session
-                    )
-                )
+        # Check if the user wants to archive stickers, and if
+        # this message is a sticker
+        if self.config.stickers:
+            tasks.append(
+                stickers_handler(self.client, tel_msg, self.id, self.session)
+            )
 
         # Check if the user wants to archive reactions
         if self.config.reactions:

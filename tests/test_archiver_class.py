@@ -56,6 +56,7 @@ def mock_config():
 @pytest_asyncio.fixture
 @patch("objects.archiver.Archiver.get_checkpoint", new_callable=AsyncMock)
 @patch("objects.archiver.file")
+@patch("objects.archiver.ProgressFileDelegation")
 @patch("objects.archiver.prog")
 @patch("objects.archiver.get_session")
 @patch("objects.archiver.Archiver.get_dialog_type")
@@ -65,6 +66,7 @@ async def mock_archiver(
     mock_get_type,
     mock_get_session,
     mock_progress,
+    mock_progress_delegation,
     mock_file,
     mock_checkpoint,
     mock_client,
@@ -73,12 +75,14 @@ async def mock_archiver(
     mock_session,
 ):
     progress = MagicMock()
+    progress_delegation = MagicMock()
     file = MagicMock()
 
     mock_get_id.return_value = 1
     mock_get_type.return_value = "Something"
 
     mock_progress.return_value = progress
+    mock_progress_delegation.return_value = progress_delegation
     mock_file.return_value = file
 
     mock_get_session.return_value = mock_session
@@ -98,7 +102,9 @@ async def mock_archiver(
         mock_get_session=mock_get_session,
         mock_session=mock_session,
         mock_progress=mock_progress,
+        mock_progress_delegation=mock_progress_delegation,
         progress=progress,
+        progress_delegation=progress_delegation,
         mock_file=mock_file,
         file=file,
         mock_checkpoint=mock_checkpoint,
@@ -141,7 +147,7 @@ async def test_dialog_init(mock_archiver):
         arc.mock_dialog, limit=0
     )
     arc.mock_progress.assert_called_once_with(10, "Me")
-    arc.mock_file.assert_called_once_with(5)
+    arc.mock_file.assert_called_once_with(5, arc.progress_delegation)
 
     arc.mock_checkpoint.assert_awaited_once()
     arc.progress.use_checkpoint.assert_called_once_with([123])

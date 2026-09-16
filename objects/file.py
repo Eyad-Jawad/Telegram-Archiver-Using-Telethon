@@ -5,11 +5,15 @@ from telethon import custom
 from db.models import Message
 from helpers.local_utils import byte_to_mb
 
+from .progress import ProgressFileDelegation
+
 logger = logging.getLogger(__name__)
 
 
 class File:
-    def __init__(self, size_threshold: float) -> None:
+    def __init__(
+        self, size_threshold: float, prog_delegation: ProgressFileDelegation
+    ) -> None:
         """
         Initialize the File class object
 
@@ -17,12 +21,17 @@ class File:
             size_threshold (float):
                 The maximum size of the files to download of which any larger
                 will be ignored, parsed by the config class from user in CLI args.
+
+            prog_delegation (objects.progress.ProgressFileDelegation):
+                An interface for the file to call update progress size
+                without exposing anything unecessary.
         """
 
         logger.debug("Setting up the File class...")
 
         self.size_threshold = size_threshold  # in bytes
         self.PATH = "Media/"
+        self.prog = prog_delegation
 
     async def handle(
         self,
@@ -65,15 +74,10 @@ class File:
             # If the file is within the threshold, download it
             if file.size < self.size_threshold:
                 file_path = await tel_msg.download_media(file=self.PATH)
+                self.prog.update_file_progress(db_msg.file_size)
 
                 db_msg.file_path = file_path
                 db_msg.downloaded_file = True
 
-                return
-
-            # Did not download the file, return
-            return
-
         except Exception:
             logger.exception(f"Exception occurred at message {tel_msg.id}")
-            return
