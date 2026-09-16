@@ -143,6 +143,7 @@ class Archiver:
                     i += 1
                     if i % BATCH_SIZE == 0:
                         await self.session.commit()
+                        await self.save_checkpoint()
 
             # Ensure the progress panel is showed at 100% at the end.
             progress_console.print(
