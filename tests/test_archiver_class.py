@@ -57,7 +57,6 @@ def mock_config():
 @patch("objects.archiver.Archiver.get_checkpoint", new_callable=AsyncMock)
 @patch("objects.archiver.file")
 @patch("objects.archiver.prog")
-@patch("objects.archiver.err")
 @patch("objects.archiver.get_session")
 @patch("objects.archiver.Archiver.get_dialog_type")
 @patch("telethon.utils.get_peer_id")
@@ -65,7 +64,6 @@ async def mock_archiver(
     mock_get_id,
     mock_get_type,
     mock_get_session,
-    mock_error,
     mock_progress,
     mock_file,
     mock_checkpoint,
@@ -76,12 +74,10 @@ async def mock_archiver(
 ):
     progress = MagicMock()
     file = MagicMock()
-    error = MagicMock()
 
     mock_get_id.return_value = 1
     mock_get_type.return_value = "Something"
 
-    mock_error.return_value = error
     mock_progress.return_value = progress
     mock_file.return_value = file
 
@@ -105,7 +101,6 @@ async def mock_archiver(
         progress=progress,
         mock_file=mock_file,
         file=file,
-        mock_error=mock_error,
         mock_checkpoint=mock_checkpoint,
     )
 
@@ -147,10 +142,6 @@ async def test_dialog_init(mock_archiver):
     )
     arc.mock_progress.assert_called_once_with(10, "Me")
     arc.mock_file.assert_called_once_with(5)
-    arc.mock_error.assert_called_once_with(
-        arc.progress,
-        arc.obj,
-    )
 
     arc.mock_checkpoint.assert_awaited_once()
     arc.progress.use_checkpoint.assert_called_once_with([123])

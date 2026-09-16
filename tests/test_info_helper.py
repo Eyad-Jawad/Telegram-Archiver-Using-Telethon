@@ -308,30 +308,22 @@ async def test_get_dialog_info(
     dialog.id = 1
     dialog.entity.id = 1
     users = set()
-    errors_handler = AsyncMock()
     session = MagicMock()
-
-    errors_handler.handle = AsyncMock()
 
     full_request = mock_full_request.return_value
     latest_photo_date = mock_get_latest.return_value
     photo_info = mock_get_photo.return_value
 
-    await get_dialog_info(client, dialog, users, errors_handler, session)
+    await get_dialog_info(client, dialog, users, session)
 
-    mock_add_users.assert_awaited_once_with(
-        client, dialog, users, errors_handler
-    )
+    mock_add_users.assert_awaited_once_with(client, dialog, users)
     mock_push_photo.assert_called_once_with(session, photo_info)
     mock_get_photo.assert_awaited_once_with(
-        client, dialog.entity, errors_handler, latest_photo_date
+        client, dialog.entity, latest_photo_date
     )
     mock_get_latest.assert_awaited_once_with(session, 1)
     mock_push_into.assert_called_once_with(session, 1, full_request)
-    mock_full_request.assert_awaited_once_with(
-        client, dialog.entity, errors_handler
-    )
-    errors_handler.handle.assert_not_awaited()
+    mock_full_request.assert_awaited_once_with(client, dialog.entity)
 
 
 @pytest.mark.asyncio
@@ -340,20 +332,16 @@ async def test_get_full_request_for_channel(mock_channel):
     client = AsyncMock()
     dialog = MagicMock(spec=types.Channel)
     dialog.id = 1
-    errors_handler = AsyncMock()
     result = MagicMock()
-
-    errors_handler.handle = AsyncMock()
 
     mock_channel.return_value = "Test"
 
     result.stringify.return_value = "Chickens"
     client.return_value = result
 
-    assert await get_full_request(client, dialog, errors_handler) == "Chickens"
+    assert await get_full_request(client, dialog) == "Chickens"
     mock_channel.assert_called_once_with(1)
     client.assert_awaited_once_with("Test")
-    errors_handler.handle.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -362,20 +350,16 @@ async def test_get_full_request_for_user(mock_user):
     client = AsyncMock()
     dialog = MagicMock(spec=types.User)
     dialog.id = 1
-    errors_handler = AsyncMock()
     result = MagicMock()
-
-    errors_handler.handle = AsyncMock()
 
     mock_user.return_value = "Test"
 
     result.stringify.return_value = "Chickens"
     client.return_value = result
 
-    assert await get_full_request(client, dialog, errors_handler) == "Chickens"
+    assert await get_full_request(client, dialog) == "Chickens"
     mock_user.assert_called_once_with(1)
     client.assert_awaited_once_with("Test")
-    errors_handler.handle.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -384,32 +368,24 @@ async def test_get_full_request_for_chat(mock_chat):
     client = AsyncMock()
     dialog = MagicMock(spec=types.Chat)
     dialog.id = 1
-    errors_handler = AsyncMock()
     result = MagicMock()
-
-    errors_handler.handle = AsyncMock()
 
     mock_chat.return_value = "Test"
 
     result.stringify.return_value = "Chickens"
     client.return_value = result
 
-    assert await get_full_request(client, dialog, errors_handler) == "Chickens"
+    assert await get_full_request(client, dialog) == "Chickens"
     mock_chat.assert_called_once_with(1)
     client.assert_awaited_once_with("Test")
-    errors_handler.handle.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 @patch("logging.Logger.warning")
 async def test_get_full_request_for_unknown_type(mock_logger):
     dialog = MagicMock()
-    errors_handler = AsyncMock()
-    errors_handler.handle = AsyncMock()
-
-    assert await get_full_request(None, dialog, errors_handler) == ""
+    assert await get_full_request(None, dialog) == ""
     mock_logger.assert_called_once_with(f"Unknown dialog type: {dialog}")
-    errors_handler.handle.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -419,39 +395,30 @@ async def test_get_full_request_for_error(chat_mock):
     dialog = MagicMock(spec=types.Chat)
     dialog.id = 1
     dialog.name = "Idk what"
-    errors_handler = MagicMock()
-    errors_handler.handle = AsyncMock()
-
-    await get_full_request(client, dialog, errors_handler)
+    await get_full_request(client, dialog)
 
     client.assert_awaited_once()
     chat_mock.assert_called_once_with(1)
-    errors_handler.handle.assert_awaited_once_with(client.side_effect)
 
 
 @pytest.mark.asyncio
 async def test_get_photo_info_for_empty_input():
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
-
-    errors_handler.handle = AsyncMock()
 
     iterator = MagicMock()
     iterator.__aiter__.return_value = []
 
     client.iter_profile_photos = MagicMock(return_value=iterator)
 
-    assert await get_photo_info(client, dialog, errors_handler, None) == []
+    assert await get_photo_info(client, dialog, None) == []
     client.iter_profile_photos.assert_called_once_with(dialog)
-    errors_handler.handle.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_get_photo_info_for_one_input():
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
     photo = MagicMock()
 
     DATES = date_consts()
@@ -469,51 +436,40 @@ async def test_get_photo_info_for_one_input():
     client.download_media = AsyncMock()
     client.download_media.return_value = "Noice"
 
-    errors_handler.handle = AsyncMock()
-
-    assert await get_photo_info(client, dialog, errors_handler, DATES[1]) == [
+    assert await get_photo_info(client, dialog, DATES[1]) == [
         (1, 5, "Noice", DATES[1])
     ]
     client.iter_profile_photos.assert_called_once_with(dialog)
     client.download_media.assert_awaited_once_with(photo, file="Media/")
-    errors_handler.handle.assert_not_awaited()
 
 
 @pytest.mark.asyncio
 async def test_get_photo_info_for_error():
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
 
     error = RuntimeError("dunno")
 
     client.iter_profile_photos = MagicMock(side_effect=error)
 
-    errors_handler.handle = AsyncMock()
-
-    assert await get_photo_info(client, dialog, errors_handler, None) == []
+    assert await get_photo_info(client, dialog, None) == []
     client.iter_profile_photos.assert_called_once_with(dialog)
-    errors_handler.handle.assert_awaited_once_with(error)
 
 
 @pytest.mark.asyncio
 async def test_add_users_to_set_with_empty_input():
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
     users = set()
-
-    errors_handler.handle = AsyncMock()
 
     iterator = MagicMock()
     iterator.__aiter__.return_value = []
 
     client.iter_participants.return_value = iterator
 
-    await add_users_to_set(client, dialog, users, errors_handler)
+    await add_users_to_set(client, dialog, users)
 
     client.iter_participants.assert_called_once_with(dialog)
-    errors_handler.handle.assert_not_awaited()
     assert users == set()
 
 
@@ -521,10 +477,7 @@ async def test_add_users_to_set_with_empty_input():
 async def test_add_users_to_set_with_one_input():
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
     users = set()
-
-    errors_handler.handle = AsyncMock()
 
     user = MagicMock()
     user.id = 1
@@ -534,10 +487,9 @@ async def test_add_users_to_set_with_one_input():
 
     client.iter_participants.return_value = iterator
 
-    await add_users_to_set(client, dialog, users, errors_handler)
+    await add_users_to_set(client, dialog, users)
 
     client.iter_participants.assert_called_once_with(dialog)
-    errors_handler.handle.assert_not_awaited()
     assert users == {1}
 
 
@@ -545,10 +497,7 @@ async def test_add_users_to_set_with_one_input():
 async def test_add_users_to_set_with_many_inputs():
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
     users = {1, 5}
-
-    errors_handler.handle = AsyncMock()
 
     user1 = MagicMock()
     user1.id = 1
@@ -567,10 +516,9 @@ async def test_add_users_to_set_with_many_inputs():
 
     client.iter_participants.return_value = iterator
 
-    await add_users_to_set(client, dialog, users, errors_handler)
+    await add_users_to_set(client, dialog, users)
 
     client.iter_participants.assert_called_once_with(dialog)
-    errors_handler.handle.assert_not_awaited()
     assert users == {1, 2, 3, 4, 5}
 
 
@@ -578,18 +526,14 @@ async def test_add_users_to_set_with_many_inputs():
 async def test_add_users_to_set_for_unknown_errors():
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
-
-    errors_handler.handle = AsyncMock()
 
     error = RuntimeError("Dunno")
 
     client.iter_participants = MagicMock(side_effect=error)
 
-    await add_users_to_set(client, dialog, None, errors_handler)
+    await add_users_to_set(client, dialog, None)
 
     client.iter_participants.assert_called_once_with(dialog)
-    errors_handler.handle.assert_awaited_once_with(error)
 
 
 @pytest.mark.asyncio
@@ -651,7 +595,7 @@ async def test_insert_users_duplicate(mock_session):
 @patch("helpers.info.insert_users_ids", new_callable=AsyncMock)
 @patch("helpers.info.get_dialog_info", new_callable=AsyncMock)
 async def test_entity_handler_with_empty_set(mock_info, mock_insert):
-    await entity_handler(None, None, set(), None, None, True)
+    await entity_handler(None, None, set(), None, True)
 
     mock_info.assert_not_awaited()
     mock_insert.assert_not_awaited()
@@ -663,12 +607,11 @@ async def test_entity_handler_with_empty_set(mock_info, mock_insert):
 async def test_entity_handler_with_one_entry_and_skip(mock_info, mock_insert):
     client = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
     session = MagicMock()
     users = {5}
 
     dialog.entity.id = 1
-    await entity_handler(client, dialog, users, errors_handler, session, True)
+    await entity_handler(client, dialog, users, session, True)
 
     mock_insert.assert_awaited_once_with(session, 5, 1)
     mock_info.assert_not_awaited()
@@ -685,18 +628,15 @@ async def test_entity_handler_with_one_entry_and_no_skip(
     entity = MagicMock()
     fake_dialog = MagicMock()
     dialog = MagicMock()
-    errors_handler = MagicMock()
     session = MagicMock()
     users = {5}
 
     dialog.entity.id = 1
     client.get_entity.return_value = entity
     mock_construct_fake_dialog.return_value = fake_dialog
-    await entity_handler(client, dialog, users, errors_handler, session, False)
+    await entity_handler(client, dialog, users, session, False)
 
     mock_insert.assert_called_once_with(session, 5, 1)
     client.get_entity.assert_awaited_once_with(5)
     mock_construct_fake_dialog.assert_called_once_with(entity)
-    mock_info.assert_awaited_once_with(
-        client, fake_dialog, set(), errors_handler, session
-    )
+    mock_info.assert_awaited_once_with(client, fake_dialog, set(), session)

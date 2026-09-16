@@ -12,7 +12,6 @@ from telethon.errors import (
 )
 
 from db.models import DialogMetadata, DialogPhoto, Message, User
-from objects.errors import Errors
 
 from .local_utils import construct_fake_dialog
 
@@ -166,7 +165,6 @@ async def get_dialog_info(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
     users: set[int],
-    errors_handler: Errors,
     session: AsyncSession,
 ) -> None:
     """
@@ -183,29 +181,23 @@ async def get_dialog_info(
             A set of user ids or any kind of entity where
             entity ids accumulate over the time archiving.
 
-        errors_handler (objects.errors.Errors):
-            An object that handles errors appropriately.
-
         session (sqlalchemy.ext.asyncio.AsyncSession):
             The async session of the database.
     """
 
-    full_request = await get_full_request(client, dialog.entity, errors_handler)
+    full_request = await get_full_request(client, dialog.entity)
     insert_dialog_metadata(session, dialog.entity.id, full_request)
 
     latest_photo_date = await get_latest_photo_date(session, dialog.entity.id)
-    photo_info = await get_photo_info(
-        client, dialog.entity, errors_handler, latest_photo_date
-    )
+    photo_info = await get_photo_info(client, dialog.entity, latest_photo_date)
     insert_photo_info(session, photo_info)
 
-    await add_users_to_set(client, dialog, users, errors_handler)
+    await add_users_to_set(client, dialog, users)
 
 
 async def get_full_request(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
-    errors_handler: Errors,
 ) -> str:
     """
     A function that gets the full request from telegram for
@@ -217,9 +209,6 @@ async def get_full_request(
 
         dialog (telethon.tl.custom.dialog.Dialog):
             The object which you get from client.iter_dialogs.
-
-        errors_handler (objects.errors.Errors):
-            An object that handles errors appropriately.
 
     Retunrs:
         str:
@@ -250,18 +239,16 @@ async def get_full_request(
             return ""
 
         return full_request.stringify()
-    except Exception as e:
+    except Exception:
         logger.exception(
             f"Exception occurred with dialog {dialog.id} : {dialog.name}"
         )
-        await errors_handler.handle(e)
         return ""
 
 
 async def get_photo_info(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
-    errors_handler: Errors,
     latest_photo_date: datetime,
 ) -> list[tuple[int, int, str, str]]:
     """
@@ -275,9 +262,6 @@ async def get_photo_info(
         dialog (telethon.types.[entity]):
             The entity you want their info, it can be User, Channel,
             or Chat.
-
-        errors_handler (objects.errors.Errors):
-            An object that handles errors appropriately.
 
         latest_photo_date (datetime):
             The date of the latest photo in the database
@@ -313,11 +297,10 @@ async def get_photo_info(
                 )
             )
 
-    except Exception as e:
+    except Exception:
         logger.exception(
             f"Exception occurred with dialog {dialog.id} : {dialog.name}"
         )
-        await errors_handler.handle(e)
 
     return photo_data
 
@@ -326,7 +309,6 @@ async def add_users_to_set(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
     users: set[int],
-    errors_handler: Errors,
 ) -> None:
     """
     A function that parses users in chats, and adds
@@ -342,9 +324,6 @@ async def add_users_to_set(
         users (set[int]):
             A set of user ids or any kind of entity where
             entity ids accumulate over the time archiving.
-
-        errors_handler (objects.errors.Errors):
-            An object that handles errors appropriately.
     """
 
     try:
@@ -356,23 +335,19 @@ async def add_users_to_set(
         logger.info(
             f"You can't parse users in this chat, it's a private chat: {e}"
         )
-        return
 
     except ChannelPrivateError:
         logger.info(
             "You can't parse users from this channel, you are not an admin"
         )
-        return
 
     except BadRequestError:
         logger.warning("Something went wrong, due to that we can't parse users")
-        return
 
-    except Exception as e:
+    except Exception:
         logger.exception(
             f"Exception occurred with dialog {dialog.id} : {dialog.name}"
         )
-        await errors_handler.handle(e)
 
 
 async def insert_users_ids(
@@ -407,7 +382,6 @@ async def entity_handler(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
     users: set[int],
-    errors_handler: Errors,
     session: AsyncSession,
     skip_details: bool = False,
 ) -> None:
@@ -424,9 +398,6 @@ async def entity_handler(
         users (set[int]):
             A set of user ids or any kind of entity where
             entity ids accumulate over the time archiving.
-
-        errors_handler (objects.errors.Errors):
-            An object that handles errors appropriately.
 
         session (sqlalchemy.ext.asyncio.AsyncSession):
             The async session of the database.
@@ -462,6 +433,4 @@ async def entity_handler(
 
         # We pass an empty set because we don't want
         # it to function as a crawler, for now at least
-        await get_dialog_info(
-            client, fake_dialog, set(), errors_handler, session
-        )
+        await get_dialog_info(client, fake_dialog, set(), session)

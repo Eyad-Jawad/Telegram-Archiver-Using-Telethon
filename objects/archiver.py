@@ -19,7 +19,6 @@ from helpers.stickers import stickers_handler
 from helpers.text import *
 
 from .config import Config as con
-from .errors import Errors as err
 from .file import File as file
 from .progress import Progress as prog
 
@@ -90,8 +89,6 @@ class Archiver:
 
         self.file: file = file(self.config.size_threshold)
 
-        self.error: err = err(self.progress, self)
-
         self.users: set[int] = (
             set()
         )  # A set that collects entities over archiving time.
@@ -161,7 +158,6 @@ class Archiver:
                     self.client,
                     self.dialog,
                     self.users,
-                    self.error,
                     self.session,
                 )
 
@@ -173,7 +169,6 @@ class Archiver:
                     self.client,
                     self.dialog,
                     self.users,
-                    self.error,
                     self.session,
                 )
 
@@ -186,7 +181,7 @@ class Archiver:
             )
 
             progress_console.clear()
-            print(f"Done archiving {self.dialog.name}!\n\n")
+            progress_console.print(f"Done archiving {self.dialog.name}!\n\n")
 
         # Handle key interruption
         except (KeyboardInterrupt, asyncio.CancelledError):
@@ -196,11 +191,10 @@ class Archiver:
             await self.handle_key_interruption()
 
         # Handle other unknown errors
-        except Exception as e:
+        except Exception:
             logger.exception(
                 f"Exception occurred with dialog {self.id} : {self.dialog.name}"
             )
-            await self.error.handle(e)
 
     async def save_checkpoint(self) -> None:
         """A method that saves the progress of archiving in the database for future archiving."""
