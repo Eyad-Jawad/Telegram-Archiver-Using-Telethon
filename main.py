@@ -26,8 +26,8 @@ from objects.config import Config
 TODO:
 Unit tests / pytest
 
-use 'returning' for new_dialog in archiver init in ohter funcs to
-make it simpler for other funcs
+make handle interruption in archiver handling normal exiting
+and exceptions; change its name
     
 Handle migration
 stories

@@ -113,12 +113,13 @@ class Archiver:
 
         logger.debug("Started the archiving loop...")
 
+        last_progress_refresh = time.monotonic() - 10
+        progress_console = Console()
+        current_msg_count = 0
+
         try:
-            last_progress_refresh = time.monotonic() - 10
-            progress_console = Console()
             with progress_console.screen() as screen:
                 # The progress panel in the CLI.
-                i = 0
                 async for message in self.client.iter_messages(
                     self.entity,
                     reverse=True,  # Start from the oldest message.
@@ -134,8 +135,8 @@ class Archiver:
                     # Archive the message, this method handles it all
                     await self.archive_message(message)
 
-                    i += 1
-                    if i % BATCH_SIZE == 0:
+                    current_msg_count += 1
+                    if current_msg_count % BATCH_SIZE == 0:
                         await self.session.commit()
                         await self.save_checkpoint()
 
@@ -143,13 +144,11 @@ class Archiver:
             progress_console.print(
                 self.progress.make_table(), self.progress.bar
             )
-            progress_console.print("\n")
 
             logger.info("Done archiving messages.")
 
             # Check if the user wants to archive dialog's metadata
             if self.config.dialog_metadata:
-                logger.info("Parsing dialog's metadata...")
                 progress_console.print("Parsing dialog's metadata...")
                 await get_dialog_info(
                     self.client,
@@ -160,7 +159,6 @@ class Archiver:
 
             # Check if the user wants to archive users' metadata
             if self.config.user_metadata:
-                logger.info("Parsing users' metadata...")
                 progress_console.print("Parsing users' metadata...")
                 await entity_handler(
                     self.client,
@@ -180,18 +178,14 @@ class Archiver:
             progress_console.clear()
             progress_console.print(f"Done archiving {self.dialog.name}!\n\n")
 
-        # Handle key interruption
-        except (KeyboardInterrupt, asyncio.CancelledError):
-            logger.info(
-                f"Exiting mid-archiving the dialog {self.dialog.name}..."
-            )
-            await self.handle_key_interruption()
-
         # Handle other unknown errors
         except Exception:
             logger.exception(
                 f"Exception occurred with dialog {self.id} : {self.dialog.name}"
             )
+            await (
+                self.handle_key_interruption()
+            )  # the misleading name is temporary
 
     async def save_checkpoint(self) -> None:
         """A method that saves the progress of archiving in the database for future archiving."""
@@ -210,8 +204,8 @@ class Archiver:
             if value:
                 checkpoint[i] = value
 
-        self.db_dialog.last_message_id = checkpoint[0]
-        self.db_dialog.message_counter = checkpoint[1]
+        self.db_dialog.last_message_id = int(checkpoint[0])  # For mypy
+        self.db_dialog.message_counter = int(checkpoint[1])  # For mypy
         self.db_dialog.archiving_time = checkpoint[2]
 
         await self.session.commit()

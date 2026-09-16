@@ -84,7 +84,7 @@ class Progress:
         A method that updates attributes having to do with files.
 
         Args:
-            file_size (int):
+            file_size (float):
                 The size of the last file downloaded in megabytes.
         """
 
@@ -165,5 +165,5 @@ class ProgressFileDelegation:
     def __init__(self, progress: Progress):
         self.__progress = progress
 
-    def update_file_progress(self, file_size: int):
+    def update_file_progress(self, file_size: float) -> None:
         self.__progress.update_file_progress(file_size)
