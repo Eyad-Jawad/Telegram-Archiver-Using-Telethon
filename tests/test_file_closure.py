@@ -11,7 +11,7 @@ def file_handler():
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_no_message(
+async def test_file_handler_with_no_message(
     file_handler, mock_message, check_db_msg_defaults
 ):
     await file_handler(None, mock_message)
@@ -20,7 +20,7 @@ async def test_file_handle_with_no_message(
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_no_file(
+async def test_file_handler_with_no_file(
     file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
@@ -32,7 +32,7 @@ async def test_file_handle_with_no_file(
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_photo(
+async def test_file_handler_with_photo(
     file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
@@ -69,7 +69,7 @@ async def test_file_handle_with_photo(
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_file(
+async def test_file_handler_with_file(
     file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
@@ -105,7 +105,7 @@ async def test_file_handle_with_file(
 
 
 @pytest.mark.asyncio
-async def test_file_handle_with_big_file(
+async def test_file_handler_with_big_file(
     file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
@@ -152,3 +152,21 @@ async def test_file_calls_update_file_size(mock_message):
     prog_delegation.update_file_progress.assert_called_once_with(
         1.9073486328125e-06
     )
+
+
+@pytest.mark.asyncio
+async def test_file_handler_for_error(
+    file_handler, mock_message, check_db_msg_defaults
+):
+    message = AsyncMock(side_effect=ValueError("Idk"))
+    file = MagicMock()
+
+    file.size = None
+    file.id = None
+    file.name = None
+    message.photo = None
+    message.file = file
+
+    await file_handler(message, mock_message)
+
+    await check_db_msg_defaults(mock_message)

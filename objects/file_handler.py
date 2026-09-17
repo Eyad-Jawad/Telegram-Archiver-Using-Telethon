@@ -1,5 +1,5 @@
 import logging
-from collections.abc import Callable, Awaitable
+from collections.abc import Awaitable, Callable
 
 from telethon import custom
 
@@ -93,5 +93,6 @@ def make_file_handler(
 
         except Exception:
             logger.exception(f"Exception occurred at message {tel_msg.id}")
+            print("\n\n\nError\n\n\n")
 
     return handle_file

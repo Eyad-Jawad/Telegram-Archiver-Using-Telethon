@@ -3,6 +3,7 @@ import logging
 import time
 
 from rich.console import Console
+from sqlalchemy import select
 from telethon import TelegramClient, custom, types, utils
 
 from db import get_session
@@ -75,6 +76,9 @@ class Archiver:
             await self.client.get_messages(self.dialog, limit=0)
         ).total
 
+        stmt = select(Dialog).where(Dialog.dialog_id == self.id)
+        result = await self.session.execute(stmt)
+        self.db_dialog = result.scalar_one()
         self.db_dialog.total_number_of_messages = self.total_messages
 
         await self.session.commit()
@@ -178,14 +182,18 @@ class Archiver:
             progress_console.clear()
             progress_console.print(f"Done archiving {self.dialog.name}!\n\n")
 
+        # Handle key interruption
+        except (KeyboardInterrupt, asyncio.CancelledError):
+            logger.info(
+                f"Exiting mid-archiving the dialog {self.dialog.name}..."
+            )
+            await self.handle_key_interruption()
+
         # Handle other unknown errors
         except Exception:
             logger.exception(
                 f"Exception occurred with dialog {self.id} : {self.dialog.name}"
             )
-            await (
-                self.handle_key_interruption()
-            )  # the misleading name is temporary
 
     async def save_checkpoint(self) -> None:
         """A method that saves the progress of archiving in the database for future archiving."""

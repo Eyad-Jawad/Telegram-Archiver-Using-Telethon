@@ -44,7 +44,7 @@ async def main():
     # Set up the main tasks so we can cancel them if interrupted mid-archiving
     loop = asyncio.get_running_loop()
     main_task = asyncio.current_task()
-    logging.basicConfig(filename="archiving.log", level=logging.WARNING)
+    logging.basicConfig(filename="archiving.log", level=logging.INFO)
 
     def handle_key_interruption():
         """Safely exists the program in case of key interruption mid an async code"""
