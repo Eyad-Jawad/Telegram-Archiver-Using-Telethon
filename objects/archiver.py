@@ -18,7 +18,7 @@ from helpers.stickers import stickers_handler
 from helpers.text import *
 
 from .config import Config as con
-from .file import File as file
+from .file_handler import make_file_handler
 from .progress import Progress as prog
 from .progress import ProgressFileDelegation
 
@@ -82,7 +82,7 @@ class Archiver:
         # Initialize the needed objects
         self.progress: prog = prog(self.total_messages, self.dialog.name)
 
-        self.file: file = file(
+        self.file_handler = make_file_handler(
             self.config.size_threshold, ProgressFileDelegation(self.progress)
         )
 
@@ -233,7 +233,7 @@ class Archiver:
         A method for archiving, and exctracting data from a telegram message.
 
         Args:
-            message (telethon.custom.message.Message):
+            tel_msg (telethon.custom.message.Message):
                 A telegram dialog's message provided by telethon.
         """
 
@@ -255,7 +255,7 @@ class Archiver:
 
         # Check if the user wants to archive files
         if self.config.files and tel_msg.file:
-            tasks.append(self.file.handle(tel_msg, db_msg))
+            tasks.append(self.file_handler(tel_msg, db_msg))
 
         # Check if the user wants to archive stickers, and if
         # this message is a sticker

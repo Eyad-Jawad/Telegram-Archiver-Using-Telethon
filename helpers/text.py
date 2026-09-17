@@ -16,7 +16,7 @@ def reply_handler(
     reply to user, reply to private chat, reply to channel, and perhaps more.
 
     Args:
-        message (telethon.custom.message.Message):
+        tel_msg (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):
@@ -78,7 +78,7 @@ def forward_handler(
     hidden or shown profiles, and from other enitities like channels.
 
     Args:
-        message (telethon.custom.message.Message):
+        tel_msg (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):
@@ -123,7 +123,7 @@ def text_handler(tel_msg: custom.message.Message, db_msg) -> None:
     if the message happens not to be a text message.
 
     Args:
-        message (telethon.custom.message.Message):
+        tel_msg (telethon.custom.message.Message):
             A telegram dialog's message provided by telethon.
 
         db_msg (db.models.Message):

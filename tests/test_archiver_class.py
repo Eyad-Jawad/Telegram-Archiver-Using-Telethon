@@ -55,7 +55,7 @@ def mock_config():
 
 @pytest_asyncio.fixture
 @patch("objects.archiver.Archiver.get_checkpoint", new_callable=AsyncMock)
-@patch("objects.archiver.file")
+@patch("objects.archiver.make_file_handler")
 @patch("objects.archiver.ProgressFileDelegation")
 @patch("objects.archiver.prog")
 @patch("objects.archiver.get_session")
@@ -76,14 +76,14 @@ async def mock_archiver(
 ):
     progress = MagicMock()
     progress_delegation = MagicMock()
-    file = MagicMock()
+    file_handler = AsyncMock()
 
     mock_get_id.return_value = 1
     mock_get_type.return_value = "Something"
 
     mock_progress.return_value = progress
     mock_progress_delegation.return_value = progress_delegation
-    mock_file.return_value = file
+    mock_file.return_value = file_handler
 
     mock_get_session.return_value = mock_session
 
@@ -106,7 +106,7 @@ async def mock_archiver(
         progress=progress,
         progress_delegation=progress_delegation,
         mock_file=mock_file,
-        file=file,
+        file_handler=file_handler,
         mock_checkpoint=mock_checkpoint,
     )
 
@@ -390,7 +390,7 @@ async def test_dialog_archive_message(
 ):
     obj = mock_archiver.obj
     config = mock_archiver.mock_config
-    file = mock_archiver.file
+    file_handler = mock_archiver.file_handler
     progress = mock_archiver.progress
 
     message = MagicMock()
@@ -408,8 +408,6 @@ async def test_dialog_archive_message(
     config.files = True
     config.reactions = True
 
-    file.handle = AsyncMock()
-
     progress.used_space_in_MB = 25
 
     obj.session = mock_session
@@ -423,7 +421,7 @@ async def test_dialog_archive_message(
     mock_reply.assert_called_once_with(message, mock_message, obj.users)
     mock_text.assert_called_once_with(message, mock_message)
 
-    file.handle.assert_awaited_once_with(message, mock_message)
+    file_handler.assert_awaited_once_with(message, mock_message)
     mock_stickers.assert_awaited_once_with(
         mock_archiver.mock_client,
         message,

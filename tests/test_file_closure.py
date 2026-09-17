@@ -2,43 +2,38 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from objects.file import File
+from objects.file_handler import make_file_handler
 
 
 @pytest.fixture()
-def file_class():
-    return File(5, MagicMock())
-
-
-def test_file_class_attributes(file_class):
-    assert file_class.size_threshold == 5
-    assert file_class.PATH == "Media/"
+def file_handler():
+    return make_file_handler(5, MagicMock())
 
 
 @pytest.mark.asyncio
 async def test_file_handle_with_no_message(
-    file_class, mock_message, check_db_msg_defaults
+    file_handler, mock_message, check_db_msg_defaults
 ):
-    await file_class.handle(None, mock_message)
+    await file_handler(None, mock_message)
 
     await check_db_msg_defaults(mock_message)
 
 
 @pytest.mark.asyncio
 async def test_file_handle_with_no_file(
-    file_class, mock_message, check_db_msg_defaults
+    file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
     message.file = None
 
-    await file_class.handle(message, mock_message)
+    await file_handler(message, mock_message)
 
     await check_db_msg_defaults(mock_message)
 
 
 @pytest.mark.asyncio
 async def test_file_handle_with_photo(
-    file_class, mock_message, check_db_msg_defaults
+    file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
     file = MagicMock()
@@ -52,7 +47,7 @@ async def test_file_handle_with_photo(
 
     message.download_media.return_value = "Somewhere"
 
-    await file_class.handle(message, mock_message)
+    await file_handler(message, mock_message)
 
     await check_db_msg_defaults(
         mock_message,
@@ -75,7 +70,7 @@ async def test_file_handle_with_photo(
 
 @pytest.mark.asyncio
 async def test_file_handle_with_file(
-    file_class, mock_message, check_db_msg_defaults
+    file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
     file = MagicMock()
@@ -88,7 +83,7 @@ async def test_file_handle_with_file(
 
     message.download_media.return_value = "There"
 
-    await file_class.handle(message, mock_message)
+    await file_handler(message, mock_message)
 
     await check_db_msg_defaults(
         mock_message,
@@ -111,7 +106,7 @@ async def test_file_handle_with_file(
 
 @pytest.mark.asyncio
 async def test_file_handle_with_big_file(
-    file_class, mock_message, check_db_msg_defaults
+    file_handler, mock_message, check_db_msg_defaults
 ):
     message = AsyncMock()
     file = MagicMock()
@@ -122,7 +117,7 @@ async def test_file_handle_with_big_file(
     message.photo = None
     message.file = file
 
-    await file_class.handle(message, mock_message)
+    await file_handler(message, mock_message)
 
     await check_db_msg_defaults(
         mock_message,
@@ -140,7 +135,7 @@ async def test_file_handle_with_big_file(
 @pytest.mark.asyncio
 async def test_file_calls_update_file_size(mock_message):
     prog_delegation = MagicMock()
-    file_class = File(5, prog_delegation)
+    file_handler = make_file_handler(5, prog_delegation)
     message = AsyncMock()
     file = MagicMock()
 
@@ -152,7 +147,7 @@ async def test_file_calls_update_file_size(mock_message):
 
     message.download_media.return_value = "There"
 
-    await file_class.handle(message, mock_message)
+    await file_handler(message, mock_message)
 
     prog_delegation.update_file_progress.assert_called_once_with(
         1.9073486328125e-06
