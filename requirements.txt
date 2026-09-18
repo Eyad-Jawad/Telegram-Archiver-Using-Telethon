@@ -1,5 +1,0 @@
-telethon
-rich
-python-dotenv
-readchar
-aiosqlite

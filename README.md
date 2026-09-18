@@ -28,22 +28,13 @@ TELEGRAM_API_HASH = "abcdefg"
 This is probably the safest way possible to ensure that your keys don't get leaked, I would never put mine straight into the program, you could read them from a file, but don't forget to add it to the gitignore.
 
 ### Requirements
-To run the program you should make a virtual enviroment first:  
+You could use uv to do it:  
 
 ```
 
-python -m venv .venv
-source ./.venv/bin/activate
-
-```  
-
-Then you must download the dependincies:  
-
-```
-
-pip install -r requirements.txt # If you are a normal user
-pip install -r requirements_dev.txt # If you are a dev
-python main.py -t -d
+pip install uv
+uv sync
+uv run main.py -t -d
 
 ```  
 
@@ -60,18 +51,10 @@ And then when you run it you must do this:
 ```
 
 docker run -it --rm \
--v "$(pwd):/usr/src/telegramArchiver" \
-telegram-archiver -t -d 
-
-```  
-
-Or you could use uv:  
-
-```
-
-pip install uv
-uv sync
-uv run main.py -t -d
+    -v "$(pwd)/Media:/usr/src/telegramArchiver/Media" \
+    -v "$(pwd)/telegram.db:/usr/src/telegramArchiver/telegram.db" \
+    -v "$(pwd)/archiving.log:/usr/src/telegramArchiver/archiving.log" \
+    telegram-archiver -t -d 
 
 ```  
 
