@@ -141,7 +141,6 @@ class Archiver:
 
                     current_msg_count += 1
                     if current_msg_count % BATCH_SIZE == 0:
-                        await self.session.commit()
                         await self.save_checkpoint()
 
             # Ensure the progress panel is showed at 100% at the end.
@@ -173,7 +172,6 @@ class Archiver:
 
             await self.save_checkpoint()
 
-            await self.session.commit()
             await self.session.close()
             logger.info(
                 f"Done archiving {self.dialog.name} after {time.perf_counter() - self.progress.time_start} seconds."

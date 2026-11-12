@@ -32,6 +32,11 @@ and exceptions; change its name
 Handle migration
 stories
 
+use context manager for db session
+
+FIXME:
+look into half downloaded media
+
 """
 
 logger = logging.getLogger(__name__)
@@ -116,7 +121,7 @@ async def main():
                 """)
 
                 try:
-                    entity_data = input()
+                    entity_data = input() 
                     entity = await client.get_entity(entity_data)
                 except KeyboardInterrupt:
                     logger.info("Exited the program by key interruption.")
