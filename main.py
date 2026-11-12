@@ -121,7 +121,7 @@ async def main():
                 """)
 
                 try:
-                    entity_data = input() 
+                    entity_data = input()
                     entity = await client.get_entity(entity_data)
                 except KeyboardInterrupt:
                     logger.info("Exited the program by key interruption.")
