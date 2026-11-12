@@ -1,12 +1,12 @@
 all:
-    uv run pytest
+    uv run python -m pytest 
     uv run ruff format --check .
     uv run ruff check .
     uv run mypy .
     echo "Everything looks good!"
 
 test:
-    uv run pytest
+    uv run python -m pytest 
 
 lint:
     uv run ruff format .
