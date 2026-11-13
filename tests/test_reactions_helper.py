@@ -133,9 +133,12 @@ async def test_get_reaction_list_with_one_reaction(
 
     client.return_value = request
 
-    assert await get_reaction_list(client, dialog, message) == [
-        (1, 10, 5, DATES[1], "🐔")
-    ]
+    result = await get_reaction_list(client, dialog, message)
+    assert result[0].dialog_id == 1
+    assert result[0].message_id == 10
+    assert result[0].reactors_id == 5
+    assert result[0].date == DATES[1]
+    assert result[0].reaction == "🐔"
 
     client.assert_awaited_once_with("idk what")
 
@@ -183,10 +186,18 @@ async def test_get_reaction_list_with_many_reactions(
 
     client.side_effect = [reqeust1, reqeust2]
 
-    assert await get_reaction_list(client, dialog, message) == [
-        (1, 10, 5, DATES[1], "🐔"),
-        (1, 10, 15, DATES[2], "🐤"),
-    ]
+    result = await get_reaction_list(client, dialog, message)
+    assert result[0].dialog_id == 1
+    assert result[0].message_id == 10
+    assert result[0].reactors_id == 5
+    assert result[0].date == DATES[1]
+    assert result[0].reaction == "🐔"
+
+    assert result[1].dialog_id == 1
+    assert result[1].message_id == 10
+    assert result[1].reactors_id == 15
+    assert result[1].date == DATES[2]
+    assert result[1].reaction == "🐤"
 
     assert client.await_count == 2
     assert client.await_args_list == [call("idk what"), call("idk what")]
@@ -230,9 +241,15 @@ async def test_insert_channel_reaction(mock_reaction_type, mock_session):
 @pytest.mark.asyncio
 async def test_insert_chat_reaction(mock_session):
     DATES = date_consts()
-    result = (1, 10, 5, DATES[1], "🐔")
+    reaction = ReactionInfo(
+        dialog_id=1, 
+        message_id=10, 
+        reactors_id=5, 
+        date=DATES[1], 
+        reaction="🐔"
+    )
 
-    insert_chat_reaction(mock_session, result)
+    insert_chat_reaction(mock_session, reaction)
 
     result = await mock_session.execute(select(Reaction))
     result = result.scalar()
@@ -327,10 +344,10 @@ async def test_reaction_handler_with_valid_chat_reactions(
 
     message.reactions = result
 
-    mock_get_reaction.return_value = [[1, 2, 3], []]
+    mock_get_reaction.return_value = [1]
 
     await reaction_handler(client, dialog, message, session)
 
     mock_insert_Channel.assert_not_called()
-    mock_insert_Chat.assert_called_once_with(session, [1, 2, 3])
+    mock_insert_Chat.assert_called_once_with(session, 1)
     mock_get_reaction.assert_awaited_once_with(client, dialog, message)

@@ -1,5 +1,6 @@
 import logging
 from datetime import datetime
+from dataclasses import dataclass
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from telethon import TelegramClient, custom, functions, tl, types
@@ -9,32 +10,22 @@ from db.models import Reaction
 logger = logging.getLogger(__name__)
 
 
+@dataclass
+class ReactionInfo:
+    dialog_id: int
+    message_id: int
+    reactors_id: int
+    date: datetime
+    reaction: str
+
+
 async def get_reaction_list(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
     message: custom.message.Message,
-) -> list[tuple[int, int, int, datetime, str]]:
+) -> list[ReactionInfo]:
     """
     A function that extracts reactions from a message.
-
-    Args:
-        client (telethon.TelegramClient):
-            Your account's client.
-
-        dialog (telethon.tl.custom.dialog.Dialog):
-            The object which you get from client.iter_dialogs.
-
-        message (telethon.custom.message.Message):
-            A telegram dialog's message provided by telethon.
-
-    Returns:
-        List[Tuple(
-            int (dialog id),
-            int (message id),
-            int (reactor's id),
-            datetime (date of reacting),
-            str (reaction),
-        )]
     """
 
     id = message.id
@@ -55,12 +46,12 @@ async def get_reaction_list(
 
             for react in result or []:
                 reactions.append(
-                    (
-                        dialog.id,
-                        message.id,
-                        get_peer_id(react),
-                        react.date,
-                        reaction_type(react),
+                    ReactionInfo(
+                        dialog_id=dialog.id,
+                        message_id=message.id,
+                        reactors_id=get_peer_id(react),
+                        date=react.date,
+                        reaction=reaction_type(react),
                     )
                 )
 
@@ -78,18 +69,10 @@ async def get_reaction_list(
     return reactions
 
 
-def reaction_type(react) -> str:
+def reaction_type(react: types.messages.MessageReactionsList) -> str:
     """
     A function that returns the reaction,
     or its type if it is not a unicode reaction.
-
-    Args:
-        react:
-            The returned value of telethon's get reaction functions.
-
-    Returns:
-        str:
-            The reaction, or its type if it is not a unicode reaction.
     """
 
     # For safety
@@ -110,18 +93,10 @@ def reaction_type(react) -> str:
         return "Unknown Emoji Type"
 
 
-def get_peer_id(react) -> int:
+def get_peer_id(react: types.messages.MessageReactionsList) -> int:
     """
     A function that gets the id of the reactor with
     minimal interaction with the api.
-
-    Args:
-        react:
-            The returned value of telethon's get reaction functions.
-
-    Returns:
-        int:
-            The id of the entity that made the reaction.
     """
 
     # For safety
@@ -149,19 +124,6 @@ def insert_channel_reaction(
     A function that interacts with the database to insert reaction data.
     It inserts the reaction data of a reaction in a channel, or where
     you can't see who is reacting.
-
-    Args:
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
-
-        dialog_id (int):
-            The id of the dialog where the message is reacted on.
-
-        message_id (int):
-            The id of the message reacted on.
-
-        react:
-            The returned value of telethon's get reaction functions.
     """
 
     new_reaction = Reaction(
@@ -175,33 +137,20 @@ def insert_channel_reaction(
 
 
 def insert_chat_reaction(
-    session: AsyncSession, result: tuple[int, int, int, datetime, str]
+    session: AsyncSession, reaction: ReactionInfo
 ) -> None:
     """
     A function that interacts with the database to insert reaction data.
     It inserts reaction data of a reaction where the reactor can be seen,
     aka in a group, or a chat, or any other dialog type.
-
-    Args:
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
-
-        result:
-            The reaction's data: tuple(
-                int (dialog id),
-                int (message id),
-                int (reactor's id),
-                datetime (date of reacting),
-                str (reaction),
-            )
     """
 
     new_reaction = Reaction(
-        dialog_id=result[0],
-        message_id=result[1],
-        reactors_id=result[2],
-        reacting_date=result[3],
-        reaction=result[4],
+        dialog_id=reaction.dialog_id,
+        message_id=reaction.message_id,
+        reactors_id=reaction.reactors_id,
+        reacting_date=reaction.date,
+        reaction=reaction.reaction,
     )
 
     session.add(new_reaction)
@@ -216,19 +165,6 @@ async def reaction_handler(
     """
     A function that handles all things having to do with a message
     and its reactions.
-
-    Args:
-        client (telethon.TelegramClient):
-            Your account's client.
-
-        dialog (telethon.tl.custom.dialog.Dialog):
-            The object which you get from client.iter_dialogs.
-
-        message (telethon.custom.message.Message):
-            A telegram dialog's message provided by telethon.
-
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
     """
 
     try:
@@ -249,8 +185,7 @@ async def reaction_handler(
         result = await get_reaction_list(client, dialog, message)
 
         for react in result:
-            if len(react) != 0:
-                insert_chat_reaction(session, react)
+            insert_chat_reaction(session, react)
 
     except Exception:
         logger.exception(f"Exception occurred at message {message.id}")
