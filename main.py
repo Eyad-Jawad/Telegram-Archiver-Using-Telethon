@@ -34,6 +34,8 @@ stories
 
 use context manager for db session
 
+Make tests more actual; use mock less
+
 FIXME:
 look into half downloaded media
 

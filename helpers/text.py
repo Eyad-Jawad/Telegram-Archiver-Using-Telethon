@@ -14,18 +14,6 @@ def reply_handler(
     """
     A function that handles message replies. It has many edge cases:
     reply to user, reply to private chat, reply to channel, and perhaps more.
-
-    Args:
-        tel_msg (telethon.custom.message.Message):
-            A telegram dialog's message provided by telethon.
-
-        db_msg (db.models.Message):
-            The database orm object that holds the data and will
-            be appended into the database.
-
-        users (set[int]):
-            A set of user ids or any kind of entity where
-            entity ids accumulate over the time archiving.
     """
 
     # check if this message is a reply to another
@@ -76,18 +64,6 @@ def forward_handler(
     """
     A function that handles forwarded messages from users with
     hidden or shown profiles, and from other enitities like channels.
-
-    Args:
-        tel_msg (telethon.custom.message.Message):
-            A telegram dialog's message provided by telethon.
-
-        db_msg (db.models.Message):
-            The database orm object that holds the data and will
-            be appended into the database.
-
-        users (set[int]):
-            A set of user ids or any kind of entity where
-            entity ids accumulate over the time archiving.
     """
 
     try:
@@ -121,14 +97,6 @@ def text_handler(tel_msg: custom.message.Message, db_msg) -> None:
     """
     A function that handles text messages, as well as actions
     if the message happens not to be a text message.
-
-    Args:
-        tel_msg (telethon.custom.message.Message):
-            A telegram dialog's message provided by telethon.
-
-        db_msg (db.models.Message):
-            The database orm object that holds the data and will
-            be appended into the database.
     """
 
     action_handlers = {

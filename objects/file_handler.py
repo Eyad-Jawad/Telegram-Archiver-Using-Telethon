@@ -16,26 +16,9 @@ def make_file_handler(
 ) -> Callable[[custom.message.Message, Message], Awaitable[None]]:
     """
     A function that makes file handlers.
-
-    Args:
-        size_threshold (float):
-            The maximum size of the files to download of which any larger
-            will be ignored, parsed by the config class from user in CLI args.
-
         prog_delegation (objects.progress.ProgressFileDelegation):
             An interface for the file to call update progress size
             without exposing anything unecessary.
-
-    Returns:
-        handle_file Callable[
-            [
-                telethon.custom.message.Message,
-                db.models.Message,
-            ],
-            Awaitable[None]
-        ]:
-            A function that will handle the file and decide based
-            on the threshold whether to download it or not.
     """
 
     logger.debug("Setting up the file handler closure...")
@@ -47,15 +30,7 @@ def make_file_handler(
         db_msg: Message,
     ) -> None:
         """
-        A function that handles downloading a file, and getting its metadata.
-
-        Args:
-            tel_msg (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
-
-            db_msg (db.models.Message):
-                The database orm object that holds the data and will
-                be appended into the database.
+        A function that handles downloading a file based on a threshold, and getting its metadata.
         """
         try:
             # If there's not message (safety), or the message

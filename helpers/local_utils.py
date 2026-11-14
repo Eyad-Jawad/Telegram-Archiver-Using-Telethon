@@ -62,11 +62,6 @@ def parse_args(config: Config, args=None) -> None:
     A helper function that parses the configuration of archiving
     from user in CLI.
 
-    Args:
-        config (objects.config.Config):
-            The config object which has the settings the user
-            has provided.
-
         args:
             This is for testing, don't pay it a mind.
     """
@@ -178,20 +173,10 @@ def mb_to_byte(size: float) -> float:
     return size * (1024**2)
 
 
-def print_three_dialogs(l: list, i: int, con: Console) -> None:
+def print_three_dialogs(dialogs: list, current_dialog_index: int, con: Console) -> None:
     """
     A function that takes the list of dialogs, and prints three or less dialogs
     for the user as a UI to navigate through.
-
-    Args:
-        dialogs (list):
-            A list of the dialogs.
-
-        i (int):
-            The current dialog's index.
-
-        console (rich.console.Console):
-            The object which we will use to print things.
     """
 
     FIRST_LINE = """
@@ -202,53 +187,53 @@ def print_three_dialogs(l: list, i: int, con: Console) -> None:
         and [yellow]i[/] to input a dialog yourself\n"""
 
     # If there's not dialog
-    if len(l) == 0:
+    if len(dialogs) == 0:
         con.print(
             "There's no dialog to work with, do you want to input your own dialog? (i)\n"
         )
         return
 
     # If there's one dialog
-    if len(l) == 1:
+    if len(dialogs) == 1:
         con.print(
-            f"Do you want to archive: {l[0].name}? (y, q to exit, i to input your own dialog)"
+            f"Do you want to archive: {dialogs[0].name}? (y, q to exit, i to input your own dialog)"
         )
         return
 
     # If there are two dialogs
-    if len(l) == 2:
+    if len(dialogs) == 2:
         con.print(
             FIRST_LINE,
-            f"> [bold black on cyan]1.{l[0].name}[/]\n",
-            f"  2.{l[1].name}\n",
+            f"> [bold black on cyan]1.{dialogs[0].name}[/]\n",
+            f"  2.{dialogs[1].name}\n",
         )
         return
 
     to_print = []
 
     # If we are at the first dialog of the dialogs list
-    if i == 0:
+    if current_dialog_index == 0:
         to_print = [
-            f"{len(l)}.{l[-1].name}",
-            f"1.{l[0].name}",
-            f"2.{l[1].name}",
+            f"{len(dialogs)}.{dialogs[-1].name}",
+            f"1.{dialogs[0].name}",
+            f"2.{dialogs[1].name}",
         ]
 
     # If we are at the last dialog of the dialogs list
-    elif i + 1 == len(l):
+    elif current_dialog_index + 1 == len(dialogs):
         to_print = [
-            f"{i}.{l[i - 1].name}",
-            f"{i + 1}.{l[i].name}",
-            f"1.{l[0].name}",
+            f"{current_dialog_index}.{dialogs[current_dialog_index - 1].name}",
+            f"{current_dialog_index + 1}.{dialogs[current_dialog_index].name}",
+            f"1.{dialogs[0].name}",
         ]
 
     # If we are not near any boundary of the list
     # i.e. a normal situation
     else:
         to_print = [
-            f"{i}.{l[i - 1].name}",
-            f"{i + 1}.{l[i].name}",
-            f"{i + 2}.{l[i + 1].name}",
+            f"{current_dialog_index}.{dialogs[current_dialog_index - 1].name}",
+            f"{current_dialog_index + 1}.{dialogs[current_dialog_index].name}",
+            f"{current_dialog_index + 2}.{dialogs[current_dialog_index + 1].name}",
         ]
 
     con.print(
@@ -265,21 +250,6 @@ def handle_index(i: int, amount: int, list_length: int) -> int:
     """
     A function that handles incrementing, and decrementing
     an index so that it doesn't get out of boundary.
-
-    Args:
-        i (int):
-            The index one wants to increment.
-
-        amount (int):
-            The amount you want to increment or decrement from
-            the index.
-
-        list_length (int):
-            The length of the list the index is on.
-
-    Returns:
-        int:
-            The new index.
     """
 
     # Normalize in case the function recieves
@@ -308,14 +278,6 @@ def construct_fake_dialog(entity) -> SimpleNamespace:
     object that simulates how dialog works, having the necessary
     things that this program uses only, since you can't get a dialog
     in telethon unless you have chatted with before.
-
-    Args:
-        entity:
-            The object that you get from client.get_entity().
-
-    Returns:
-        SimpleNamespace:
-            An object that simulates a fake dialog.
     """
 
     if isinstance(entity, User):

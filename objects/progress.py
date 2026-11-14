@@ -14,14 +14,6 @@ class Progress:
         """
         Initialize the progress class which handles how progress
         is shown in the CLI while archiving a dialog.
-
-        Args:
-            total_messages (int):
-                The number of total messages of a dialog.
-
-            dialog_name (str):
-                The title of the dialog being archived, can be accessed
-                through dialog.name.
         """
 
         logger.debug("Setting up the Progress class...")
@@ -61,11 +53,6 @@ class Progress:
     def update(self, last_message_id: int) -> None:
         """
         A method that updates internal attributes.
-
-        Args:
-            last_message_id (int):
-                The id of the last message archived. It is not always an increment
-                of the last id, that's why it must be provided.
         """
 
         # For safety
@@ -82,10 +69,6 @@ class Progress:
     def update_file_progress(self, file_size: float) -> None:
         """
         A method that updates attributes having to do with files.
-
-        Args:
-            file_size (float):
-                The size of the last file downloaded in megabytes.
         """
 
         # For safety
@@ -101,10 +84,6 @@ class Progress:
     def make_table(self) -> Table:
         """
         A method that returns a table from 'rich' library.
-
-        Returns:
-            rich.table.Table:
-                A table with the needed columns, and one row for progress.
         """
 
         # Initilize the table.

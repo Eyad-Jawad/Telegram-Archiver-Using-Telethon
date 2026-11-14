@@ -30,17 +30,7 @@ BATCH_SIZE = 700
 class Archiver:
     def __init__(self, client: TelegramClient, config: con, dialog) -> None:
         """
-        Initialize the sync part of the class.
-
-        Args:
-            client (telethon.TelegramClient):
-                Your account's client.
-
-            config (objects.config.Config):
-                The config object which is parsed from user in CLI.
-
-            dialog (telethon.tl.custom.dialog.Dialog):
-                The object which you get from client.iter_dialogs.
+        Initialize the sync part of the class. Must call `await Archiver.set_up()` afterwards.
         """
 
         logger.debug("Initiating the dialog class (the synchronous part)...")
@@ -237,10 +227,6 @@ class Archiver:
     async def archive_message(self, tel_msg: custom.message.Message) -> None:
         """
         A method for archiving, and exctracting data from a telegram message.
-
-        Args:
-            tel_msg (telethon.custom.message.Message):
-                A telegram dialog's message provided by telethon.
         """
 
         db_msg = Message()
