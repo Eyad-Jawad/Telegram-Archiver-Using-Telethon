@@ -173,7 +173,9 @@ def mb_to_byte(size: float) -> float:
     return size * (1024**2)
 
 
-def print_three_dialogs(dialogs: list, current_dialog_index: int, con: Console) -> None:
+def print_three_dialogs(
+    dialogs: list, current_dialog_index: int, con: Console
+) -> None:
     """
     A function that takes the list of dialogs, and prints three or less dialogs
     for the user as a UI to navigate through.

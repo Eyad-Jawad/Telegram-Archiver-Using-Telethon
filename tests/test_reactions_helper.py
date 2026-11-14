@@ -242,11 +242,7 @@ async def test_insert_channel_reaction(mock_reaction_type, mock_session):
 async def test_insert_chat_reaction(mock_session):
     DATES = date_consts()
     reaction = ReactionInfo(
-        dialog_id=1, 
-        message_id=10, 
-        reactors_id=5, 
-        date=DATES[1], 
-        reaction="🐔"
+        dialog_id=1, message_id=10, reactors_id=5, date=DATES[1], reaction="🐔"
     )
 
     insert_chat_reaction(mock_session, reaction)

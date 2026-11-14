@@ -21,6 +21,7 @@ def mock_message():
 
     return message
 
+
 @pytest_asyncio.fixture
 async def one_sticker_set(mock_session):
     sticker_set = StickerSetInfo(
@@ -41,6 +42,7 @@ async def one_sticker_set(mock_session):
     assert result.access_hash == sticker_set.access_hash
 
     return mock_session
+
 
 @pytest.mark.asyncio
 @patch("helpers.stickers.find_sticker_set_in_db", new_callable=AsyncMock)
@@ -81,7 +83,7 @@ async def test_stickers_handler_with_existing_sticker_set(
     sticker_set.id = 123
     sticker_set.access_hash = 321
     mock_find.return_value = sticker_set
-    
+
     await stickers_handler(client, mock_message, dialog_id, mock_session)
 
     mock_find.assert_awaited_once_with(mock_session, 123, 321)
@@ -111,7 +113,10 @@ async def test_stickers_handler_with_new_sticker_set(
 
     mock_find.assert_awaited_once_with(mock_session, 123, 321)
     mock_insert.assert_called_once_with(
-        mock_session, 1, 10, sticker_set,
+        mock_session,
+        1,
+        10,
+        sticker_set,
     )
     mock_get_info.assert_awaited_once_with(
         client, mock_message.file.sticker_set
@@ -133,12 +138,16 @@ async def test_insert_sticker_set_info_with_no_entry(mock_session):
 async def test_insert_sticker_set_info_with_one_entry(one_sticker_set):
     pass
 
+
 @pytest.mark.asyncio
 async def test_insert_sticker_set_info_with_many_entries(one_sticker_set):
     mock_session = one_sticker_set
 
     sticker_set = StickerSetInfo(
-        title="names", link="nah", id=654, access_hash=456,
+        title="names",
+        link="nah",
+        id=654,
+        access_hash=456,
     )
     insert_sticker_set_info(mock_session, 1, 11, sticker_set)
 
@@ -163,7 +172,10 @@ async def test_insert_sticker_set_info_with_dupes(one_sticker_set):
     mock_session = one_sticker_set
 
     sticker_set = StickerSetInfo(
-        title="names", link="nah", id=654, access_hash=456,
+        title="names",
+        link="nah",
+        id=654,
+        access_hash=456,
     )
     insert_sticker_set_info(mock_session, 1, 10, sticker_set)
 
@@ -195,7 +207,7 @@ async def test_get_sticker_set_info_with_valid_sticker_set(
 
     sticker_set = mock_message.file.sticker_set
 
-    result = await get_sticker_set_info(client, sticker_set) 
+    result = await get_sticker_set_info(client, sticker_set)
     assert result.title == "Pack"
     assert result.link == "https://t.me/addstickers/add"
     assert result.id == 123
@@ -241,11 +253,11 @@ async def test_get_sticker_set_info_with_unknown_exception(
     mock_requset.return_value = "called"
 
     sticker_set = mock_message.file.sticker_set
-    result = await get_sticker_set_info(client, sticker_set) 
+    result = await get_sticker_set_info(client, sticker_set)
 
     assert result.title == ""
     assert result.link == ""
-    assert result.id ==123
+    assert result.id == 123
     assert result.access_hash == 321
 
     client.assert_awaited_once_with("called")

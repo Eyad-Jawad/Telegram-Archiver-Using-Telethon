@@ -1,6 +1,6 @@
 import logging
-from datetime import UTC, datetime
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert
@@ -18,12 +18,14 @@ from .local_utils import construct_fake_dialog
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class PhotoInfo:
     dialog_id: int
     photo_id: int
     path: str
     date: str
+
 
 def user_id_handler(
     tel_msg: custom.message.Message, db_msg: Message, users: set[int]

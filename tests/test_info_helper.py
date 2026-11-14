@@ -243,12 +243,7 @@ async def test_push_photos_info_with_nothing(mock_session, photo_data):
 async def test_push_photos_info_with_one_entry(mock_session):
     DATES = date_consts()
     photo_info = [
-        PhotoInfo(
-            dialog_id=1, 
-            photo_id=1231, 
-            path="Somewhere", 
-            date=DATES[1]
-        )
+        PhotoInfo(dialog_id=1, photo_id=1231, path="Somewhere", date=DATES[1])
     ]
 
     insert_photo_info(mock_session, photo_info)
@@ -437,7 +432,7 @@ async def test_get_photo_info_for_one_input():
     assert result[0].photo_id == 5
     assert result[0].path == "Noice"
     assert result[0].date == DATES[1]
-    
+
     client.iter_profile_photos.assert_called_once_with(dialog)
     client.download_media.assert_awaited_once_with(photo, file="Media/")
 

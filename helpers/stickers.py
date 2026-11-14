@@ -83,9 +83,9 @@ async def get_sticker_set_info(
     except Exception:
         logger.exception("An exception occurred.")
         return StickerSetInfo(
-            id=message_sticker_set.id, 
-            link="", 
-            title="", 
+            id=message_sticker_set.id,
+            link="",
+            title="",
             access_hash=message_sticker_set.access_hash,
         )
 

@@ -1,6 +1,6 @@
 import logging
-from datetime import datetime
 from dataclasses import dataclass
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from telethon import TelegramClient, custom, functions, tl, types
@@ -136,9 +136,7 @@ def insert_channel_reaction(
     session.add(new_reaction)
 
 
-def insert_chat_reaction(
-    session: AsyncSession, reaction: ReactionInfo
-) -> None:
+def insert_chat_reaction(session: AsyncSession, reaction: ReactionInfo) -> None:
     """
     A function that interacts with the database to insert reaction data.
     It inserts reaction data of a reaction where the reactor can be seen,
