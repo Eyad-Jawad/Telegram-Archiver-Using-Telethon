@@ -1,5 +1,6 @@
 import logging
 from datetime import UTC, datetime
+from dataclasses import dataclass
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.sqlite import insert
@@ -17,6 +18,12 @@ from .local_utils import construct_fake_dialog
 
 logger = logging.getLogger(__name__)
 
+@dataclass
+class PhotoInfo:
+    dialog_id: int
+    photo_id: int
+    path: str
+    date: str
 
 def user_id_handler(
     tel_msg: custom.message.Message, db_msg: Message, users: set[int]
@@ -24,17 +31,6 @@ def user_id_handler(
     """
     A function that parses user id from messages, or post author name
     in case of channels.
-
-    Args:
-        tel_msg (telethon.custom.message.Message):
-            A telegram dialog's message provided by telethon.
-
-        db_msg (db.models.Message):
-            The database orm object that holds the data and will
-            be appended into the database.
-
-        users (set[int]):
-            A set that holds the ids of users.
     """
 
     try:
@@ -70,17 +66,6 @@ async def get_latest_photo_date(
     A function that gets the date of the latest profile photo
     for entities, so that you only donwload photos that are newer
     than the last one saved.
-
-    Args:
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
-
-        dialog_id (int):
-            The id of the entity.
-
-    Returns:
-        Datetime:
-            The latest date of a pfp if it exists, else 1900 as a default.
     """
 
     # format: 2026-03-06 17:45:25+00:00
@@ -103,24 +88,9 @@ def insert_dialog_metadata(
     session: AsyncSession, dialog_id: int, full_request: str
 ) -> None:
     """
-    A function that inserts dialog metadata into dialog_metadata
-    if it is the first time archiving this dialog's metadata
-    or updating dialog_metadata_archive if it is not the first time
-    while also inserting new metadata into dialog_metadata.
-
-    Args:
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
-
-        dialog_id (int):
-            The id of the entity.
-
-        full_request (str):
-            A srting of the full request received from telegram of
-            the dialog we are archiving its metadata.
+    A function that inserts dialog metadata into dialog_metadata.
     """
 
-    # Check if the dialog's metadata was archived before
     new_dialog_metadata = DialogMetadata(
         dialog_id=dialog_id, full_request=full_request
     )
@@ -128,37 +98,22 @@ def insert_dialog_metadata(
 
 
 def insert_photo_info(
-    session: AsyncSession, photo_info: list[tuple[int, int, str, str]]
+    session: AsyncSession, photo_info: list[PhotoInfo]
 ) -> None:
     """
     A function that inserts photo data acquired from get_photo_info
     into the database.
-
-    Args:
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
-
-        photo_info list[tuple(
-            int (dialog id),
-            int (photo id),
-            str (the path where the photo was saved),
-            str (photo date in iso format),
-        )]
     """
 
-    # For safety
     for row in photo_info or []:
-        if len(row) == 0:
-            continue
-
-        new_dialog_photo = DialogPhoto(
-            dialog_id=row[0],
-            photo_id=row[1],
-            photo_path=row[2],
-            photo_date=row[3],
+        session.add(
+            DialogPhoto(
+                dialog_id=row.dialog_id,
+                photo_id=row.photo_id,
+                photo_path=row.path,
+                photo_date=row.date,
+            )
         )
-
-        session.add(new_dialog_photo)
 
 
 async def get_dialog_info(
@@ -169,20 +124,6 @@ async def get_dialog_info(
 ) -> None:
     """
     A function that handles all things having to do with info, user ids, or metadata
-
-    Args:
-        client (telethon.TelegramClient):
-            Your account's client.
-
-        dialog (telethon.tl.custom.dialog.Dialog):
-            The object which you get from client.iter_dialogs.
-
-        users (set[int]):
-            A set of user ids or any kind of entity where
-            entity ids accumulate over the time archiving.
-
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
     """
 
     full_request = await get_full_request(client, dialog.entity)
@@ -202,18 +143,6 @@ async def get_full_request(
     """
     A function that gets the full request from telegram for
     the different types of dialogs.
-
-    Args:
-        client (telethon.TelegramClient):
-            Your account's client.
-
-        dialog (telethon.tl.custom.dialog.Dialog):
-            The object which you get from client.iter_dialogs.
-
-    Retunrs:
-        str:
-            A srting of the full request received from telegram of
-            the dialog we are archiving its metadata.
     """
 
     try:
@@ -250,31 +179,10 @@ async def get_photo_info(
     client: TelegramClient,
     dialog: tl.custom.dialog.Dialog,
     latest_photo_date: datetime,
-) -> list[tuple[int, int, str, str]]:
+) -> list[PhotoInfo]:
     """
     A function that downloads and gets the metadata of profile
     photos of dialogs.
-
-    Args:
-        client (telethon.TelegramClient):
-            Your account's client.
-
-        dialog (telethon.types.[entity]):
-            The entity you want their info, it can be User, Channel,
-            or Chat.
-
-        latest_photo_date (datetime):
-            The date of the latest photo in the database
-            in case this dialog was archived before so we
-            don't donwload duplicate photos and metadata.
-
-    Returns:
-        list[tuple(
-            int (dialog id),
-            int (photo id),
-            str (the path where the photo was saved),
-            str (photo date in iso format),
-        )]
     """
 
     # The directory where photos will be saved
@@ -289,11 +197,11 @@ async def get_photo_info(
 
             photo_path = await client.download_media(photo, file=PATH)
             photo_data.append(
-                (
-                    dialog.id,
-                    photo.id,
-                    photo_path,
-                    photo.date,
+                PhotoInfo(
+                    dialog_id=dialog.id,
+                    photo_id=photo.id,
+                    path=photo_path,
+                    date=photo.date,
                 )
             )
 
@@ -313,17 +221,6 @@ async def add_users_to_set(
     """
     A function that parses users in chats, and adds
     them to the accumulative set of users we have.
-
-    Args:
-        client (telethon.TelegramClient):
-            Your account's client.
-
-        dialog (telethon.tl.custom.dialog.Dialog):
-            The object which you get from client.iter_dialogs.
-
-        users (set[int]):
-            A set of user ids or any kind of entity where
-            entity ids accumulate over the time archiving.
     """
 
     try:
@@ -355,17 +252,6 @@ async def insert_users_ids(
 ) -> None:
     """
     A function that inserts a user's id into the database.
-
-    Args:
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
-
-        user (int):
-            the id of the user we want to insert their id into the database.
-            Note that a user can be a channel or any other type of entity.
-
-        dialog_id (int):
-            The id of the entity where this user was found.
     """
 
     # For safety
@@ -387,20 +273,6 @@ async def entity_handler(
 ) -> None:
     """
     A function that handles the metadata of entities found in dialogs.
-
-    Args:
-        client (telethon.TelegramClient):
-            Your account's client.
-
-        dialog (telethon.tl.custom.dialog.Dialog):
-            The object which you get from client.iter_dialogs.
-
-        users (set[int]):
-            A set of user ids or any kind of entity where
-            entity ids accumulate over the time archiving.
-
-        session (sqlalchemy.ext.asyncio.AsyncSession):
-            The async session of the database.
 
         skip_details (bool):
             A flag for skipping requesting metadata of users

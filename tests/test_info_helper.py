@@ -228,18 +228,12 @@ async def test_push_info_with_many_entries(mock_time, mock_session):
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("photo_data"),
-    [None, [], [[]]],
+    [None, []],
 )
 async def test_push_photos_info_with_nothing(mock_session, photo_data):
     insert_photo_info(mock_session, photo_data)
 
-    stmt = select(
-        DialogPhoto.dialog_id,
-        DialogPhoto.photo_id,
-        DialogPhoto.photo_path,
-        DialogPhoto.photo_date,
-    )
-    result = await mock_session.execute(stmt)
+    result = await mock_session.execute(select(DialogPhoto))
     result = result.all()
 
     assert [] == result
@@ -248,43 +242,45 @@ async def test_push_photos_info_with_nothing(mock_session, photo_data):
 @pytest.mark.asyncio
 async def test_push_photos_info_with_one_entry(mock_session):
     DATES = date_consts()
-    photo_info = [(1, 1231, "Somewhere", DATES[1])]
+    photo_info = [
+        PhotoInfo(
+            dialog_id=1, 
+            photo_id=1231, 
+            path="Somewhere", 
+            date=DATES[1]
+        )
+    ]
 
     insert_photo_info(mock_session, photo_info)
 
-    stmt = select(
-        DialogPhoto.dialog_id,
-        DialogPhoto.photo_id,
-        DialogPhoto.photo_path,
-        DialogPhoto.photo_date,
-    )
-    result = await mock_session.execute(stmt)
-    result = result.all()
+    result = await mock_session.execute(select(DialogPhoto))
+    result = result.scalars().all()
 
-    assert photo_info == result
+    assert result[0].dialog_id == photo_info[0].dialog_id
+    assert result[0].photo_id == photo_info[0].photo_id
+    assert result[0].photo_path == photo_info[0].path
+    assert result[0].photo_date == photo_info[0].date
 
 
 @pytest.mark.asyncio
 async def test_push_photos_info_with_many_entries(mock_session):
     DATES = date_consts()
     photo_info = [
-        (1, 1234, "somewhere", DATES[1]),
-        (1, 2314, "somewhere", DATES[1]),
-        (1, 4321, "somewhere", DATES[1]),
+        PhotoInfo(1, 1234, "somewhere", DATES[1]),
+        PhotoInfo(1, 2314, "somewhere", DATES[1]),
+        PhotoInfo(1, 4321, "somewhere", DATES[1]),
     ]
 
     insert_photo_info(mock_session, photo_info)
 
-    stmt = select(
-        DialogPhoto.dialog_id,
-        DialogPhoto.photo_id,
-        DialogPhoto.photo_path,
-        DialogPhoto.photo_date,
-    )
-    result = await mock_session.execute(stmt)
-    result = result.all()
+    result = await mock_session.execute(select(DialogPhoto))
+    result = result.scalars().all()
 
-    assert photo_info == result
+    for i in range(3):
+        assert result[i].dialog_id == photo_info[i].dialog_id
+        assert result[i].photo_id == photo_info[i].photo_id
+        assert result[i].photo_path == photo_info[i].path
+        assert result[i].photo_date == photo_info[i].date
 
 
 @pytest.mark.asyncio
@@ -436,9 +432,12 @@ async def test_get_photo_info_for_one_input():
     client.download_media = AsyncMock()
     client.download_media.return_value = "Noice"
 
-    assert await get_photo_info(client, dialog, DATES[1]) == [
-        (1, 5, "Noice", DATES[1])
-    ]
+    result = await get_photo_info(client, dialog, DATES[1])
+    assert result[0].dialog_id == 1
+    assert result[0].photo_id == 5
+    assert result[0].path == "Noice"
+    assert result[0].date == DATES[1]
+    
     client.iter_profile_photos.assert_called_once_with(dialog)
     client.download_media.assert_awaited_once_with(photo, file="Media/")
 
