@@ -202,49 +202,20 @@ def print_three_dialogs(
         )
         return
 
-    # If there are two dialogs
-    if len(dialogs) == 2:
-        con.print(
-            FIRST_LINE,
-            f"> [bold black on cyan]1.{dialogs[0].name}[/]\n",
-            f"  2.{dialogs[1].name}\n",
-        )
-        return
-
     to_print = []
 
-    # If we are at the first dialog of the dialogs list
-    if current_dialog_index == 0:
-        to_print = [
-            f"{len(dialogs)}.{dialogs[-1].name}",
-            f"1.{dialogs[0].name}",
-            f"2.{dialogs[1].name}",
-        ]
+    end = 2 if len(dialogs) >= 3 else 1
 
-    # If we are at the last dialog of the dialogs list
-    elif current_dialog_index + 1 == len(dialogs):
-        to_print = [
-            f"{current_dialog_index}.{dialogs[current_dialog_index - 1].name}",
-            f"{current_dialog_index + 1}.{dialogs[current_dialog_index].name}",
-            f"1.{dialogs[0].name}",
-        ]
+    for i in range(-1, end):
+        idx = handle_index(current_dialog_index, i, len(dialogs))
+        if i == 0:
+            to_print.append(
+                f"> [bold black on cyan]{idx + 1}.{dialogs[idx].name}[/]\n"
+            )
+        else:
+            to_print.append(f"  {idx + 1}.{dialogs[idx].name}\n")
 
-    # If we are not near any boundary of the list
-    # i.e. a normal situation
-    else:
-        to_print = [
-            f"{current_dialog_index}.{dialogs[current_dialog_index - 1].name}",
-            f"{current_dialog_index + 1}.{dialogs[current_dialog_index].name}",
-            f"{current_dialog_index + 2}.{dialogs[current_dialog_index + 1].name}",
-        ]
-
-    con.print(
-        FIRST_LINE,
-        f"  {to_print[0]}\n",
-        f"> [bold black on cyan]{to_print[1]}[/]\n",
-        f"  {to_print[2]}\n",
-    )
-
+    con.print(FIRST_LINE, *to_print)
     return
 
 
@@ -253,25 +224,7 @@ def handle_index(i: int, amount: int, list_length: int) -> int:
     A function that handles incrementing, and decrementing
     an index so that it doesn't get out of boundary.
     """
-
-    # Normalize in case the function recieves
-    # input higher than 1
-    amount = -1 if amount < 0 else 1
-
-    # Case: Increment
-    if amount == 1:
-        # If we are at the last element flip the index
-        if i + 1 == list_length:
-            return 0
-
-        return i + 1
-
-    # Case: Decrement
-    # If we are at the first element flip the index as well
-    if i == 0:
-        return list_length - 1
-
-    return i - 1
+    return (i + amount) % list_length
 
 
 def construct_fake_dialog(entity) -> SimpleNamespace:

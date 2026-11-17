@@ -224,14 +224,25 @@ def make_dialogs_list(*names):
     return l
 
 
-def test_print_three_dialog_with_length_two_list():
+def test_print_three_dialog_with_length_two_list_on_one():
     console = MagicMock()
     dialogs = make_dialogs_list("Noice", "Good guy")
     FIRST_LINE = get_print_three_dialog_first_line()
     print_three_dialogs(dialogs, 0, console)
 
     console.print.assert_called_once_with(
-        FIRST_LINE, "> [bold black on cyan]1.Noice[/]\n", "  2.Good guy\n"
+        FIRST_LINE, "  2.Good guy\n", "> [bold black on cyan]1.Noice[/]\n"
+    )
+
+
+def test_print_three_dialog_with_length_two_list_on_two():
+    console = MagicMock()
+    dialogs = make_dialogs_list("Noice", "Good guy")
+    FIRST_LINE = get_print_three_dialog_first_line()
+    print_three_dialogs(dialogs, 1, console)
+
+    console.print.assert_called_once_with(
+        FIRST_LINE, "  1.Noice\n", "> [bold black on cyan]2.Good guy[/]\n"
     )
 
 
