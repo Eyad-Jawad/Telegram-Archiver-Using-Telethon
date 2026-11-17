@@ -126,14 +126,14 @@ def insert_channel_reaction(
     you can't see who is reacting.
     """
 
-    new_reaction = Reaction(
-        dialog_id=dialog_id,
-        message_id=message_id,
-        reaction=reaction_type(react),
-        count=react.count,
+    session.add(
+        Reaction(
+            dialog_id=dialog_id,
+            message_id=message_id,
+            reaction=reaction_type(react),
+            count=react.count,
+        )
     )
-
-    session.add(new_reaction)
 
 
 def insert_chat_reaction(session: AsyncSession, reaction: ReactionInfo) -> None:
@@ -143,15 +143,15 @@ def insert_chat_reaction(session: AsyncSession, reaction: ReactionInfo) -> None:
     aka in a group, or a chat, or any other dialog type.
     """
 
-    new_reaction = Reaction(
-        dialog_id=reaction.dialog_id,
-        message_id=reaction.message_id,
-        reactors_id=reaction.reactors_id,
-        reacting_date=reaction.date,
-        reaction=reaction.reaction,
+    session.add(
+        Reaction(
+            dialog_id=reaction.dialog_id,
+            message_id=reaction.message_id,
+            reactors_id=reaction.reactors_id,
+            reacting_date=reaction.date,
+            reaction=reaction.reaction,
+        )
     )
-
-    session.add(new_reaction)
 
 
 async def reaction_handler(

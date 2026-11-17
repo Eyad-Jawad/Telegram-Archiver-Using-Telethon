@@ -140,10 +140,10 @@ def text_handler(tel_msg: custom.message.Message, db_msg) -> None:
         ),
     }
 
-    text = ""
+    db_msg.text = ""
+
     if tel_msg.text:
-        # check for text
-        text = f"{tel_msg.text}"
+        db_msg.text = tel_msg.text
     elif isinstance(tel_msg, types.MessageService):
         action = tel_msg.action
         # Get the action, if it's not something we've written
@@ -154,23 +154,3 @@ def text_handler(tel_msg: custom.message.Message, db_msg) -> None:
                 return
 
         db_msg.text = f"{action} was done."
-        return
-
-    db_msg.text = text
-    return
-
-
-"""
-
-These ones are a little more complex than one string of text, 
-that's why I'm chsosing to ignore them for now
-
-Todo Actions:
-
-MessageActionChannelMigrateFrom
-MessageActionChatMigrateTo
-MessageActionConferenceCall
-MessageActionSetChatTheme
-MessageActionSetChatWallPaper
-
-"""

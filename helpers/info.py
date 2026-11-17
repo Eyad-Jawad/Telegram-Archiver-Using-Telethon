@@ -78,12 +78,7 @@ async def get_latest_photo_date(
 
     result = await session.execute(stmt)
 
-    query = result.scalar()
-
-    if not query:
-        return datetime(1900, 1, 1, tzinfo=UTC)  # arbitrary date
-    else:
-        return query
+    return result.scalar() or datetime(1900, 1, 1, tzinfo=UTC)  # arbitrary date
 
 
 def insert_dialog_metadata(
@@ -260,8 +255,11 @@ async def insert_users_ids(
     if not user or not dialog_id:
         return
 
-    stmt = insert(User).values(user_id=user, dialog_id=dialog_id)
-    stmt = stmt.on_conflict_do_nothing(index_elements=["dialog_id", "user_id"])
+    stmt = (
+        insert(User)
+        .values(user_id=user, dialog_id=dialog_id)
+        .on_conflict_do_nothing(index_elements=["dialog_id", "user_id"])
+    )
 
     await session.execute(stmt)
 

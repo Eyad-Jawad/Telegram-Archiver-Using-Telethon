@@ -26,25 +26,20 @@ async def find_sticker_set_in_db(
     archived before so we can skip sending another api call.
     """
 
-    stmt = select(
-        StickerSet.pack_name,
-        StickerSet.pack_link,
-        StickerSet.sticker_set_id,
-        StickerSet.access_hash,
-    ).where(StickerSet.sticker_set_id == id, StickerSet.access_hash == hash)
-
+    stmt = select(StickerSet).where(
+        StickerSet.sticker_set_id == id, StickerSet.access_hash == hash
+    )
     result = await session.execute(stmt)
+    sticker_set = result.scalars().first()
 
-    query = result.first()
-
-    if query is None:
-        return None
+    if sticker_set is None:
+        return
 
     return StickerSetInfo(
-        title=query[0],
-        link=query[1],
-        id=query[2],
-        access_hash=query[3],
+        title=sticker_set.pack_name,
+        link=sticker_set.pack_link,
+        id=sticker_set.sticker_set_id,
+        access_hash=sticker_set.access_hash,
     )
 
 
@@ -54,40 +49,35 @@ async def get_sticker_set_info(
     """
     A function that sends an api request to telegram to get info about the sticker set.
     """
+    sticker_set_info = StickerSetInfo(
+        id=message_sticker_set.id,
+        access_hash=message_sticker_set.access_hash,
+        title="",
+        link="",
+    )
+
     try:
         sticker_set = await client(
             functions.messages.GetStickerSetRequest(
                 stickerset=message_sticker_set, hash=0
             )
         )
-
         sticker_set = sticker_set.set
 
-        return StickerSetInfo(
-            id=message_sticker_set.id,
-            link="https://t.me/addstickers/" + sticker_set.short_name,
-            title=sticker_set.title,
-            access_hash=message_sticker_set.access_hash,
+        sticker_set_info.title = sticker_set.title
+        sticker_set_info.link = (
+            "https://t.me/addstickers/" + sticker_set.short_name
         )
     except (
         errors.EmoticonStickerpackMissingError,
         errors.rpcerrorlist.StickersetInvalidError,
     ):
         # means the sticker set does not exist
-        return StickerSetInfo(
-            id=message_sticker_set.id,
-            link="Pack is unavailable",
-            title="",
-            access_hash=message_sticker_set.access_hash,
-        )
+        sticker_set_info.link = "Pack is unavailable"
     except Exception:
         logger.exception("An exception occurred.")
-        return StickerSetInfo(
-            id=message_sticker_set.id,
-            link="",
-            title="",
-            access_hash=message_sticker_set.access_hash,
-        )
+
+    return sticker_set_info
 
 
 def insert_sticker_set_info(
@@ -105,16 +95,16 @@ def insert_sticker_set_info(
     if not sticker_set_info:
         return
 
-    new_sticker_set = StickerSet(
-        dialog_id=dialog_id,
-        message_id=message_id,
-        pack_name=sticker_set_info.title,
-        pack_link=sticker_set_info.link,
-        sticker_set_id=sticker_set_info.id,
-        access_hash=sticker_set_info.access_hash,
+    session.add(
+        StickerSet(
+            dialog_id=dialog_id,
+            message_id=message_id,
+            pack_name=sticker_set_info.title,
+            pack_link=sticker_set_info.link,
+            sticker_set_id=sticker_set_info.id,
+            access_hash=sticker_set_info.access_hash,
+        )
     )
-
-    session.add(new_sticker_set)
 
 
 async def stickers_handler(

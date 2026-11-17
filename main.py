@@ -36,6 +36,15 @@ use context manager for db session
 
 Make tests more actual; use mock less
 
+Todo message Actions:
+
+MessageActionChannelMigrateFrom
+MessageActionChatMigrateTo
+MessageActionConferenceCall
+MessageActionSetChatTheme
+MessageActionSetChatWallPaper
+
+
 FIXME:
 look into half downloaded media
 
