@@ -33,7 +33,7 @@ async def find_sticker_set_in_db(
     sticker_set = result.scalars().first()
 
     if sticker_set is None:
-        return
+        return None
 
     return StickerSetInfo(
         title=sticker_set.pack_name,
